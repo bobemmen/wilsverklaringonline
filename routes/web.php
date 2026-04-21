@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\TwoFactorController;
@@ -52,6 +53,12 @@ Route::middleware(['auth', '2fa'])->group(function () {
 
     Route::get('/account/export', [AccountController::class, 'export'])->name('account.export');
     Route::delete('/account', [AccountController::class, 'destroy'])->name('account.destroy');
+
+    Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('index');
+        Route::get('/gebruiker/{user}', [AdminController::class, 'show'])->name('show');
+        Route::delete('/gebruiker/{user}', [AdminController::class, 'destroy'])->name('destroy');
+    });
 });
 
 Route::middleware('throttle:10,1')->group(function () {

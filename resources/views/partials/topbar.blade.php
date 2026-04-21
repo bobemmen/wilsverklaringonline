@@ -9,6 +9,7 @@
             @elseif(request()->routeIs('token.*')) Arts-toegang
             @elseif(request()->routeIs('naasten.*')) Naasten
             @elseif(request()->routeIs('2fa.*')) Tweestapsverificatie
+            @elseif(request()->routeIs('admin.*')) Beheer
             @else {{ config('app.name') }}
             @endif
         </span>

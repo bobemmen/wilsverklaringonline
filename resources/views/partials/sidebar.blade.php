@@ -25,6 +25,14 @@
         Naasten
     </a>
 
+    @if(auth()->user()?->isAdmin())
+        <div class="sidebar-section">Beheer</div>
+        <a href="{{ route('admin.index') }}" class="sidebar-item {{ request()->routeIs('admin.*') ? 'active' : '' }}">
+            <span class="sidebar-pip {{ request()->routeIs('admin.*') ? 'active' : '' }}"></span>
+            Gebruikers
+        </a>
+    @endif
+
     <div class="sidebar-section">Account</div>
     <a href="{{ route('2fa.setup') }}" class="sidebar-item {{ request()->routeIs('2fa.*') ? 'active' : '' }}">
         <span class="sidebar-pip"></span>
