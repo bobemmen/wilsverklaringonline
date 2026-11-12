@@ -41,7 +41,7 @@ final class VerificationController extends Controller
         }
 
         if ($v['pending_user_id'] === $this->user()['id'] && $v['sms_code_mac'] && $v['sms_expires_at'] > time()) {
-            return $this->view('verification/code', ['arts' => $arts, 'token' => $token, 'phone' => mask_phone((string) $v['phone']), 'canResend' => (int) $v['sms_sends'] < self::MAX_SENDS]);
+            return $this->view('verification/code', ['arts' => $arts, 'token' => $token, 'paper' => ($v['code_method'] ?? 'sms') === 'papier', 'phone' => $v['phone'] ? mask_phone((string) $v['phone']) : '', 'canResend' => ($v['code_method'] ?? 'sms') === 'sms' && (int) $v['sms_sends'] < self::MAX_SENDS]);
         }
 
         return $this->view('verification/link', ['arts' => $arts, 'token' => $token, 'name' => $v['patient_name']]);
@@ -80,6 +80,15 @@ final class VerificationController extends Controller
             return $this->fail($back, ['consent' => 'Geef toestemming om door te gaan.']);
         }
 
+        if (($v['code_method'] ?? 'sms') === 'papier') {
+            // code op papier van de huisarts: er wordt niets verstuurd
+            $v['pending_user_id'] = $user['id'];
+            $v['sms_code_mac'] = $v['paper_code_mac'];
+            $v['sms_expires_at'] = $v['expires_at'];
+            $v['sms_attempts'] = 0;
+            $store->saveVerification($v);
+            return $this->redirect($back);
+        }
         // identiteit uit het dossier klopt: tweede controle met een sms-code naar het door de arts opgegeven nummer
         $v['pending_user_id'] = $user['id'];
         $v['sms_sends'] = 0;
@@ -141,7 +150,7 @@ final class VerificationController extends Controller
         if ($v['status'] !== 'uitgenodigd' || $v['pending_user_id'] !== $this->user()['id']) {
             return $this->redirect($back);
         }
-        if ((int) $v['sms_sends'] >= self::MAX_SENDS) {
+        if (($v['code_method'] ?? 'sms') !== 'sms' || (int) $v['sms_sends'] >= self::MAX_SENDS) {
             return $this->fail($back, ['code' => 'U kunt geen nieuwe code meer aanvragen. Neem contact op met uw huisarts.']);
         }
         if (!$this->sendCode($v)) {
@@ -155,13 +164,13 @@ final class VerificationController extends Controller
 
     private function codeMac(array $v, string $code): string
     {
-        return $this->app->crypto->mac('sms-code', $v['id'] . '|' . $code);
+        return $this->app->store->codeMac($v['id'], $code);
     }
 
     /** Maakt een nieuwe 6-cijferige code (oude vervalt) en verstuurt die; werkt $v bij, bewaart niet. */
     private function sendCode(array &$v): bool
     {
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $code = $this->app->store->newCode();
         $v['sms_code_mac'] = $this->codeMac($v, $code);
         $v['sms_expires_at'] = time() + self::CODE_TTL;
         $v['sms_attempts'] = 0;

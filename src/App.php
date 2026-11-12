@@ -121,6 +121,7 @@ final class App
         $r->post('/arts/uitnodigen', [C\ArtsController::class, 'invite'], $arts);
         $r->get('/arts/patienten/{id}', [C\ArtsController::class, 'patient'], $arts);
         $r->post('/arts/patienten/{id}/bevestigen', [C\ArtsController::class, 'confirm'], $arts);
+        $r->post('/arts/patienten/{id}/papiercode', [C\ArtsController::class, 'paperCode'], $arts);
         $r->post('/arts/patienten/{id}/intrekken', [C\ArtsController::class, 'revoke'], $arts);
 
         $r->get('/v/{token}', [C\PublicController::class, 'show'], ['throttle:public,10,60']);

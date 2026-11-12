@@ -473,6 +473,27 @@ for ($i = 0; $i < 5; $i++) {
 T::eq($other->get('/uitnodiging/' . $inv3)['status'], 404, 'na 5 foute sms-codes vervalt de uitnodiging');
 clearThrottle($dbfile);
 
+// code op papier
+$r = $invite(['email' => 'bas3@voorbeeld.nl', 'name' => 'Bas Bakker', 'dob' => '1962-02-02', 'method' => 'papier', 'phone' => '']);
+$page = $arts->follow($r);
+preg_match('#token-box">' . preg_quote($base, '#') . '/uitnodiging/([a-f0-9]{64})<#', $page['body'], $m);
+$inv4 = $m[1] ?? '';
+preg_match('#class="paper-code"[^>]*>(\d{3}) (\d{3})<#', $page['body'], $pc);
+$paper = ($pc[1] ?? '') . ($pc[2] ?? '');
+T::ok($inv4 !== '' && strlen($paper) === 6, 'arts krijgt een code van 6 cijfers voor op papier (zonder mobiel nummer)');
+T::ok(!str_contains($arts->get('/arts')['body'], $paper . ''), 'de papieren code wordt maar één keer getoond');
+@unlink("$root/storage/logs/sms.log");
+clearThrottle($dbfile);
+$r = $other->submit('/uitnodiging/' . $inv4, '/uitnodiging/' . $inv4, ['dob' => '1962-02-02', 'bsn' => '111222333', 'consent' => '1']);
+T::ok(!is_file("$root/storage/logs/sms.log"), 'bij papieren code wordt geen sms verstuurd');
+$pg = $other->get('/uitnodiging/' . $inv4);
+T::ok(str_contains($pg['body'], 'op papier heeft meegegeven') && !str_contains($pg['body'], 'Stuur een nieuwe code'), 'patiënt wordt om de papieren code gevraagd');
+$r = $other->submit('/uitnodiging/' . $inv4, '/uitnodiging/' . $inv4 . '/code', ['code' => $paper === '123456' ? '654321' : '123456']);
+T::ok(str_contains($other->follow($r)['body'], 'klopt niet'), 'foute papieren code wordt geweigerd');
+$r = $other->submit('/uitnodiging/' . $inv4, '/uitnodiging/' . $inv4 . '/code', ['code' => $paper]);
+T::eq($r['location'], '/dashboard', 'juiste papieren code → gekoppeld');
+clearThrottle($dbfile);
+
 // intrekken door patiënt
 $page = $c->get('/dashboard');
 preg_match('#/verificatie/([a-f0-9]{32})/intrekken#', $page['body'], $m);
@@ -521,7 +542,7 @@ $left = (int) $pdo->query('SELECT (SELECT COUNT(*) FROM versions) + (SELECT COUN
 T::eq($left, 0, 'geen verweesde versies, uitnodigingen of logs na verwijderen');
 $bas = (int) $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 T::eq($bas, 2, 'alleen Bas en de huisarts bestaan nog');
-T::eq((int) $pdo->query('SELECT COUNT(*) FROM verifications WHERE patient_user_id IS NOT NULL')->fetchColumn(), 0, 'verificaties van de verwijderde patiënt zijn weg');
+T::eq((int) $pdo->query('SELECT COUNT(*) FROM verifications WHERE patient_user_id IS NOT NULL')->fetchColumn(), 1, 'alleen de verificatie van Bas (nog actief) bestaat; die van de verwijderde patiënt is weg');
 
 $log = @file_get_contents("$tmp/server.log") ?: '';
 T::ok(!preg_match('/Fatal|Warning|Notice|Deprecated/', $log), 'geen PHP-waarschuwingen in serverlog' . (preg_match('/(Fatal|Warning|Notice|Deprecated)[^\n]*/', $log, $mm) ? ': ' . $mm[0] : ''));

@@ -135,6 +135,7 @@ Een huisarts bevestigt **eenmalig** dat een account bij een patiënt hoort. Late
 
 - Huisartsaccounts worden alleen door de beheerder aangemaakt: `php bin/console arts:aanmaken "Dr. Jansen" jansen@praktijk.nl "Praktijknaam"`. Het tijdelijke wachtwoord wordt eenmalig getoond; tweestapsverificatie is verplicht.
 - In `/arts` vult de arts naam, e-mail, geboortedatum, BSN (elfproef), mobiel nummer en het HIS-patiënt-ID in. De patiënt krijgt een e-mail met een persoonlijke link (14 dagen geldig).
+- Tweede controle naar keuze: een sms-code, of een **code op papier**: de arts krijgt een 6-cijferige code (eenmalig getoond, alleen als HMAC bewaard) die hij de patiënt meegeeft. In `/arts` kan per openstaande uitnodiging een nieuwe papieren code worden aangemaakt (de oude vervalt).
 - De patiënt maakt een account of logt in, bevestigt geboortedatum en BSN (vergeleken via HMAC; nooit leesbaar opgeslagen) en voert daarna een 6-cijferige sms-code in die naar het door de arts opgegeven nummer gaat (10 minuten geldig, maximaal 3 keer versturen, 5 pogingen).
 - Daarna bevestigt de arts met twee vinkjes. Lezers zien arts, praktijk, datum en de laatste 6 tekens van het HIS-ID (ook in de PDF). Patiënt en arts kunnen de koppeling intrekken.
 - SMS: `SMS_DRIVER=log` (ontwikkeling, schrijft naar `storage/logs/sms.log`) of `SMS_DRIVER=bird`. De Bird-koppeling (bird.com) is nog niet gebouwd: zie `src/Sms.php`, methode `bird()`. Zonder werkende sms-dienst kan een patiënt in productie niet koppelen (er wordt nooit stilzwijgend "verstuurd").

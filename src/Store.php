@@ -277,6 +277,17 @@ final class Store
 
     // ----------------------------------------------------------- verificaties
 
+    /** Zoekwaarde van een 6-cijferige code (sms of papier), gebonden aan de verificatie. */
+    public function codeMac(string $verificationId, string $code): string
+    {
+        return $this->crypto->mac('sms-code', $verificationId . '|' . $code);
+    }
+
+    public function newCode(): string
+    {
+        return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
     /** BSN en geboortedatum worden nooit bewaard, alleen als HMAC om later te kunnen vergelijken. */
     public function bsnProof(string $bsn): string
     {
@@ -300,6 +311,8 @@ final class Store
             'created_at' => time(),
             'linked_at' => null,
             'verified_at' => null,
+            'code_method' => 'sms', // sms | papier
+            'paper_code_mac' => null,
             'pending_user_id' => null,
             'sms_code_mac' => null,
             'sms_expires_at' => null,

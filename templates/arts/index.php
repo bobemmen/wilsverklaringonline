@@ -4,6 +4,14 @@
     <p>Nodig een patiënt uit om zijn wilsverklaring online te maken. Nadat u de patiënt in persoon heeft gezien, bevestigt u hier dat de verklaring echt van deze patiënt is.</p>
 </div>
 
+<?php if ($paperCode): ?>
+    <section class="card card-accent" aria-labelledby="i-code">
+        <h2 class="card-title" id="i-code">Code voor op papier</h2>
+        <p>Schrijf deze code op voor de patiënt. Hij wordt hier maar één keer getoond en is bij ons alleen versleuteld bewaard.</p>
+        <p class="paper-code" aria-label="Code: <?= e(implode(' ', str_split($paperCode))) ?>"><?= e(substr($paperCode, 0, 3) . ' ' . substr($paperCode, 3)) ?></p>
+    </section>
+<?php endif ?>
+
 <?php if ($inviteUrl): ?>
     <section class="card card-accent" aria-labelledby="i-link">
         <h2 class="card-title" id="i-link">Persoonlijke link</h2>
@@ -14,7 +22,7 @@
 
 <section class="card" aria-labelledby="i-nieuw">
     <h2 class="card-title" id="i-nieuw">Patiënt uitnodigen</h2>
-    <p class="muted">De patiënt krijgt alleen een e-mail met een link. Geboortedatum, BSN en patiënt-ID worden niet gemaild. De patiënt bevestigt geboortedatum en BSN zelf en voert daarna een sms-code in. BSN en geboortedatum worden niet leesbaar opgeslagen.</p>
+    <p class="muted">De patiënt krijgt alleen een e-mail met een link. Geboortedatum, BSN en patiënt-ID worden niet gemaild. De patiënt bevestigt geboortedatum en BSN zelf en voert daarna een code in: per sms of de code die u op papier meegeeft. BSN en geboortedatum worden niet leesbaar opgeslagen.</p>
     <form method="post" action="/arts/uitnodigen" autocomplete="off">
         <?= $this->csrf() ?>
         <div class="field">
@@ -37,10 +45,22 @@
             <input type="text" id="bsn" name="bsn" inputmode="numeric" pattern="[0-9 ]{8,11}" maxlength="11" required<?= $this->invalid('bsn') ?>>
             <?= $this->fieldError('bsn') ?>
         </div>
+        <?php $method = $this->old('method', 'sms') ?>
+        <fieldset class="field">
+            <legend>Tweede controle voor de patiënt</legend>
+            <label class="choice<?= $method === 'sms' ? ' selected' : '' ?>">
+                <input type="radio" name="method" value="sms"<?= $method === 'sms' ? ' checked' : '' ?>>
+                <span><span class="choice-label">Code per sms</span><span class="choice-help">Naar het mobiele nummer hieronder.</span></span>
+            </label>
+            <label class="choice<?= $method === 'papier' ? ' selected' : '' ?>">
+                <input type="radio" name="method" value="papier"<?= $method === 'papier' ? ' checked' : '' ?>>
+                <span><span class="choice-label">Code op papier</span><span class="choice-help">U krijgt een code van 6 cijfers die u de patiënt meegeeft.</span></span>
+            </label>
+        </fieldset>
         <div class="field">
-            <label for="phone">Mobiel nummer patiënt</label>
-            <p class="hint" id="phone-hint">De patiënt ontvangt hierop een sms-code als tweede controle. Vul het nummer in dat u kent uit het dossier.</p>
-            <input type="tel" id="phone" name="phone" value="<?= e($this->old('phone')) ?>" autocomplete="off" inputmode="tel" required aria-describedby="phone-hint"<?= $this->invalid('phone') ?>>
+            <label for="phone">Mobiel nummer patiënt <span class="muted">(alleen bij sms)</span></label>
+            <p class="hint" id="phone-hint">Vul het nummer in dat u kent uit het dossier.</p>
+            <input type="tel" id="phone" name="phone" value="<?= e($this->old('phone')) ?>" autocomplete="off" inputmode="tel" aria-describedby="phone-hint"<?= $this->invalid('phone') ?>>
             <?= $this->fieldError('phone') ?>
         </div>
         <div class="field">
@@ -77,6 +97,12 @@
                         <td>
                             <?php if (in_array($v['effective'], ['gekoppeld', 'geverifieerd'], true)): ?>
                                 <a class="btn btn-small" href="/arts/patienten/<?= e($v['id']) ?>">Openen<span class="sr-only"> (<?= e($v['patient_name']) ?>)</span></a>
+                            <?php endif ?>
+                            <?php if ($v['effective'] === 'uitgenodigd'): ?>
+                                <form method="post" action="/arts/patienten/<?= e($v['id']) ?>/papiercode" class="inline-form">
+                                    <?= $this->csrf() ?>
+                                    <button type="submit" class="btn btn-small">Code op papier<span class="sr-only"> (<?= e($v['patient_name']) ?>)</span></button>
+                                </form>
                             <?php endif ?>
                             <?php if (in_array($v['effective'], ['uitgenodigd', 'gekoppeld', 'geverifieerd'], true)): ?>
                                 <form method="post" action="/arts/patienten/<?= e($v['id']) ?>/intrekken" class="inline-form">
