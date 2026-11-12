@@ -21,6 +21,60 @@
 </section>
 
 
+<figure class="schema">
+    <img src="<?= e($this->asset('dementie-schema.jpg')) ?>" width="1000" height="1415" loading="lazy"
+         alt="Schema: euthanasie bij dementie in zes fasen. Een trap van zes blokken naar beneden, met een pijl 'zelf beslissingen kunnen nemen' die afneemt: 1 niets aan de hand, 2 beginnende klachten, 3 diagnose is gesteld, 4 omslagzone, 5 gevorderde dementie, 6 laatste fase. De tabel hieronder beschrijft elke fase in tekst.">
+    <figcaption>Schematisch overzicht van de zes fasen bij dementie. Hoe verder de dementie, hoe minder u zelf kunt beslissen. Bron: NVVE, <em>Euthanasie bij dementie</em> (schema, 2026). <a href="<?= e($this->asset('dementie-schema.jpg')) ?>">Afbeelding groter bekijken</a></figcaption>
+</figure>
+
+<details class="more">
+    <summary>Euthanasie bij dementie in de praktijk: wat kan in welke fase?</summary>
+    <div class="more-body">
+        <p>Dit overzicht laat per fase zien wat u kunt doen en of euthanasie of hulp bij zelfdoding mogelijk is. De beoordeling blijft altijd bij uw arts.</p>
+        <div class="table-wrap">
+        <table class="table-stack">
+            <caption class="sr-only">Euthanasie bij dementie in de praktijk, per fase</caption>
+            <thead>
+                <tr><th scope="col">Fase</th><th scope="col">Advies</th><th scope="col">Is euthanasie of hulp bij zelfdoding mogelijk?</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th scope="row"><span class="fase-nr">1</span> Niets aan de hand</th>
+                    <td data-label="Advies"><ul><li>Heeft u nog geen wilsverklaringen? Stel ze nu op.</li></ul></td>
+                    <td data-label="Mogelijk?"><ul><li>Niet van toepassing.</li></ul></td>
+                </tr>
+                <tr>
+                    <th scope="row"><span class="fase-nr">2</span> Beginnende klachten</th>
+                    <td data-label="Advies"><ul><li>Bespreek uw euthanasiewens met uw naasten.</li><li>Vraag uw huisarts of die bereid is euthanasie te verlenen.</li><li>Laat de diagnose dementie stellen.</li><li>Stel uw wilsverklaringen op.</li></ul></td>
+                    <td data-label="Mogelijk?"><ul><li><strong>Nee</strong>, want er is nog geen diagnose dementie gesteld.</li></ul></td>
+                </tr>
+                <tr>
+                    <th scope="row"><span class="fase-nr">3</span> Diagnose is gesteld</th>
+                    <td data-label="Advies"><ul><li>Houd regelmatig contact met uw naasten en huisarts over uw euthanasiewens.</li><li>Werk uw wilsverklaringen zo nodig bij.</li></ul></td>
+                    <td data-label="Mogelijk?"><ul><li><strong>Ja</strong>, als u aannemelijk kunt maken dat u ondraaglijk lijdt aan de actuele gevolgen en de vooruitzichten van de dementie.</li></ul></td>
+                </tr>
+                <tr>
+                    <th scope="row"><span class="fase-nr">4</span> Omslagzone <span class="fase-sub">(wilsbekwaam voor de doodswens)</span></th>
+                    <td data-label="Advies"><ul><li>Bespreek regelmatig met uw huisarts het verloop van de dementie, uw euthanasiewens en het afnemen van uw vermogen om zelf te beslissen.</li><li>Vraag uw arts tot welk moment die bereid is euthanasie te verlenen.</li></ul></td>
+                    <td data-label="Mogelijk?"><ul><li><strong>Ja</strong>, als u aannemelijk kunt maken dat u ondraaglijk lijdt aan de actuele gevolgen en de vooruitzichten van de dementie.</li></ul></td>
+                </tr>
+                <tr>
+                    <th scope="row"><span class="fase-nr">5</span> Gevorderde dementie <span class="fase-sub">(wilsonbekwaam)</span></th>
+                    <td data-label="Advies"><ul><li>Praten en beslissen nemen kan moeilijk worden. Naasten en huisarts betrekken u zoveel mogelijk bij het overleg over het euthanasieverzoek.</li></ul></td>
+                    <td data-label="Mogelijk?"><ul><li><strong>Nee</strong>, als u op enig moment toch aangeeft geen euthanasie te willen en/of niet lijkt te lijden.</li><li><strong>Ja</strong>, bij ernstige pijn, benauwdheid of onrust, én als er een schriftelijk euthanasieverzoek is.</li></ul></td>
+                </tr>
+                <tr>
+                    <th scope="row"><span class="fase-nr">6</span> Laatste fase</th>
+                    <td data-label="Advies"><ul><li>Liefdevolle verzorging en aandacht.</li><li>Overweeg een behandeling te (laten) stoppen.</li></ul></td>
+                    <td data-label="Mogelijk?"><ul><li><strong>Nee</strong>, als er geen lijden lijkt te worden ervaren.</li><li><strong>Ja</strong>, bij ernstige pijn, benauwdheid, angst, agressie of onrust, én als er een schriftelijk euthanasieverzoek is.</li></ul></td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+        <p class="small muted">Bron: NVVE, <em>Euthanasie bij dementie in de praktijk</em> (2026). Vragen? NVVE Steunpunt Levenseinde en Dementie: 020 620 06 90.</p>
+    </div>
+</details>
+
 <details class="more">
     <summary>Euthanasie bij dementie: de zes fasen</summary>
     <div class="more-body">
