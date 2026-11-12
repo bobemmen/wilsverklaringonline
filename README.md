@@ -128,3 +128,14 @@ deploy/          voorbeeldconfiguraties (nginx, Caddy, back-up)
 storage/         database en logs (buiten de webroot, 0700)
 tests/           unit- en end-to-end tests
 ```
+
+## Huisarts-verificatie
+
+Een huisarts kan een patiënt uitnodigen en later bevestigen dat de verklaring echt van die patiënt is.
+
+- Huisartsaccounts worden alleen door de beheerder aangemaakt: `php bin/console arts:aanmaken "Dr. Jansen" jansen@praktijk.nl "Praktijknaam"`. Het tijdelijke wachtwoord wordt eenmalig getoond; tweestapsverificatie is verplicht.
+- In `/arts` vult de arts naam, e-mail, geboortedatum, BSN (elfproef) en het HIS-patiënt-ID in. De patiënt krijgt een e-mail met een persoonlijke link (14 dagen geldig).
+- De patiënt maakt een account of logt in en bevestigt geboortedatum en BSN. Die worden vergeleken met HMAC's; BSN en geboortedatum worden nooit leesbaar opgeslagen. Na 5 foute pogingen vervalt de uitnodiging.
+- Na koppeling kan de arts de gepubliceerde verklaring lezen (dat wordt gelogd) en bevestigen met twee vinkjes. De bevestiging is gebonden aan die versie (inhoudsvingerafdruk); na een wijziging toont de leesweergave dat de nieuwste versie niet meer bevestigd is.
+- Lezers zien arts, praktijk, datum en alleen de laatste 6 tekens van het HIS-ID; ook in de PDF. De patiënt kan de koppeling altijd intrekken op het dashboard.
+- Bestaande databases worden automatisch gemigreerd (schema 2).

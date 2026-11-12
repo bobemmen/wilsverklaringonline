@@ -7,7 +7,7 @@ namespace WV;
 /** Zet een verklaring om in een afdrukbare PDF (zelfde indeling als de online weergave). */
 final class DeclarationPdf
 {
-    public static function build(string $name, ?string $versionDate, array $c, bool $tokenActive, float $scale = 1.0): string
+    public static function build(string $name, ?string $versionDate, array $c, bool $tokenActive, float $scale = 1.0, ?array $verification = null): string
     {
         $pdf = new Pdf('Wilsverklaring ' . $name);
         $pdf->scale = $scale;
@@ -120,6 +120,16 @@ final class DeclarationPdf
         }
 
         $pdf->signature($name, fmt_iso_date((string) $c['datum']));
+
+        if ($verification !== null) {
+            $who = $verification['arts_name'] . (!empty($verification['practice']) ? ', ' . $verification['practice'] : '');
+            $pdf->noteBox(
+                'Bevestigd door huisarts',
+                "Op " . fmt_date($verification['verified_at']) . " heeft $who bevestigd dat deze patiënt in persoon is gezien en dat de identiteit is gecontroleerd. "
+                . ($verification['his_masked'] !== '' ? 'Patiënt-ID in het HIS: ' . $verification['his_masked'] . '. ' : '')
+                . ($verification['current'] ? '' : 'Let op: de verklaring is na die bevestiging gewijzigd.')
+            );
+        }
 
         if ($tokenActive) {
             $pdf->noteBox(

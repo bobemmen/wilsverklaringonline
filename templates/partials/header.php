@@ -10,6 +10,11 @@ $items = [
     ['/naasten', 'Naasten'],
     ['/account', 'Account'],
 ];
+if ($user && ($user['role'] ?? 'patient') === 'arts') {
+    $items = [
+        ['/arts', 'Patiënten'],
+    ];
+}
 ?>
 <header class="site-header">
     <div class="bar">

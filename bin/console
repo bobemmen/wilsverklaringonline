@@ -95,6 +95,28 @@ switch ($cmd) {
         out('Tweestapsverificatie is gereset; de gebruiker moet bij de volgende login opnieuw instellen.');
         break;
 
+    case 'arts:aanmaken':
+        [$name, $email, $practice] = $args + [null, null, null];
+        if (!$name || !$email) {
+            fail('Gebruik: php bin/console arts:aanmaken "<naam>" <e-mailadres> ["<praktijk>"]');
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            fail('Ongeldig e-mailadres.');
+        }
+        $store = store();
+        $password = rtrim(strtr(base64_encode(random_bytes(15)), '+/', '-_'), '=');
+        $user = $store->createUser($name, $email, password_hash($password, PASSWORD_ARGON2ID));
+        if ($user === null) {
+            fail('Dit e-mailadres is al in gebruik.');
+        }
+        $user['role'] = 'arts';
+        $user['practice'] = $practice;
+        $store->saveUser($user);
+        out("Huisartsaccount aangemaakt voor $name <$email>.");
+        out("Tijdelijk wachtwoord (nu doorgeven, daarna wijzigen): $password");
+        out('Bij de eerste login moet tweestapsverificatie worden ingesteld.');
+        break;
+
     case 'backup':
         $target = $args[0] ?? fail('Gebruik: php bin/console backup <doelbestand.sqlite>');
         if (file_exists($target)) {
@@ -123,6 +145,7 @@ switch ($cmd) {
     default:
         out('WilsVerklaring beheer');
         out('  install [url]           maak .env (met nieuwe APP_KEY) en de database aan; url = publiek adres');
+        out('  arts:aanmaken <naam> <email> [praktijk]  maak een huisartsaccount aan');
         out('  migrate                 werk het databaseschema bij');
         out('  key:generate            toon een nieuwe APP_KEY');
         out('  user:reset-2fa <email>  reset tweestapsverificatie van een gebruiker');

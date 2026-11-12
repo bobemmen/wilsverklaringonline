@@ -13,7 +13,7 @@ use PDO;
  */
 final class Db
 {
-    private const SCHEMA_VERSION = 1;
+    private const SCHEMA_VERSION = 2;
 
     public PDO $pdo;
 
@@ -117,6 +117,21 @@ final class Db
                     k TEXT PRIMARY KEY,
                     v TEXT NOT NULL
                 ) WITHOUT ROWID;
+                SQL);
+            }
+            if ($version < 2) {
+                // Verificatie van een patiënt door zijn huisarts (zie Store::addVerification).
+                $this->pdo->exec(<<<'SQL'
+                CREATE TABLE verifications (
+                    seq             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id              TEXT NOT NULL UNIQUE,
+                    arts_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    patient_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+                    token_idx       TEXT NOT NULL UNIQUE,
+                    data            TEXT NOT NULL
+                );
+                CREATE INDEX verifications_arts ON verifications(arts_id);
+                CREATE INDEX verifications_patient ON verifications(patient_user_id);
                 SQL);
             }
             $this->pdo->exec('PRAGMA user_version = ' . self::SCHEMA_VERSION);

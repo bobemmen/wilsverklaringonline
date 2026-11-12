@@ -20,6 +20,11 @@ final class DashboardController extends Controller
             'viewCount' => $store->logCount($declaration['id']),
             'activeShares' => $store->activeShareCount($declaration['id']),
             'versionCount' => $store->versionCount($declaration['id']),
+            'verifications' => array_values(array_filter(
+                $store->verificationsForPatient($this->user()['id']),
+                fn($v) => $v['status'] !== 'ingetrokken'
+            )),
+            'verificationPanel' => $store->verificationPanel($declaration, $store->version($declaration['current_version_id'], $declaration['id'])),
         ]);
     }
 }

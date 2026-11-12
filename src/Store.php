@@ -53,6 +53,11 @@ final class Store
         return $row ? $this->unseal('users', $row) : null;
     }
 
+    public function isArts(?array $user): bool
+    {
+        return $user !== null && ($user['role'] ?? 'patient') === 'arts';
+    }
+
     public function userByEmail(string $email): ?array
     {
         $row = $this->db->one('SELECT id, data FROM users WHERE email_idx = ?', [$this->emailIndex($email)]);
@@ -68,6 +73,8 @@ final class Store
             'email' => mb_strtolower(trim($email)),
             'password' => $passwordHash,
             'created_at' => time(),
+            'role' => 'patient',
+            'practice' => null,
             'two_factor_secret' => null,
             'two_factor_confirmed_at' => null,
             'two_factor_last_step' => 0,
@@ -98,6 +105,8 @@ final class Store
     {
         $this->db->transaction(function () use ($id) {
             $this->db->run('DELETE FROM sessions WHERE user_idx = ?', [$this->crypto->index('session-user', $id)]);
+            // persoonsgegevens in verificaties van een verwijderde patiënt mogen niet achterblijven
+            $this->db->run('DELETE FROM verifications WHERE patient_user_id = ?', [$id]);
             $this->db->run('DELETE FROM users WHERE id = ?', [$id]);
         });
     }
@@ -264,6 +273,116 @@ final class Store
     {
         $row = $this->db->one('SELECT id, user_id, token_idx, data FROM declarations WHERE id = ?', [$id]);
         return $row ? $this->hydrateDeclaration($row) : null;
+    }
+
+    // ----------------------------------------------------------- verificaties
+
+    /** BSN en geboortedatum worden nooit bewaard, alleen als HMAC om later te kunnen vergelijken. */
+    public function bsnProof(string $bsn): string
+    {
+        return $this->crypto->mac('bsn', preg_replace('/\D/', '', $bsn));
+    }
+
+    public function dobProof(string $isoDate): string
+    {
+        return $this->crypto->mac('dob', $isoDate);
+    }
+
+    /** @return array{verification: array, token: string} */
+    public function addVerification(string $artsId, array $fields): array
+    {
+        $id = $this->newId();
+        $token = bin2hex(random_bytes(32));
+        $data = $fields + [
+            'status' => 'uitgenodigd', // uitgenodigd | gekoppeld | geverifieerd | ingetrokken
+            'attempts' => 0,
+            'expires_at' => time() + 14 * 86400,
+            'created_at' => time(),
+            'linked_at' => null,
+            'verified_at' => null,
+            'verified_version_id' => null,
+            'verified_hash' => null,
+            'revoked_at' => null,
+            'revoked_by' => null,
+        ];
+        $this->db->run(
+            'INSERT INTO verifications (id, arts_id, patient_user_id, token_idx, data) VALUES (?, ?, NULL, ?, ?)',
+            [$id, $artsId, $this->tokenIndex($token), $this->seal('verifications', $id, $data)]
+        );
+        return ['verification' => ['id' => $id, 'arts_id' => $artsId, 'patient_user_id' => null] + $data, 'token' => $token];
+    }
+
+    private function hydrateVerification(array $row): array
+    {
+        return $this->unseal('verifications', $row) + ['arts_id' => $row['arts_id'], 'patient_user_id' => $row['patient_user_id']];
+    }
+
+    public function verificationByToken(string $token): ?array
+    {
+        $row = $this->db->one('SELECT id, arts_id, patient_user_id, data FROM verifications WHERE token_idx = ?', [$this->tokenIndex($token)]);
+        return $row ? $this->hydrateVerification($row) : null;
+    }
+
+    public function verificationById(string $id): ?array
+    {
+        $row = $this->db->one('SELECT id, arts_id, patient_user_id, data FROM verifications WHERE id = ?', [$id]);
+        return $row ? $this->hydrateVerification($row) : null;
+    }
+
+    /** Nieuwste eerst. @return list<array> */
+    public function verificationsForArts(string $artsId): array
+    {
+        $rows = $this->db->all('SELECT id, arts_id, patient_user_id, data FROM verifications WHERE arts_id = ? ORDER BY seq DESC', [$artsId]);
+        return array_map(fn($r) => $this->hydrateVerification($r), $rows);
+    }
+
+    /** Nieuwste eerst. @return list<array> */
+    public function verificationsForPatient(string $patientId): array
+    {
+        $rows = $this->db->all('SELECT id, arts_id, patient_user_id, data FROM verifications WHERE patient_user_id = ? ORDER BY seq DESC', [$patientId]);
+        return array_map(fn($r) => $this->hydrateVerification($r), $rows);
+    }
+
+    public function saveVerification(array $v): void
+    {
+        $id = $v['id'];
+        $patient = $v['patient_user_id'] ?? null;
+        unset($v['id'], $v['arts_id'], $v['patient_user_id']);
+        $this->db->run(
+            'UPDATE verifications SET patient_user_id = ?, data = ? WHERE id = ?',
+            [$patient, $this->seal('verifications', $id, $v), $id]
+        );
+    }
+
+    /**
+     * De meest recente geldige verificatie van deze verklaring, voor weergave aan lezers.
+     * Geeft het volledige patiënt-ID niet terug, alleen een afgeschermde variant.
+     */
+    public function verificationPanel(array $declaration, ?array $version): ?array
+    {
+        foreach ($this->verificationsForPatient($declaration['user_id']) as $v) {
+            if ($v['status'] !== 'geverifieerd') {
+                continue;
+            }
+            $current = $version !== null
+                && $v['verified_version_id'] === $version['id']
+                && hash_equals((string) $v['verified_hash'], $this->contentHash($version['content']));
+            $id = (string) ($v['his_id'] ?? '');
+            return [
+                'arts_name' => $v['arts_name'] ?? '',
+                'practice' => $v['practice'] ?? null,
+                'verified_at' => $v['verified_at'],
+                'his_masked' => $id === '' ? '' : '…' . substr($id, -6),
+                'current' => $current,
+            ];
+        }
+        return null;
+    }
+
+    /** Inhoud-vingerafdruk: laat zien of een versie na de verificatie nog gelijk is. */
+    public function contentHash(array $content): string
+    {
+        return $this->crypto->mac('version-content', json_encode($content, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     }
 
     // ------------------------------------------------------------ access logs

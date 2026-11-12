@@ -21,7 +21,8 @@ final class PdfController extends Controller
             $version ? fmt_date($version['created_at']) : null,
             $content,
             $this->app->store->tokenIsActive($declaration),
-            $this->input('groot') === '1' ? 1.35 : 1.0
+            $this->input('groot') === '1' ? 1.35 : 1.0,
+            $this->app->store->verificationPanel($declaration, $version)
         );
         return Response::download($pdf, 'wilsverklaring-' . date('Y-m-d') . '.pdf', 'application/pdf');
     }

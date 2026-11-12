@@ -43,6 +43,7 @@ final class SharedController extends Controller
             'share' => $share,
             'version' => $version,
             'doc' => Content::normalize($version['content']),
+            'verification' => $store->verificationPanel($declaration, $version),
         ]);
     }
 }

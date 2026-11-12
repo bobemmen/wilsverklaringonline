@@ -55,6 +55,7 @@ final class PublicController extends Controller
             'version' => $version,
             'doc' => \WV\Content::normalize($version['content']),
             'versionNumber' => $number,
+            'verification' => $store->verificationPanel($declaration, $version),
         ]);
     }
 

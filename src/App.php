@@ -71,6 +71,8 @@ final class App
     {
         $r = $this->router;
         $auth = ['auth', 'twofa'];
+        $patient = ['auth', 'twofa', 'role:patient'];
+        $arts = ['auth', 'twofa', 'role:arts'];
 
         $r->get('/', [C\HomeController::class, 'index']);
         $r->get('/weergave', [C\PreferencesController::class, 'show']);
@@ -87,25 +89,35 @@ final class App
         $r->get('/2fa/controle', [C\TwoFactorController::class, 'challenge'], ['auth']);
         $r->post('/2fa/controle', [C\TwoFactorController::class, 'verify'], ['auth']);
 
-        $r->get('/dashboard', [C\DashboardController::class, 'index'], $auth);
+        $r->get('/dashboard', [C\DashboardController::class, 'index'], $patient);
 
-        $r->get('/verklaring/wizard', [C\WizardController::class, 'show'], $auth);
-        $r->post('/verklaring/wizard', [C\WizardController::class, 'save'], $auth);
-        $r->get('/verklaring/versies', [C\WizardController::class, 'versions'], $auth);
-        $r->get('/verklaring/pdf', [C\PdfController::class, 'export'], $auth);
+        $r->get('/verklaring/wizard', [C\WizardController::class, 'show'], $patient);
+        $r->post('/verklaring/wizard', [C\WizardController::class, 'save'], $patient);
+        $r->get('/verklaring/versies', [C\WizardController::class, 'versions'], $patient);
+        $r->get('/verklaring/pdf', [C\PdfController::class, 'export'], $patient);
 
-        $r->get('/token', [C\TokenController::class, 'index'], $auth);
-        $r->post('/token/genereer', [C\TokenController::class, 'regenerate'], $auth);
-        $r->post('/token/intrekken', [C\TokenController::class, 'revoke'], $auth);
-        $r->post('/token/instellingen', [C\TokenController::class, 'settings'], $auth);
+        $r->get('/token', [C\TokenController::class, 'index'], $patient);
+        $r->post('/token/genereer', [C\TokenController::class, 'regenerate'], $patient);
+        $r->post('/token/intrekken', [C\TokenController::class, 'revoke'], $patient);
+        $r->post('/token/instellingen', [C\TokenController::class, 'settings'], $patient);
 
-        $r->get('/naasten', [C\ShareController::class, 'index'], $auth);
-        $r->post('/naasten', [C\ShareController::class, 'invite'], $auth);
-        $r->post('/naasten/{id}/intrekken', [C\ShareController::class, 'revoke'], $auth);
+        $r->get('/naasten', [C\ShareController::class, 'index'], $patient);
+        $r->post('/naasten', [C\ShareController::class, 'invite'], $patient);
+        $r->post('/naasten/{id}/intrekken', [C\ShareController::class, 'revoke'], $patient);
 
-        $r->get('/account', [C\AccountController::class, 'index'], $auth);
-        $r->get('/account/export', [C\AccountController::class, 'export'], $auth);
-        $r->post('/account/verwijderen', [C\AccountController::class, 'destroy'], $auth);
+        $r->get('/account', [C\AccountController::class, 'index'], $patient);
+        $r->get('/account/export', [C\AccountController::class, 'export'], $patient);
+        $r->post('/account/verwijderen', [C\AccountController::class, 'destroy'], $patient);
+
+        $r->post('/verificatie/{id}/intrekken', [C\VerificationController::class, 'patientRevoke'], $patient);
+        $r->get('/uitnodiging/{token}', [C\VerificationController::class, 'show'], ['throttle:invite,20,60']);
+        $r->post('/uitnodiging/{token}', [C\VerificationController::class, 'link'], array_merge($patient, ['throttle:invite,20,60']));
+
+        $r->get('/arts', [C\ArtsController::class, 'index'], $arts);
+        $r->post('/arts/uitnodigen', [C\ArtsController::class, 'invite'], $arts);
+        $r->get('/arts/patienten/{id}', [C\ArtsController::class, 'patient'], $arts);
+        $r->post('/arts/patienten/{id}/bevestigen', [C\ArtsController::class, 'confirm'], $arts);
+        $r->post('/arts/patienten/{id}/intrekken', [C\ArtsController::class, 'revoke'], $arts);
 
         $r->get('/v/{token}', [C\PublicController::class, 'show'], ['throttle:public,10,60']);
         $r->get('/v/{token}/bevestig/{proof}', [C\PublicController::class, 'confirm'], ['throttle:public,10,60']);
@@ -187,6 +199,14 @@ final class App
                     return Response::redirect('/2fa/instellen');
                 }
                 return $this->auth->twoFactorVerified() ? null : Response::redirect('/2fa/controle');
+
+            case 'role':
+                // 'role:arts' alleen huisartsen; 'role:patient' alleen patiënten (huisartsen gaan naar hun eigen omgeving)
+                $isArts = $this->store->isArts($this->auth->user());
+                if ($arg === 'arts') {
+                    return $isArts ? null : throw new HttpException(403);
+                }
+                return $isArts ? Response::redirect('/arts') : null;
 
             case 'throttle':
                 [$bucket, $max, $seconds] = explode(',', $arg) + [2 => '60'];
