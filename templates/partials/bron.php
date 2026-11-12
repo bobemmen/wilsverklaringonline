@@ -1,0 +1,1 @@
+<p class="small muted bron">Toelichting in deze vragenlijst is in eigen woorden samengevat uit de NVVE-brochure <em>Keuzes rond het einde van uw leven</em> (14e druk, januari 2025), met bronvermelding. Meer informatie: <strong>nvve.nl</strong>. Dit is algemene informatie en geen medisch of juridisch advies; bespreek uw keuzes met uw arts.</p>

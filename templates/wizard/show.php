@@ -45,3 +45,9 @@ $chapterNames = [1 => 'Introductie', 2 => 'Behandelverbod', 3 => 'Palliatieve se
         </div>
     </form>
 </div>
+
+<?php if ($step === $total): ?>
+    <div class="callout"><p><strong>Na het publiceren:</strong> download de PDF, print hem en onderteken met datum en handtekening. Geef een kopie aan uw arts, uw naasten en uw gevolmachtigde en laat hem opnemen in uw medisch dossier. Controleer uw verklaring af en toe: bent u het nog eens, zet er dan een nieuwe datum en handtekening onder.</p></div>
+    <?php $this->include('partials/hulp') ?>
+<?php endif ?>
+<?php $this->include('partials/bron') ?>

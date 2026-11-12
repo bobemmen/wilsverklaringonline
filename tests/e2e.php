@@ -185,7 +185,7 @@ $r = $c->submit('/verklaring/wizard?stap=8', '/verklaring/wizard', ['stap' => '8
 T::eq($r['location'], '/verklaring/wizard?stap=12', 'euthanasiehoofdstuk overslaan → stap 12');
 $r = $c->submit('/verklaring/wizard?stap=12', '/verklaring/wizard', ['stap' => '12', 'actie' => 'terug']);
 T::eq($r['location'], '/verklaring/wizard?stap=8', 'terug vanaf 12 → 8');
-$c->submit('/verklaring/wizard?stap=13', '/verklaring/wizard', ['stap' => '13', 'actie' => 'volgende', 'data' => ['arts' => 'Dr. Jansen', 'besproken' => 'ja', 'datum' => '2026-11-01']]);
+$c->submit('/verklaring/wizard?stap=13', '/verklaring/wizard', ['stap' => '13', 'actie' => 'volgende', 'data' => ['volmacht' => 'Piet de Vries, zoon', 'volmacht_contact' => '06 12345678', 'arts' => 'Dr. Jansen', 'besproken' => 'ja', 'datum' => '2026-11-01']]);
 $r = $c->get('/verklaring/wizard?stap=14');
 T::ok(str_contains($r['body'], 'Overzicht en publicatie') && str_contains($r['body'], 'Dr. Jansen') && str_contains($r['body'], "regel 1<br>\nregel 2"), 'overzicht toont alle antwoorden');
 $r = $c->submit('/verklaring/wizard?stap=14', '/verklaring/wizard', ['stap' => '14', 'actie' => 'publiceer']);
@@ -229,7 +229,7 @@ $log = @file_get_contents($root . '/storage/logs/mail.log') ?: '';
 preg_match('#' . preg_quote($base, '#') . '/v/' . $token . '/bevestig/(\d{10}-[a-f0-9]{64})#', $log, $m);
 T::ok(isset($m[1]), 'bevestigingsmail verstuurd (log-driver)');
 $proof = $m[1] ?? 'x';
-T::eq($doc2->get('/v/' . $token . '/bevestig/' . substr($proof, 0, -1) . '0')['status'], 403, 'gemanipuleerde bevestigingslink → 403');
+T::eq($doc2->get('/v/' . $token . '/bevestig/' . substr($proof, 0, -1) . (substr($proof, -1) === '0' ? '1' : '0'))['status'], 403, 'gemanipuleerde bevestigingslink → 403');
 $exp = (int) explode('-', $proof)[0];
 T::eq($doc2->get('/v/' . $token . '/bevestig/' . ($exp + 100) . '-' . explode('-', $proof)[1])['status'], 403, 'verlengde vervaltijd → 403');
 $r = $doc2->get('/v/' . $token . '/bevestig/' . $proof);
@@ -313,6 +313,13 @@ $r = $c->get('/verklaring/pdf?groot=1');
 T::ok($r['status'] === 200 && str_starts_with($r['body'], '%PDF'), 'PDF met grote letters');
 $r2 = $c->get('/verklaring/pdf');
 T::ok(strlen($r['body']) !== strlen($r2['body']), 'grote letters geven een ander document');
+foreach ([1, 2, 3, 4, 5, 6, 8, 9, 10, 13] as $n) {
+    $pg = $c->get('/verklaring/wizard?stap=' . $n)['body'];
+    T::ok(str_contains($pg, '<details class="more">') && str_contains($pg, 'NVVE-brochure'), "stap $n: uitleg en bronvermelding aanwezig");
+}
+$pg = $c->get('/verklaring/wizard?stap=14')['body'];
+T::ok(str_contains($pg, 'Hulp en advies') && str_contains($pg, '0800-0113') && str_contains($pg, 'Piet de Vries, zoon'), 'overzicht: hulpblok en gevolmachtigde');
+
 
 T::section('Export en account verwijderen');
 $r = $c->get('/account/export');
@@ -326,7 +333,7 @@ T::section('Versleuteling in het databasebestand');
 $pdo = new PDO('sqlite:' . $dbfile);
 $pdo->exec('PRAGMA wal_checkpoint(TRUNCATE)');
 $raw = file_get_contents($dbfile) . (is_file("$dbfile-wal") ? file_get_contents("$dbfile-wal") : '');
-foreach (['Anna', 'anna@voorbeeld', 'Vries', 'Ik houd van mijn tuin', 'Bram', 'Dr. Jansen', 'praktijk@huisarts', 'piet@voorbeeld', 'regel 1', 'Gewijzigd concept', '127.0.0.1', 'curl/', $token, $shareToken, $c->secret] as $needle) {
+foreach (['Anna', 'anna@voorbeeld', 'Vries', 'Ik houd van mijn tuin', 'Bram', 'Dr. Jansen', 'praktijk@huisarts', 'piet@voorbeeld', 'Piet de Vries, zoon', '06 12345678', 'regel 1', 'Gewijzigd concept', '127.0.0.1', 'curl/', $token, $shareToken, $c->secret] as $needle) {
     T::ok(!str_contains($raw, $needle), "'" . substr($needle, 0, 18) . "' niet leesbaar in database");
 }
 $cols = [];

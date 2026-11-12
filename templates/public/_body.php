@@ -53,6 +53,13 @@ $sec = fn(string $t) => '<h2>' . e($t) . '</h2>';
     </section>
 <?php endif ?>
 
+<?php if ($has('volmacht')): ?>
+    <section class="doc-section"><?= $sec('Medische volmacht') ?>
+        <p class="doc-text">Namens mij mag beslissen over mijn medische behandeling, als ik dat zelf niet meer kan:</p>
+        <p class="doc-text"><strong><?= e($doc['volmacht']) ?></strong><?php if ($has('volmacht_contact')): ?><br><?= e($doc['volmacht_contact']) ?><?php endif ?></p>
+    </section>
+<?php endif ?>
+
 <?php if ($has('orgaandonatie') || $has('uitvaart') || $has('overig')): ?>
     <section class="doc-section"><?= $sec('Na het overlijden') ?>
         <?php if ($has('orgaandonatie')) echo $row('Orgaandonatie', $doc['orgaandonatie']) ?>

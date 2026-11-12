@@ -1,5 +1,19 @@
 <div class="callout"><p>Bij ernstig ademhalingsfalen kan kunstmatige beademing uw ademhaling overnemen. Soms gebeurt dat op de intensive care, soms tijdelijk met een kapje. Denk na over wat u wel en niet wilt.</p></div>
 
+<details class="more">
+    <summary>Mag ik een behandeling weigeren of stoppen?</summary>
+    <div class="more-body">
+<p>Ja. Artsen hebben uw toestemming nodig voor een behandeling. U mag nee zeggen en een arts moet naar uw wens handelen. Vraag wel naar de mogelijke gevolgen: het kan zijn dat u aan uw ziekte overlijdt.</p>
+<ul>
+    <li><strong>Geen enkele behandeling meer:</strong> bijvoorbeeld omdat u in uw laatste levensfase niet meer naar een arts of ziekenhuis wilt. Uw kwaliteit van leven kan dan achteruitgaan.</li>
+    <li><strong>Bepaalde behandelingen niet meer:</strong> als een behandeling voor u meer nadelen dan voordelen heeft. Geef dat aan vóór de behandeling start.</li>
+    <li>U kunt een behandeling die al is begonnen altijd stoppen.</li>
+</ul>
+<p>Ook als u geen levensverlengende behandelingen meer wilt, blijft u <strong>palliatieve zorg</strong> krijgen: behandelingen die pijn en andere klachten verminderen, zodat u niet onnodig lijdt.</p>
+    </div>
+</details>
+
+
 <fieldset class="field">
     <legend>Kunstmatige beademing</legend>
     <?= $this->radio('beademing', 'ja', 'Ja, ik wil beademd worden', null, $data['beademing']) ?>

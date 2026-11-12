@@ -59,7 +59,7 @@ final class Content
         10 => ['euthanasie_wilsonbekwaam', 'euthanasie_wilsonbekwaam_toelichting'],
         11 => ['euthanasie_brief'],
         12 => ['orgaandonatie', 'uitvaart', 'overig'],
-        13 => ['arts', 'besproken', 'datum'],
+        13 => ['volmacht', 'volmacht_contact', 'arts', 'besproken', 'datum'],
         14 => [],
     ];
 
@@ -125,6 +125,8 @@ final class Content
             'orgaandonatie' => '',
             'uitvaart' => '',
             'overig' => '',
+            'volmacht' => '',
+            'volmacht_contact' => '',
             'arts' => '',
             'besproken' => '',
             'datum' => '',

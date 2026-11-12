@@ -423,3 +423,22 @@ h1, h2, h3, .btn, .tool, .choice-label, .choice-help, td, th, .token-box, .brand
     .card { padding: 1.1rem; }
     .chapters li { flex-basis: 100%; }
 }
+
+/* ------------------------------------------------------- uitklapbare uitleg */
+details.more { border: var(--card-border) solid var(--border-strong); border-radius: var(--radius); margin: 0 0 1.75rem; background: var(--surface); }
+details.more > summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 0.75rem;
+    min-height: 3.25rem; padding: 0.6rem 1.1rem; font-weight: 700; color: var(--brand-strong);
+    border-radius: var(--radius);
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "+"; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 1.7rem; height: 1.7rem; border: 2px solid currentColor; border-radius: 50%; font-size: 1.1rem; line-height: 1; }
+details.more[open] > summary::before { content: "−"; }
+details.more > summary:hover { background: var(--tint); }
+.more-body { padding: 0.25rem 1.25rem 1.25rem; border-top: 1px solid var(--border); }
+.more-body h2 { font-size: 1.15rem; margin: 1.4rem 0 0.5rem; }
+.more-body li { margin-bottom: 0.45rem; }
+ol.fasen { padding-left: 1.4rem; }
+ol.fasen li { margin-bottom: 0.9rem; }
+.bron { margin-top: 1.5rem; }
+p, li, dd, summary, .alert { overflow-wrap: anywhere; }

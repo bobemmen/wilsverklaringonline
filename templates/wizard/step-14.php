@@ -42,6 +42,7 @@ $blocks['Na het overlijden'] = [
     'Overig' => $d['overig'],
 ];
 $blocks['Afsluiting'] = [
+    'Gevolmachtigde' => trim($d['volmacht'] . ($d['volmacht_contact'] !== '' ? ' — ' . $d['volmacht_contact'] : '')),
     'Arts' => $d['arts'],
     'Besproken met arts' => $c('besproken'),
     'Datum' => fmt_iso_date($d['datum']),

@@ -55,6 +55,8 @@
     </section>
 </div>
 
+<?php $this->include('partials/hulp') ?>
+
 <section class="card" aria-labelledby="d-pdf">
     <h2 class="card-title" id="d-pdf">Op papier bewaren</h2>
     <p>Print uw verklaring en onderteken hem om op papier te bewaren. De online versie blijft altijd de leidende.</p>

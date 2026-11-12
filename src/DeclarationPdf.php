@@ -85,6 +85,11 @@ final class DeclarationPdf
             }
         }
 
+        if ($filled('volmacht')) {
+            $pdf->heading('Medische volmacht');
+            $pdf->field('Mag namens mij medische beslissingen nemen', trim($c['volmacht'] . ($filled('volmacht_contact') ? ' — ' . $c['volmacht_contact'] : '')));
+        }
+
         if ($filled('orgaandonatie', 'uitvaart', 'overig')) {
             $pdf->heading('Na het overlijden');
             if ($filled('orgaandonatie')) {
