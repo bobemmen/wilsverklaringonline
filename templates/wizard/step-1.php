@@ -22,6 +22,30 @@
 </details>
 
 
+<h2 class="sub">Uw gegevens</h2>
+<p class="muted">Met deze gegevens is uw verklaring eenduidig van u. Voor een euthanasieverzoek zijn ze verplicht.</p>
+<div class="field">
+    <label for="voornamen">Voornamen (voluit)</label>
+    <?= $this->textInput('voornamen', $data['voornamen'], 'Anna Maria') ?>
+</div>
+<div class="field">
+    <label for="achternaam">Achternaam</label>
+    <?= $this->textInput('achternaam', $data['achternaam'], 'de Vries') ?>
+</div>
+<div class="field">
+    <label for="geboortenaam">Geboortenaam (als die anders is dan uw achternaam)</label>
+    <?= $this->textInput('geboortenaam', $data['geboortenaam'], 'Jansen') ?>
+</div>
+<div class="field">
+    <label for="geboortedatum">Geboortedatum</label>
+    <?= $this->textInput('geboortedatum', $data['geboortedatum'], '', 'date') ?>
+</div>
+<div class="field">
+    <label for="geboorteplaats">Geboorteplaats</label>
+    <?= $this->textInput('geboorteplaats', $data['geboorteplaats'], 'Utrecht') ?>
+</div>
+
+<h2 class="sub">Over u</h2>
 <div class="field">
     <label for="intro">Korte introductie</label>
     <?= $this->textarea('intro', $data['intro'], 'Ik ben … Ik woon in … Wat voor mij belangrijk is …') ?>

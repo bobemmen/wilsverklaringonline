@@ -53,6 +53,16 @@ final class WizardController extends Controller
         }
 
         if ($action === 'publiceer' && $step === Content::TOTAL_STEPS) {
+            $missing = Content::missingForPublish(Content::normalize($data));
+            if ($missing) {
+                $declaration['draft'] = $data;
+                $this->app->store->saveDeclaration($declaration);
+                $errors = [];
+                foreach ($missing as $i => $text) {
+                    $errors['ontbreekt-' . $i] = $text;
+                }
+                return $this->fail('/verklaring/wizard?stap=17', $errors);
+            }
             $this->app->db->transaction(function () use (&$declaration, $data) {
                 $version = $this->app->store->addVersion($declaration['id'], Content::normalize($data));
                 $declaration['current_version_id'] = $version['id'];

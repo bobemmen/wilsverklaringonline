@@ -430,9 +430,25 @@ $pub = (new Client($base))->get('/v/' . $token);
 T::ok(str_contains($pub['body'], 'Identiteit bevestigd door de huisarts') && str_contains($pub['body'], 'Dr. Jansen') && str_contains($pub['body'], 'Huisartsenpraktijk Wanroij'), 'leesweergave toont bevestiging door huisarts');
 T::ok(str_contains($pub['body'], '…1C1E2C') && !str_contains($pub['body'], $his), 'leesweergave toont alleen afgeschermd patiënt-ID');
 T::ok(str_starts_with($c->get('/verklaring/pdf')['body'], '%PDF'), 'PDF met bevestiging wordt gegenereerd');
-// wijziging: bevestiging blijft gelden
+// wijziging: bevestiging blijft gelden; een verklaring met euthanasiehoofdstuk vraagt om volledige gegevens
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Nieuwe tekst na de bevestiging.']]);
-$c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+$c->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'concept', 'data' => ['datum' => '', 'plaats' => '']]);
+$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+$page = $c->follow($r)['body'];
+T::ok(str_contains($page, 'Vul uw voornamen') && str_contains($page, 'Vul uw geboorteplaats') && str_contains($page, 'Vul de plaats van ondertekening'), 'publiceren met euthanasiehoofdstuk vereist naam, geboortegegevens, datum en plaats');
+T::ok(str_contains($c->get('/verklaring/wizard?stap=17')['body'], 'Overzicht en publicatie'), 'bij ontbrekende gegevens blijft de verklaring een concept');
+$c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['voornamen' => 'Anna Maria', 'achternaam' => 'de Vries', 'geboortenaam' => 'Jansen', 'geboortedatum' => '1950-03-07', 'geboorteplaats' => 'Utrecht']]);
+$c->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'concept', 'data' => ['datum' => '2026-11-12', 'plaats' => 'Wanroij']]);
+$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+T::eq($r['location'], '/dashboard', 'met alle gegevens kan wel worden gepubliceerd');
+$pubNew = (new Client($base))->get('/v/' . $token);
+T::ok(str_contains($pubNew['body'], 'Anna Maria de Vries') && str_contains($pubNew['body'], 'Geboren op 07-03-1950 te Utrecht') && str_contains($pubNew['body'], 'geboortenaam: Jansen') && str_contains($pubNew['body'], 'uit vrije wil'), 'leesweergave toont naam, geboortegegevens, geboortenaam en vrije-wil-verklaring');
+if (trim((string) shell_exec('command -v pdftotext'))) {
+    file_put_contents("$tmp/out2.pdf", $c->get('/verklaring/pdf')['body']);
+    exec('pdftotext -layout ' . escapeshellarg("$tmp/out2.pdf") . ' - 2>&1', $txt2);
+    $text2 = implode("\n", $txt2);
+    T::ok(str_contains($text2, 'Anna Maria de Vries') && str_contains($text2, 'Geboren op 07-03-1950 te Utrecht') && str_contains($text2, 'uit vrije wil') && str_contains($text2, 'Wanroij'), 'PDF bevat naam, geboortegegevens, vrije-wil-verklaring en plaats');
+}
 $pub = (new Client($base))->get('/v/' . $token);
 T::ok(str_contains($pub['body'], 'Identiteit bevestigd door de huisarts') && str_contains($pub['body'], 'Nieuwe tekst na de bevestiging'), 'na wijziging blijft de identiteitsbevestiging gelden');
 T::ok(str_contains($arts->get("/arts/patienten/$vid")['body'], 'Nieuwe tekst na de bevestiging'), 'arts ziet de nieuwe tekst zonder opnieuw te bevestigen');

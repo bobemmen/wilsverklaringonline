@@ -35,7 +35,14 @@
     <?= $this->radio('besproken', 'nee', 'Nee', null, $data['besproken']) ?>
 </fieldset>
 
+<div class="callout"><p><strong>Ondertekenen.</strong> Print uw verklaring, zet er <strong>datum, plaats en uw handtekening</strong> onder en geef een kopie aan uw huisarts en naasten. Bevestig uw verklaring af en toe: bent u het nog eens, zet er dan een nieuwe datum en handtekening onder. In de verklaring staat dat u deze zelf en uit vrije wil heeft opgesteld.</p></div>
+
 <div class="field">
     <label for="datum">Datum van ondertekening</label>
     <?= $this->textInput('datum', $data['datum'], '', 'date') ?>
+</div>
+
+<div class="field">
+    <label for="plaats">Plaats van ondertekening</label>
+    <?= $this->textInput('plaats', $data['plaats'], 'Utrecht') ?>
 </div>

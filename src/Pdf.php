@@ -302,7 +302,7 @@ final class Pdf
     }
 
     /** Handtekeningblok: naam/datum, daaronder lijnen voor handtekening en plaats. */
-    public function signature(string $name, string $date): void
+    public function signature(string $name, string $date, string $place = ''): void
     {
         $this->ensure(110);
         $this->space(34);
@@ -317,6 +317,9 @@ final class Pdf
         $this->y -= 58;
         $this->hr([211, 209, 199], self::MARGIN, self::MARGIN + 290);
         $this->hr([211, 209, 199], $right - 190, $right);
+        if ($place !== '') {
+            $this->textAt($right - 190, $this->y + 5, $place, 'H', 10, [44, 44, 42]);
+        }
         $this->textAt(self::MARGIN, $this->y - 12, 'Handtekening', 'H', 8.5, [136, 135, 128]);
         $this->textAt($right - 190, $this->y - 12, 'Plaats', 'H', 8.5, [136, 135, 128]);
         $this->y -= 22;

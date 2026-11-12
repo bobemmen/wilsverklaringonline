@@ -58,7 +58,7 @@ final class Content
 
     /** Welke velden op welke stap worden ingevuld. */
     public const STEP_FIELDS = [
-        1 => ['intro', 'waarde'],
+        1 => ['voornamen', 'achternaam', 'geboortenaam', 'geboortedatum', 'geboorteplaats', 'intro', 'waarde'],
         2 => ['grens', 'ervaring'],
         3 => ['reanimatie', 'reanimatie_toelichting'],
         4 => ['beademing', 'ic', 'beademing_toelichting'],
@@ -73,7 +73,7 @@ final class Content
         13 => ['dementie_lijden', 'dementie_moment'],
         14 => ['dementie_naasten', 'dementie_huisarts'],
         15 => ['orgaandonatie', 'uitvaart', 'overig'],
-        16 => ['volmacht', 'volmacht_contact', 'arts', 'besproken', 'datum'],
+        16 => ['volmacht', 'volmacht_contact', 'arts', 'besproken', 'datum', 'plaats'],
         17 => [],
     ];
 
@@ -122,6 +122,11 @@ final class Content
     public static function defaults(): array
     {
         return [
+            'voornamen' => '',
+            'achternaam' => '',
+            'geboortenaam' => '',
+            'geboortedatum' => '',
+            'geboorteplaats' => '',
             'intro' => '',
             'waarde' => '',
             'grens' => '',
@@ -157,6 +162,7 @@ final class Content
             'arts' => '',
             'besproken' => '',
             'datum' => '',
+            'plaats' => '',
         ];
     }
 
@@ -165,6 +171,58 @@ final class Content
     {
         $defaults = self::defaults();
         return array_replace($defaults, array_intersect_key($content, $defaults));
+    }
+
+    /** Volledige naam uit de verklaring, met de accountnaam als terugval. */
+    public static function fullName(array $doc, string $fallback = ''): string
+    {
+        $name = trim(trim((string) ($doc['voornamen'] ?? '')) . ' ' . trim((string) ($doc['achternaam'] ?? '')));
+        return $name !== '' ? $name : $fallback;
+    }
+
+    /** "Geboren op 07-03-1950 te Utrecht (geboortenaam: Jansen)" of een lege tekst. */
+    public static function birthLine(array $doc): string
+    {
+        $parts = [];
+        $date = trim((string) ($doc['geboortedatum'] ?? ''));
+        $place = trim((string) ($doc['geboorteplaats'] ?? ''));
+        if ($date !== '') {
+            $parts[] = 'Geboren op ' . fmt_iso_date($date) . ($place !== '' ? ' te ' . $place : '');
+        } elseif ($place !== '') {
+            $parts[] = 'Geboren te ' . $place;
+        }
+        $birthName = trim((string) ($doc['geboortenaam'] ?? ''));
+        if ($birthName !== '') {
+            $parts[] = 'geboortenaam: ' . $birthName;
+        }
+        return implode(' · ', $parts);
+    }
+
+    /**
+     * Wat er nog ontbreekt om te mogen publiceren. Bevat de verklaring een euthanasiehoofdstuk, dan zijn
+     * naam, geboortedatum, geboorteplaats, datum en plaats van ondertekening verplicht (identificatie en dagtekening).
+     * @return list<string>
+     */
+    public static function missingForPublish(array $doc): array
+    {
+        if (!self::euthanasieIncluded($doc) && !self::dementieIncluded($doc)) {
+            return [];
+        }
+        $need = [
+            'voornamen' => 'uw voornamen (stap 1)',
+            'achternaam' => 'uw achternaam (stap 1)',
+            'geboortedatum' => 'uw geboortedatum (stap 1)',
+            'geboorteplaats' => 'uw geboorteplaats (stap 1)',
+            'datum' => 'de datum van ondertekening (stap 16)',
+            'plaats' => 'de plaats van ondertekening (stap 16)',
+        ];
+        $missing = [];
+        foreach ($need as $key => $label) {
+            if (trim((string) ($doc[$key] ?? '')) === '') {
+                $missing[] = 'Vul ' . $label . ' in. Dat is nodig voor een euthanasieverzoek.';
+            }
+        }
+        return $missing;
     }
 
     public static function euthanasieIncluded(array $data): bool
@@ -225,7 +283,7 @@ final class Content
                 if (!in_array($value, self::CHOICES[$field], true)) {
                     continue;
                 }
-            } elseif ($field === 'datum') {
+            } elseif ($field === 'datum' || $field === 'geboortedatum') {
                 $value = trim($value);
                 if ($value !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
                     continue;

@@ -477,3 +477,6 @@ figure.schema figcaption { font-size: 0.95rem; color: var(--muted); max-width: 4
 .h1like { font-size: 2rem; margin: 0 0 0.25rem; }
 
 .paper-code { font-family: ui-monospace, Consolas, monospace; font-size: 2.6rem; font-weight: 700; letter-spacing: 0.18em; margin: 0.5rem 0 0; color: var(--brand-dark, var(--brand)); }
+
+h2.sub { font-size: 1.25rem; margin: 1.5rem 0 0.5rem; }
+h2.sub:first-child { margin-top: 0; }

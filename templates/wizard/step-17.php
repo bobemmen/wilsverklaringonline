@@ -4,6 +4,12 @@
 $d = \WV\Content::normalize($data);
 $c = fn(string $k): string => $d[$k] === '' ? '' : \WV\Content::choiceLabel((string) $d[$k]);
 $blocks = [
+    'Uw gegevens' => [
+        'Naam' => \WV\Content::fullName($d),
+        'Geboortenaam' => $d['geboortenaam'],
+        'Geboortedatum' => fmt_iso_date($d['geboortedatum']),
+        'Geboorteplaats' => $d['geboorteplaats'],
+    ],
     'Introductie' => [
         'Wie ik ben' => $d['intro'],
         'Wat mijn leven waarde geeft' => $d['waarde'],
@@ -54,6 +60,7 @@ $blocks['Afsluiting'] = [
     'Arts' => $d['arts'],
     'Besproken met arts' => $c('besproken'),
     'Datum' => fmt_iso_date($d['datum']),
+    'Plaats' => $d['plaats'],
 ];
 ?>
 <?php foreach ($blocks as $title => $items): ?>

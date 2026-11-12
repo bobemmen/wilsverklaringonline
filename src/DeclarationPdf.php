@@ -13,8 +13,12 @@ final class DeclarationPdf
         $pdf->scale = $scale;
         $filled = fn(string ...$keys) => array_filter($keys, fn($k) => trim((string) ($c[$k] ?? '')) !== '');
 
+        $name = Content::fullName($c, $name);
         $pdf->title('Wilsverklaring');
         $pdf->subtitle($name);
+        if (($birth = Content::birthLine($c)) !== '') {
+            $pdf->subtitle($birth);
+        }
         $pdf->subtitle($versionDate ? 'Versie van ' . $versionDate : 'Concept');
         $pdf->space(6);
         $pdf->hr();
@@ -119,7 +123,11 @@ final class DeclarationPdf
             }
         }
 
-        $pdf->signature($name, fmt_iso_date((string) $c['datum']));
+        $pdf->noteBox(
+            'Verklaring van de ondertekenaar',
+            'Ik heb deze verklaring zelf en uit vrije wil opgesteld. Ik bevestig haar regelmatig met een nieuwe datum en handtekening.'
+        );
+        $pdf->signature($name, fmt_iso_date((string) $c['datum']), (string) ($c['plaats'] ?? ''));
 
         if ($verification !== null) {
             $who = $verification['arts_name'] . (!empty($verification['practice']) ? ', ' . $verification['practice'] : '');

@@ -138,3 +138,9 @@ Een patiënt kan zich **alleen** registreren nadat zijn huisarts hem heeft uitge
 - De patiënt registreert zich op `/registreren` met naam, BSN, hetzelfde e-mailadres, wachtwoord en de code. E-mailadres, BSN en code moeten bij dezelfde uitnodiging horen (14 dagen geldig); een ander e-mailadres werkt niet. Na 5 foute codes vervalt de uitnodiging. Het BSN wordt nooit leesbaar opgeslagen.
 - Met de registratie is de identiteit bevestigd. Lezers zien arts, praktijk, datum en de laatste 6 tekens van het HIS-ID (ook in de PDF). De bevestiging geldt voor het account en hoeft niet te worden herhaald na wijzigingen. De arts kan een nieuwe code maken of de uitnodiging intrekken; de patiënt kan de koppeling met de huisarts intrekken.
 - De arts kan de gepubliceerde verklaring van zijn geregistreerde patiënten lezen (dat wordt gelogd).
+
+## Identificatie en ondertekening
+
+- Stap 1 vraagt voornamen, achternaam, geboortenaam (optioneel), geboortedatum en geboorteplaats; stap 16 datum en plaats van ondertekening.
+- Bevat de verklaring een euthanasiehoofdstuk (algemeen of dementie), dan zijn al deze gegevens verplicht om te publiceren (de wet stelt minimaal naam, handtekening en dagtekening; de rest dient identificatie).
+- PDF en leesweergave tonen naam, geboortegegevens en de zin "Ik heb deze verklaring zelf en uit vrije wil opgesteld". Het BSN staat bewust niet in de verklaring.

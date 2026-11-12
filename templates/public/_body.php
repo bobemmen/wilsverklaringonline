@@ -77,4 +77,5 @@ $sec = fn(string $t) => '<h2>' . e($t) . '</h2>';
         <?php endforeach ?>
     </section>
 <?php endif ?>
+<p class="doc-text muted mb0">Ik heb deze verklaring zelf en uit vrije wil opgesteld.</p>
 </div>
