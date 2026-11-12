@@ -64,3 +64,21 @@ function parse_birthdate(string $value): ?DateTimeImmutable
     }
     return ($d < new DateTimeImmutable('today') && (int) $d->format('Y') >= 1900) ? $d : null;
 }
+
+/** Mobiel nummer naar internationaal formaat (+316…), of null als het niet klopt. */
+function normalize_phone(string $value): ?string
+{
+    $v = preg_replace('/[\s().-]/', '', $value) ?? '';
+    if (str_starts_with($v, '00')) {
+        $v = '+' . substr($v, 2);
+    } elseif (str_starts_with($v, '0')) {
+        $v = '+31' . substr($v, 1);
+    }
+    return preg_match('/^\+[1-9][0-9]{9,14}$/', $v) ? $v : null;
+}
+
+/** "+31612345678" → "+31 6•• ••• 78" */
+function mask_phone(string $phone): string
+{
+    return substr($phone, 0, 4) . ' ••• ••• ' . substr($phone, -2);
+}

@@ -300,8 +300,11 @@ final class Store
             'created_at' => time(),
             'linked_at' => null,
             'verified_at' => null,
-            'verified_version_id' => null,
-            'verified_hash' => null,
+            'pending_user_id' => null,
+            'sms_code_mac' => null,
+            'sms_expires_at' => null,
+            'sms_attempts' => 0,
+            'sms_sends' => 0,
             'revoked_at' => null,
             'revoked_by' => null,
         ];
@@ -355,34 +358,25 @@ final class Store
     }
 
     /**
-     * De meest recente geldige verificatie van deze verklaring, voor weergave aan lezers.
+     * De geldige verificatie van de eigenaar van deze verklaring, voor weergave aan lezers.
+     * Het betreft de identiteit van het account, niet de inhoud van een bepaalde versie.
      * Geeft het volledige patiënt-ID niet terug, alleen een afgeschermde variant.
      */
-    public function verificationPanel(array $declaration, ?array $version): ?array
+    public function verificationPanel(array $declaration): ?array
     {
         foreach ($this->verificationsForPatient($declaration['user_id']) as $v) {
             if ($v['status'] !== 'geverifieerd') {
                 continue;
             }
-            $current = $version !== null
-                && $v['verified_version_id'] === $version['id']
-                && hash_equals((string) $v['verified_hash'], $this->contentHash($version['content']));
             $id = (string) ($v['his_id'] ?? '');
             return [
                 'arts_name' => $v['arts_name'] ?? '',
                 'practice' => $v['practice'] ?? null,
                 'verified_at' => $v['verified_at'],
                 'his_masked' => $id === '' ? '' : '…' . substr($id, -6),
-                'current' => $current,
             ];
         }
         return null;
-    }
-
-    /** Inhoud-vingerafdruk: laat zien of een versie na de verificatie nog gelijk is. */
-    public function contentHash(array $content): string
-    {
-        return $this->crypto->mac('version-content', json_encode($content, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     }
 
     // ------------------------------------------------------------ access logs

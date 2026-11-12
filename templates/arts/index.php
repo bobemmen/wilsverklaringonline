@@ -14,7 +14,7 @@
 
 <section class="card" aria-labelledby="i-nieuw">
     <h2 class="card-title" id="i-nieuw">Patiënt uitnodigen</h2>
-    <p class="muted">De patiënt krijgt alleen een e-mail met een link. Geboortedatum, BSN en patiënt-ID worden niet gemaild; de patiënt bevestigt geboortedatum en BSN zelf, waarna wij die vergelijken met uw invoer. BSN en geboortedatum worden niet leesbaar opgeslagen.</p>
+    <p class="muted">De patiënt krijgt alleen een e-mail met een link. Geboortedatum, BSN en patiënt-ID worden niet gemaild. De patiënt bevestigt geboortedatum en BSN zelf en voert daarna een sms-code in. BSN en geboortedatum worden niet leesbaar opgeslagen.</p>
     <form method="post" action="/arts/uitnodigen" autocomplete="off">
         <?= $this->csrf() ?>
         <div class="field">
@@ -36,6 +36,12 @@
             <label for="bsn">BSN</label>
             <input type="text" id="bsn" name="bsn" inputmode="numeric" pattern="[0-9 ]{8,11}" maxlength="11" required<?= $this->invalid('bsn') ?>>
             <?= $this->fieldError('bsn') ?>
+        </div>
+        <div class="field">
+            <label for="phone">Mobiel nummer patiënt</label>
+            <p class="hint" id="phone-hint">De patiënt ontvangt hierop een sms-code als tweede controle. Vul het nummer in dat u kent uit het dossier.</p>
+            <input type="tel" id="phone" name="phone" value="<?= e($this->old('phone')) ?>" autocomplete="off" inputmode="tel" required aria-describedby="phone-hint"<?= $this->invalid('phone') ?>>
+            <?= $this->fieldError('phone') ?>
         </div>
         <div class="field">
             <label for="his_id">Patiënt-ID uit het HIS</label>

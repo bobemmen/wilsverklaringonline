@@ -11,6 +11,8 @@ use WV\Response;
 final class VerificationController extends Controller
 {
     private const MAX_ATTEMPTS = 5;
+    private const MAX_SENDS = 3;
+    private const CODE_TTL = 600;
 
     public function show(string $token): Response
     {
@@ -36,6 +38,10 @@ final class VerificationController extends Controller
         }
         if ($v['patient_user_id'] === $this->user()['id']) {
             return $this->redirect('/dashboard');
+        }
+
+        if ($v['pending_user_id'] === $this->user()['id'] && $v['sms_code_mac'] && $v['sms_expires_at'] > time()) {
+            return $this->view('verification/code', ['arts' => $arts, 'token' => $token, 'phone' => mask_phone((string) $v['phone']), 'canResend' => (int) $v['sms_sends'] < self::MAX_SENDS]);
         }
 
         return $this->view('verification/link', ['arts' => $arts, 'token' => $token, 'name' => $v['patient_name']]);
@@ -74,14 +80,93 @@ final class VerificationController extends Controller
             return $this->fail($back, ['consent' => 'Geef toestemming om door te gaan.']);
         }
 
+        // identiteit uit het dossier klopt: tweede controle met een sms-code naar het door de arts opgegeven nummer
+        $v['pending_user_id'] = $user['id'];
+        $v['sms_sends'] = 0;
+        if (!$this->sendCode($v)) {
+            $store->saveVerification($v);
+            return $this->fail($back, ['match' => 'De sms kon niet worden verstuurd. Probeer het later opnieuw of neem contact op met uw huisarts.']);
+        }
+        $store->saveVerification($v);
+        $this->flash('We hebben een sms met een code gestuurd naar ' . mask_phone((string) $v['phone']) . '.');
+        return $this->redirect($back);
+    }
+
+    public function code(string $token): Response
+    {
+        $v = $this->find($token);
+        $user = $this->user();
+        $store = $this->app->store;
+        $back = '/uitnodiging/' . $token;
+        if ($v['status'] !== 'uitgenodigd' || $v['pending_user_id'] !== $user['id'] || !$v['sms_code_mac']) {
+            return $this->redirect($back);
+        }
+        if ($v['sms_expires_at'] < time()) {
+            return $this->fail($back, ['code' => 'De code is verlopen. Vraag een nieuwe aan.']);
+        }
+
+        $given = preg_replace('/\D/', '', $this->input('code')) ?? '';
+        $ok = strlen($given) === 6 && hash_equals($v['sms_code_mac'], $this->codeMac($v, $given));
+        if (!$ok) {
+            $v['sms_attempts'] = (int) $v['sms_attempts'] + 1;
+            if ($v['sms_attempts'] >= self::MAX_ATTEMPTS) {
+                $v['status'] = 'ingetrokken';
+                $v['revoked_at'] = time();
+                $v['revoked_by'] = 'blokkade';
+                $store->saveVerification($v);
+                throw new HttpException(404);
+            }
+            $store->saveVerification($v);
+            return $this->fail($back, ['code' => 'Deze code klopt niet.']);
+        }
+
         $v['status'] = 'gekoppeld';
         $v['patient_user_id'] = $user['id'];
         $v['linked_at'] = time();
         $v['attempts'] = 0;
+        $v['pending_user_id'] = null;
+        $v['sms_code_mac'] = null;
+        $v['sms_expires_at'] = null;
         $store->saveVerification($v);
 
-        $this->flash('Gekoppeld aan uw huisarts. Maak uw verklaring af en publiceer hem; uw huisarts kan hem daarna bevestigen.');
+        $this->flash('Gekoppeld aan uw huisarts. Uw huisarts kan nu bevestigen dat dit account bij u hoort.');
         return $this->redirect('/dashboard');
+    }
+
+    public function resend(string $token): Response
+    {
+        $v = $this->find($token);
+        $store = $this->app->store;
+        $back = '/uitnodiging/' . $token;
+        if ($v['status'] !== 'uitgenodigd' || $v['pending_user_id'] !== $this->user()['id']) {
+            return $this->redirect($back);
+        }
+        if ((int) $v['sms_sends'] >= self::MAX_SENDS) {
+            return $this->fail($back, ['code' => 'U kunt geen nieuwe code meer aanvragen. Neem contact op met uw huisarts.']);
+        }
+        if (!$this->sendCode($v)) {
+            $store->saveVerification($v);
+            return $this->fail($back, ['code' => 'De sms kon niet worden verstuurd.']);
+        }
+        $store->saveVerification($v);
+        $this->flash('Er is een nieuwe code verstuurd.');
+        return $this->redirect($back);
+    }
+
+    private function codeMac(array $v, string $code): string
+    {
+        return $this->app->crypto->mac('sms-code', $v['id'] . '|' . $code);
+    }
+
+    /** Maakt een nieuwe 6-cijferige code (oude vervalt) en verstuurt die; werkt $v bij, bewaart niet. */
+    private function sendCode(array &$v): bool
+    {
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $v['sms_code_mac'] = $this->codeMac($v, $code);
+        $v['sms_expires_at'] = time() + self::CODE_TTL;
+        $v['sms_attempts'] = 0;
+        $v['sms_sends'] = (int) $v['sms_sends'] + 1;
+        return $this->app->sms->send((string) $v['phone'], "WilsVerklaring: uw code is $code. Deel deze code met niemand. Geldig 10 minuten.");
     }
 
     public function patientRevoke(string $id): Response

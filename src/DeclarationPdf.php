@@ -125,9 +125,8 @@ final class DeclarationPdf
             $who = $verification['arts_name'] . (!empty($verification['practice']) ? ', ' . $verification['practice'] : '');
             $pdf->noteBox(
                 'Bevestigd door huisarts',
-                "Op " . fmt_date($verification['verified_at']) . " heeft $who bevestigd dat deze patiënt in persoon is gezien en dat de identiteit is gecontroleerd. "
-                . ($verification['his_masked'] !== '' ? 'Patiënt-ID in het HIS: ' . $verification['his_masked'] . '. ' : '')
-                . ($verification['current'] ? '' : 'Let op: de verklaring is na die bevestiging gewijzigd.')
+                "Op " . fmt_date($verification['verified_at']) . " heeft $who bevestigd dat dit account bij deze patiënt hoort, dat de patiënt in persoon is gezien en dat de identiteit is gecontroleerd. "
+                . ($verification['his_masked'] !== '' ? 'Patiënt-ID in het HIS: ' . $verification['his_masked'] . '.' : '')
             );
         }
 

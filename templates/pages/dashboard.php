@@ -57,25 +57,16 @@
 
 <?php if ($verifications): ?>
 <section class="card" aria-labelledby="d-huisarts">
-    <h2 class="card-title" id="d-huisarts">Bevestiging door uw huisarts</h2>
+    <h2 class="card-title" id="d-huisarts">Identiteit bevestigd door uw huisarts</h2>
     <?php foreach ($verifications as $v): ?>
         <div class="stat-row">
             <strong><?= e($v['arts_name']) ?><?= !empty($v['practice']) ? ' · ' . e($v['practice']) : '' ?></strong>
-            <?php if ($v['status'] === 'geverifieerd' && $verificationPanel && $verificationPanel['current']): ?>
+            <?php if ($v['status'] === 'geverifieerd'): ?>
                 <span class="badge badge-ok">Bevestigd op <?= e(fmt_date($v['verified_at'])) ?></span>
-            <?php elseif ($v['status'] === 'geverifieerd'): ?>
-                <span class="badge badge-bad">Verklaring daarna gewijzigd</span>
-            <?php elseif ($declaration['is_published']): ?>
-                <span class="badge badge-brand">Wacht op uw huisarts</span>
             <?php else: ?>
-                <span class="badge badge-muted">Publiceer uw verklaring</span>
+                <span class="badge badge-brand">Wacht op uw huisarts</span>
             <?php endif ?>
         </div>
-        <?php if ($v['status'] === 'geverifieerd' && $verificationPanel && !$verificationPanel['current']): ?>
-            <p class="muted">U heeft uw verklaring na de bevestiging aangepast. Vraag uw huisarts de nieuwste versie opnieuw te bevestigen.</p>
-        <?php elseif ($v['status'] === 'gekoppeld' && !$declaration['is_published']): ?>
-            <p class="muted">Maak uw verklaring af en kies <em>Publiceer verklaring</em>. Daarna kan uw huisarts hem bevestigen.</p>
-        <?php endif ?>
         <form method="post" action="/verificatie/<?= e($v['id']) ?>/intrekken" class="inline-form">
             <?= $this->csrf() ?>
             <button type="submit" class="btn btn-small btn-danger" data-confirm="Toegang van uw huisarts intrekken?">Toegang van huisarts intrekken</button>

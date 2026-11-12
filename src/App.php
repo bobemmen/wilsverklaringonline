@@ -17,6 +17,7 @@ final class App
     public readonly Auth $auth;
     public readonly RateLimiter $limiter;
     public readonly Mailer $mailer;
+    public readonly Sms $sms;
     public readonly View $view;
     public readonly Router $router;
 
@@ -43,6 +44,7 @@ final class App
         $this->auth = new Auth($this->store, $this->session);
         $this->limiter = new RateLimiter($this->db, $this->crypto);
         $this->mailer = new Mailer();
+        $this->sms = new Sms();
         $this->view = new View($this, $this->root . '/templates');
         $this->router = new Router();
         $this->routes();
@@ -110,6 +112,8 @@ final class App
         $r->post('/account/verwijderen', [C\AccountController::class, 'destroy'], $patient);
 
         $r->post('/verificatie/{id}/intrekken', [C\VerificationController::class, 'patientRevoke'], $patient);
+        $r->post('/uitnodiging/{token}/code', [C\VerificationController::class, 'code'], array_merge($patient, ['throttle:invite,20,60']));
+        $r->post('/uitnodiging/{token}/opnieuw', [C\VerificationController::class, 'resend'], array_merge($patient, ['throttle:invite,20,60']));
         $r->get('/uitnodiging/{token}', [C\VerificationController::class, 'show'], ['throttle:invite,20,60']);
         $r->post('/uitnodiging/{token}', [C\VerificationController::class, 'link'], array_merge($patient, ['throttle:invite,20,60']));
 

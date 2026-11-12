@@ -22,7 +22,7 @@ final class PdfController extends Controller
             $content,
             $this->app->store->tokenIsActive($declaration),
             $this->input('groot') === '1' ? 1.35 : 1.0,
-            $this->app->store->verificationPanel($declaration, $version)
+            $this->app->store->verificationPanel($declaration)
         );
         return Response::download($pdf, 'wilsverklaring-' . date('Y-m-d') . '.pdf', 'application/pdf');
     }

@@ -24,7 +24,6 @@ final class DashboardController extends Controller
                 $store->verificationsForPatient($this->user()['id']),
                 fn($v) => $v['status'] !== 'ingetrokken'
             )),
-            'verificationPanel' => $store->verificationPanel($declaration, $store->version($declaration['current_version_id'], $declaration['id'])),
-        ]);
+                    ]);
     }
 }

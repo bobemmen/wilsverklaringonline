@@ -131,11 +131,10 @@ tests/           unit- en end-to-end tests
 
 ## Huisarts-verificatie
 
-Een huisarts kan een patiënt uitnodigen en later bevestigen dat de verklaring echt van die patiënt is.
+Een huisarts bevestigt **eenmalig** dat een account bij een patiënt hoort. Latere wijzigingen van de verklaring hoeven niet opnieuw te worden bevestigd.
 
 - Huisartsaccounts worden alleen door de beheerder aangemaakt: `php bin/console arts:aanmaken "Dr. Jansen" jansen@praktijk.nl "Praktijknaam"`. Het tijdelijke wachtwoord wordt eenmalig getoond; tweestapsverificatie is verplicht.
-- In `/arts` vult de arts naam, e-mail, geboortedatum, BSN (elfproef) en het HIS-patiënt-ID in. De patiënt krijgt een e-mail met een persoonlijke link (14 dagen geldig).
-- De patiënt maakt een account of logt in en bevestigt geboortedatum en BSN. Die worden vergeleken met HMAC's; BSN en geboortedatum worden nooit leesbaar opgeslagen. Na 5 foute pogingen vervalt de uitnodiging.
-- Na koppeling kan de arts de gepubliceerde verklaring lezen (dat wordt gelogd) en bevestigen met twee vinkjes. De bevestiging is gebonden aan die versie (inhoudsvingerafdruk); na een wijziging toont de leesweergave dat de nieuwste versie niet meer bevestigd is.
-- Lezers zien arts, praktijk, datum en alleen de laatste 6 tekens van het HIS-ID; ook in de PDF. De patiënt kan de koppeling altijd intrekken op het dashboard.
-- Bestaande databases worden automatisch gemigreerd (schema 2).
+- In `/arts` vult de arts naam, e-mail, geboortedatum, BSN (elfproef), mobiel nummer en het HIS-patiënt-ID in. De patiënt krijgt een e-mail met een persoonlijke link (14 dagen geldig).
+- De patiënt maakt een account of logt in, bevestigt geboortedatum en BSN (vergeleken via HMAC; nooit leesbaar opgeslagen) en voert daarna een 6-cijferige sms-code in die naar het door de arts opgegeven nummer gaat (10 minuten geldig, maximaal 3 keer versturen, 5 pogingen).
+- Daarna bevestigt de arts met twee vinkjes. Lezers zien arts, praktijk, datum en de laatste 6 tekens van het HIS-ID (ook in de PDF). Patiënt en arts kunnen de koppeling intrekken.
+- SMS: `SMS_DRIVER=log` (ontwikkeling, schrijft naar `storage/logs/sms.log`) of `SMS_DRIVER=bird`. De Bird-koppeling (bird.com) is nog niet gebouwd: zie `src/Sms.php`, methode `bird()`. Zonder werkende sms-dienst kan een patiënt in productie niet koppelen (er wordt nooit stilzwijgend "verstuurd").
