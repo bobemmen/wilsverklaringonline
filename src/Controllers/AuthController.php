@@ -79,6 +79,9 @@ final class AuthController extends Controller
         } elseif ($password !== $this->input('password_confirmation')) {
             $errors['password'] = 'De wachtwoorden komen niet overeen.';
         }
+        if ($this->input('akkoord') !== '1') {
+            $errors['akkoord'] = 'Om verder te gaan moet u de pilotinformatie en de privacyverklaring hebben gelezen en toestemming geven.';
+        }
         if ($errors) {
             return $this->fail('/registreren', $errors, $old);
         }
@@ -118,6 +121,11 @@ final class AuthController extends Controller
             return $this->fail('/registreren', ['email' => 'Met dit e-mailadres bestaat al een account. Log in, of vraag uw huisarts om hulp.'], $old);
         }
 
+        // Uitdrukkelijke toestemming (art. 9 lid 2 sub a AVG), met de versie van de tekst waarmee die is gegeven.
+        $user['consent_at'] = time();
+        $user['consent_version'] = \WV\Legal::VERSION;
+        $store->saveUser($user);
+
         // De huisarts heeft bij het uitnodigen al bevestigd dat hij deze patiënt in persoon heeft gezien en geïdentificeerd.
         $match['status'] = 'geverifieerd';
         $match['patient_user_id'] = $user['id'];
@@ -125,6 +133,14 @@ final class AuthController extends Controller
         $match['attempts'] = 0;
         $match['code_mac'] = null;
         $store->saveVerification($match);
+
+        $this->app->mailer->send(
+            $email,
+            'Uw account bij WilsVerklaring is aangemaakt',
+            "Beste $name,\n\nEr is een account aangemaakt voor dit e-mailadres, op uitnodiging van uw huisarts, {$match['arts_name']} ({$match['practice']}). "
+            . "Uw identiteit is daarbij bevestigd. De artsen van de praktijk kunnen uw gepubliceerde verklaring inzien; dat kunt u in uw account altijd intrekken.\n\n"
+            . 'Was u dit niet? Neem dan contact op met uw huisartsenpraktijk.'
+        );
 
         $this->app->auth->login($user);
         $this->flash('Welkom. Uw identiteit is bevestigd door uw huisarts. Stel nu tweestapsverificatie in om verder te gaan.');

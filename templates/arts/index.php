@@ -1,7 +1,7 @@
 <?php $this->layout('layouts/app', ['title' => 'Patiënten · WilsVerklaring']) ?>
 <div class="page-head">
     <h1>Patiënten</h1>
-    <p>Alleen patiënten die u uitnodigt kunnen zich registreren. Zo staat bij elke verklaring dat de huisarts de identiteit van de patiënt heeft bevestigd.</p>
+    <p>Praktijk <strong><?= e($practice['name']) ?></strong>. Alle artsen van de praktijk zien dezelfde patiënten; per patiënt staat welke arts hem begeleidt. Alleen patiënten die een arts uitnodigt kunnen zich registreren. Zo staat bij elke verklaring dat een huisarts de identiteit van de patiënt heeft bevestigd.</p>
 </div>
 
 <?php if ($paperCode): ?>
@@ -49,6 +49,10 @@
                 <input type="checkbox" name="identity" value="1" required>
                 <span><span class="choice-label">Ik heb de identiteit gecontroleerd en dit is de patiënt met bovenstaand patiënt-ID.</span></span>
             </label>
+            <label class="choice">
+                <input type="checkbox" name="toestemming" value="1" required>
+                <span><span class="choice-label">De patiënt weet dat ik naam, e-mailadres, BSN en HIS-ID invoer in dit platform en gaat hiermee mondeling akkoord.</span></span>
+            </label>
             <p class="muted">Uw naam, praktijk, de datum en een deel van het patiënt-ID worden bij de verklaring getoond. U bevestigt de identiteit, niet de inhoud van de verklaring.</p>
         </fieldset>
         <button type="submit" class="btn btn-primary">Uitnodigen en code aanmaken</button>
@@ -57,7 +61,7 @@
 
 <section class="card" aria-labelledby="i-lijst">
     <h2 class="card-title" id="i-lijst">Uitnodigingen en verificaties</h2>
-    <?php $filtered = $filter['q'] !== '' || $filter['bsn'] !== '' || $filter['status'] !== '' ?>
+    <?php $filtered = $filter['q'] !== '' || $filter['bsn'] !== '' || $filter['status'] !== '' || $filter['arts'] !== '' ?>
     <?php if ($total > 0): ?>
     <form method="post" action="/arts/zoeken" class="search" role="search" aria-label="Zoek in uw patiënten" autocomplete="off">
         <?= $this->csrf() ?>
@@ -68,6 +72,17 @@
         <div class="field">
             <label for="zbsn">Zoek op BSN (exact)</label>
             <input type="text" id="zbsn" name="bsn" value="<?= e($filter['bsn']) ?>" inputmode="numeric" maxlength="11" autocomplete="off">
+        </div>
+        <div class="field">
+            <label for="zarts">Arts</label>
+            <select id="zarts" name="arts">
+                <option value=""<?= $filter['arts'] === '' ? ' selected' : '' ?>>Alle artsen</option>
+                <option value="mine"<?= $filter['arts'] === 'mine' ? ' selected' : '' ?>>Mijn patiënten</option>
+                <option value="none"<?= $filter['arts'] === 'none' ? ' selected' : '' ?>>Zonder arts (alleen praktijk)</option>
+                <?php foreach ($team as $tid => $tname): ?>
+                    <option value="<?= e($tid) ?>"<?= $filter['arts'] === $tid ? ' selected' : '' ?>><?= e($tname) ?></option>
+                <?php endforeach ?>
+            </select>
         </div>
         <div class="field">
             <label for="zstatus">Status</label>
@@ -91,11 +106,12 @@
     <?php else: ?>
         <div class="table-wrap">
             <table>
-                <thead><tr><th scope="col">Patiënt</th><th scope="col">Uitgenodigd op</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Acties</span></th></tr></thead>
+                <thead><tr><th scope="col">Patiënt</th><th scope="col">Arts</th><th scope="col">Uitgenodigd op</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Acties</span></th></tr></thead>
                 <tbody>
                 <?php foreach ($items as $v): ?>
                     <tr>
                         <th scope="row"><?= e($v['patient_name']) ?></th>
+                        <td><?php if ($v['owner_name']): ?><?= e($v['owner_name']) ?><?= $v['arts_id'] === $me ? ' <span class="muted">(u)</span>' : '' ?><?php else: ?><span class="badge badge-muted">Praktijk</span><?php endif ?></td>
                         <td><?= e(fmt_date($v['created_at'])) ?></td>
                         <td>
                             <?php switch ($v['effective']):
@@ -105,6 +121,12 @@
                             endswitch ?>
                         </td>
                         <td>
+                            <?php if (in_array($v['effective'], ['geverifieerd', 'uitgenodigd'], true) && $v['arts_id'] !== $me): ?>
+                                <form method="post" action="/arts/patienten/<?= e($v['id']) ?>/overnemen" class="inline-form">
+                                    <?= $this->csrf() ?>
+                                    <button type="submit" class="btn btn-small">Overnemen<span class="sr-only"> (<?= e($v['patient_name']) ?>)</span></button>
+                                </form>
+                            <?php endif ?>
                             <?php if ($v['effective'] === 'geverifieerd'): ?>
                                 <a class="btn btn-small" href="/arts/patienten/<?= e($v['id']) ?>">Openen<span class="sr-only"> (<?= e($v['patient_name']) ?>)</span></a>
                             <?php endif ?>

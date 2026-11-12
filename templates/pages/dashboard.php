@@ -63,6 +63,7 @@
             <strong><?= e($v['arts_name']) ?><?= !empty($v['practice']) ? ' · ' . e($v['practice']) : '' ?></strong>
             <span class="badge badge-ok">Bevestigd op <?= e(fmt_date($v['attested_at'] ?? $v['verified_at'])) ?></span>
         </div>
+        <p class="muted">Alle artsen van <?= !empty($v['practice']) ? e($v['practice']) : 'deze praktijk' ?> kunnen uw gepubliceerde verklaring inzien. Elke inzage ziet u terug onder “Arts-toegang”.</p>
         <form method="post" action="/verificatie/<?= e($v['id']) ?>/intrekken" class="inline-form">
             <?= $this->csrf() ?>
             <button type="submit" class="btn btn-small btn-danger" data-confirm="Toegang van uw huisarts intrekken?">Toegang van huisarts intrekken</button>

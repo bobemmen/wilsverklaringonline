@@ -36,6 +36,14 @@
         <input type="text" id="code" name="code" inputmode="numeric" maxlength="7" pattern="[0-9 ]{6,7}" required aria-describedby="code-hint"<?= $this->invalid('code') ?>>
         <?= $this->fieldError('code') ?>
     </div>
+    <fieldset class="field" id="akkoord">
+        <legend>Toestemming</legend>
+        <?= $this->fieldError('akkoord') ?>
+        <label class="choice">
+            <input type="checkbox" name="akkoord" value="1" required>
+            <span><span class="choice-label">Ik heb de <a href="/pilot" target="_blank" rel="noopener">pilotinformatie</a> en de <a href="/privacy" target="_blank" rel="noopener">privacyverklaring</a> gelezen. Ik geef toestemming voor het opslaan van mijn gegevens en wilsverklaring in deze pilot, en ervoor dat de artsen van mijn huisartsenpraktijk mijn gepubliceerde verklaring kunnen inzien. Ik kan dit altijd intrekken.</span></span>
+        </label>
+    </fieldset>
     <button type="submit" class="btn btn-primary btn-block">Registreren</button>
 </form>
 

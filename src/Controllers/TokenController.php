@@ -16,6 +16,7 @@ final class TokenController extends Controller
             'tokenActive' => $this->app->store->tokenIsActive($declaration),
             'plaintextToken' => $this->app->session->flashed('plaintext_token'),
             'viewCount' => $this->app->store->logCount($declaration['id']),
+            'logs' => array_slice(array_reverse($this->app->store->logs($declaration['id'])), 0, 50),
         ]);
     }
 

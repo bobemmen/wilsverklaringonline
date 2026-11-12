@@ -13,7 +13,7 @@
 <section class="card" aria-labelledby="a-2fa">
     <h2 class="card-title" id="a-2fa">Beveiliging</h2>
     <p>Uw verklaring is alleen bereikbaar na tweestapsverificatie met een authenticator-app.</p>
-    <a href="/2fa/instellen" class="btn">Status tweestapsverificatie</a>
+    <a href="/2fa/beheer" class="btn">Tweestapsverificatie en herstelcodes</a>
 </section>
 
 <section class="card" aria-labelledby="a-export">

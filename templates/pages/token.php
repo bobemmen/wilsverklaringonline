@@ -24,6 +24,27 @@
         <?php endif ?>
         <span class="muted"><?= (int) $viewCount ?> keer bekeken</span>
     </div>
+    <?php if ($logs): ?>
+        <h3>Wie heeft uw verklaring bekeken?</h3>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th scope="col">Wanneer</th><th scope="col">Wie</th></tr></thead>
+                <tbody>
+                <?php foreach ($logs as $l): ?>
+                    <tr>
+                        <td><?= e(fmt_datetime($l['accessed_at'])) ?></td>
+                        <td><?php switch ($l['accessor_type']):
+                            case 'huisarts': ?>Huisarts <?= e((string) $l['accessor_identifier']) ?> (praktijk)<?php break;
+                            case 'arts': ?>Arts via uw link<?php break;
+                            default: ?>Naaste via uitnodiging<?php
+                        endswitch ?></td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+        <?php if ($viewCount > count($logs)): ?><p class="muted small">De laatste <?= count($logs) ?> raadplegingen.</p><?php endif ?>
+    <?php endif ?>
     <div class="btn-row">
         <form method="post" action="/token/genereer">
             <?= $this->csrf() ?>

@@ -480,3 +480,19 @@ figure.schema figcaption { font-size: 0.95rem; color: var(--muted); max-width: 4
 
 h2.sub { font-size: 1.25rem; margin: 1.5rem 0 0.5rem; }
 h2.sub:first-child { margin-top: 0; }
+
+/* herstelcodes */
+.codes{list-style:none;margin:1rem 0;padding:0;display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
+.codes li{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:1.15em;letter-spacing:.08em;background:var(--surface-alt);border:1px solid var(--border-strong);border-radius:.5rem;padding:.5rem .75rem;text-align:center}
+
+.footer-links{display:flex;flex-wrap:wrap;gap:.25rem 1rem}
+.legal{max-width:46rem;margin-inline:auto}
+.legal h1{margin-top:0}
+.legal h2{margin-top:1.75rem}
+.legal-nav ul{list-style:none;display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;justify-content:center;padding:0;margin:1.25rem 0}
+
+.team th[scope=row]{text-transform:none;letter-spacing:normal;font-size:1em;font-weight:700;min-width:11rem}
+.team td{white-space:nowrap}
+.team td:last-child{white-space:normal}
+.team td:last-child .inline-form{display:inline-block;margin:0 .25rem .25rem 0}
+.team th{white-space:nowrap}

@@ -11,6 +11,9 @@ use WV\Response;
 /**
  * Omgeving voor de huisarts. De arts nodigt een patiënt uit na persoonlijk contact en geeft hem een code op papier.
  * Met die code (plus e-mailadres en BSN) registreert de patiënt zich; daarmee is zijn identiteit meteen bevestigd.
+ *
+ * Patiënten horen bij de praktijk: alle artsen van de praktijk zien elkaars patiënten en gepubliceerde verklaringen.
+ * Per patiënt staat vast welke arts hem begeleidt (of dat hij op dit moment alleen bij de praktijk staat).
  */
 final class ArtsController extends Controller
 {
@@ -25,9 +28,26 @@ final class ArtsController extends Controller
         return $this->overview(true);
     }
 
+    /** De praktijk van de ingelogde arts. */
+    private function practice(): array
+    {
+        $user = $this->user();
+        return $this->app->store->practiceOf($user);
+    }
+
     private function overview(bool $searching): Response
     {
         $store = $this->app->store;
+        $practice = $this->practice();
+        $team = [];
+        foreach ($store->artsInPractice($practice['id']) as $a) {
+            $team[$a['id']] = $a['name'];
+        }
+        $me = $this->user()['id'];
+        $artsFilter = $searching ? $this->input('arts') : '';
+        if ($artsFilter !== '' && $artsFilter !== 'mine' && $artsFilter !== 'none' && !isset($team[$artsFilter])) {
+            $artsFilter = '';
+        }
         $q = $searching ? mb_strtolower(trim($this->input('q'))) : '';
         $bsn = $searching ? (preg_replace('/\D/', '', $this->input('bsn')) ?? '') : '';
         $status = $searching ? $this->input('status') : '';
@@ -36,13 +56,23 @@ final class ArtsController extends Controller
 
         $total = 0;
         $items = [];
-        foreach ($store->verificationsForArts($this->user()['id']) as $v) {
+        foreach ($store->verificationsForPractice($practice['id']) as $v) {
             $total++;
             $v['effective'] = $this->effectiveStatus($v);
+            $v['owner_name'] = $v['arts_id'] ? ($team[$v['arts_id']] ?? null) : null;
+            if ($artsFilter === 'mine' && $v['arts_id'] !== $me) {
+                continue;
+            }
+            if ($artsFilter === 'none' && $v['arts_id'] !== null) {
+                continue;
+            }
+            if ($artsFilter !== '' && $artsFilter !== 'mine' && $artsFilter !== 'none' && $v['arts_id'] !== $artsFilter) {
+                continue;
+            }
             if ($status !== '' && in_array($status, $statuses, true) && $v['effective'] !== $status) {
                 continue;
             }
-            if ($q !== '' && !str_contains(mb_strtolower($v['patient_name'] . ' ' . $v['patient_email'] . ' ' . $v['his_id']), $q)) {
+            if ($q !== '' && !str_contains(mb_strtolower($v['patient_name'] . ' ' . $v['patient_email'] . ' ' . $v['his_id'] . ' ' . ($v['owner_name'] ?? '')), $q)) {
                 continue;
             }
             // BSN: alleen exacte treffers, vergeleken met de bewaarde HMAC; het BSN zelf staat nergens
@@ -64,7 +94,10 @@ final class ArtsController extends Controller
             'matched' => $matched,
             'page' => $page,
             'pages' => $pages,
-            'filter' => ['q' => $searching ? trim($this->input('q')) : '', 'bsn' => $searching ? $this->input('bsn') : '', 'status' => in_array($status, $statuses, true) ? $status : ''],
+            'filter' => ['q' => $searching ? trim($this->input('q')) : '', 'bsn' => $searching ? $this->input('bsn') : '', 'status' => in_array($status, $statuses, true) ? $status : '', 'arts' => $artsFilter],
+            'team' => $team,
+            'me' => $me,
+            'practice' => $practice,
             'paperCode' => $this->app->session->flashed('paper_code'),
         ]);
     }
@@ -92,8 +125,8 @@ final class ArtsController extends Controller
         if (!preg_match('/^[A-Z0-9-]{8,64}$/', $his)) {
             $errors['his_id'] = 'Vul het patiënt-ID uit het HIS in (8–64 tekens: letters, cijfers en streepjes).';
         }
-        if ($this->input('seen') !== '1' || $this->input('identity') !== '1') {
-            $errors['seen'] = 'Vink beide verklaringen aan: u heeft de patiënt gezien en zijn identiteit gecontroleerd.';
+        if ($this->input('seen') !== '1' || $this->input('identity') !== '1' || $this->input('toestemming') !== '1') {
+            $errors['seen'] = 'Vink alle drie de verklaringen aan: u heeft de patiënt gezien, zijn identiteit gecontroleerd en de patiënt weet van deze uitnodiging.';
         }
         if (!$errors && $store->userByEmail($email) !== null) {
             $errors['email'] = 'Met dit e-mailadres bestaat al een account.';
@@ -113,14 +146,15 @@ final class ArtsController extends Controller
             $store->saveVerification($prev);
         }
 
-        $result = $store->addVerification($arts['id'], $email, $bsn, [
+        $practiceRow = $this->practice();
+        $result = $store->addVerification($arts['id'], $practiceRow['id'], $email, $bsn, [
             'patient_name' => $name,
             'his_id' => $his,
-            'arts_name' => $arts['name'],
-            'practice' => $arts['practice'] ?? null,
+            'arts_name' => $arts['name'],   // de arts die de patiënt heeft gezien en geïdentificeerd (blijft zo staan)
+            'practice' => $practiceRow['name'],
         ]);
 
-        $practice = ($arts['practice'] ?? '') !== '' ? ' (' . $arts['practice'] . ')' : '';
+        $practice = ' (' . $practiceRow['name'] . ')';
         $sent = $this->app->mailer->send(
             $email,
             'Uitnodiging van uw huisarts voor uw wilsverklaring',
@@ -160,7 +194,8 @@ final class ArtsController extends Controller
     {
         $v = $this->mine($id);
         $store = $this->app->store;
-        $data = ['v' => $v, 'version' => null, 'doc' => null];
+        $owner = $v['arts_id'] ? $store->userById($v['arts_id']) : null;
+        $data = ['v' => $v, 'version' => null, 'doc' => null, 'owner' => $owner['name'] ?? null, 'me' => $this->user()['id'], 'practice' => $this->practice()];
 
         if ($v['status'] === 'geverifieerd' && $v['patient_user_id']) {
             $declaration = $store->declarationForUser($v['patient_user_id']);
@@ -169,7 +204,7 @@ final class ArtsController extends Controller
                 $store->addLog(
                     $declaration['id'],
                     'huisarts',
-                    $this->app->crypto->index('accessor', $this->user()['email']),
+                    $this->user()['name'], // de patiënt ziet in zijn overzicht welke arts de verklaring las
                     $this->app->request->ip(),
                     $this->app->request->userAgent()
                 );
@@ -188,15 +223,38 @@ final class ArtsController extends Controller
             $v['revoked_at'] = time();
             $v['revoked_by'] = 'arts';
             $this->app->store->saveVerification($v);
+            if ($v['patient_user_id']) {
+                $this->app->mailer->send(
+                    $v['patient_email'],
+                    'Uw huisarts heeft de bevestiging van uw identiteit ingetrokken',
+                    "Beste {$v['patient_name']},\n\nDe huisartsenpraktijk heeft de bevestiging van uw identiteit voor uw online wilsverklaring ingetrokken. "
+                    . "Uw verklaring blijft van u, maar toont niet meer dat uw huisarts uw identiteit heeft bevestigd en de artsen van de praktijk kunnen hem niet meer inzien.\n\n"
+                    . "Heeft u hier vragen over? Neem dan contact op met uw huisartsenpraktijk."
+                );
+            }
         }
         $this->flash('Ingetrokken.');
         return $this->redirect('/arts');
     }
 
+    /** Neemt de patiënt over: de ingelogde arts wordt de begeleidende arts. Werkt ook voor patiënten zonder arts. */
+    public function takeOver(string $id): Response
+    {
+        $v = $this->mine($id);
+        $me = $this->user();
+        if ($v['status'] === 'ingetrokken' || ($v['arts_id'] === $me['id'])) {
+            return $this->redirect('/arts/patienten/' . $id);
+        }
+        $this->app->store->assignVerification($v, $me, $me['name']);
+        $this->flash($v['patient_name'] . ' staat nu bij u.');
+        return $this->redirect('/arts/patienten/' . $id);
+    }
+
+    /** Een verificatie van de eigen praktijk; anders 404 (ook voor patiënten van andere praktijken). */
     private function mine(string $id): array
     {
         $v = $this->app->store->verificationById($id);
-        if (!$v || $v['arts_id'] !== $this->user()['id']) {
+        if (!$v || $v['practice_id'] !== $this->practice()['id']) {
             throw new HttpException(404);
         }
         return $v;

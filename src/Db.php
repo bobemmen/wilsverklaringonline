@@ -13,7 +13,7 @@ use PDO;
  */
 final class Db
 {
-    private const SCHEMA_VERSION = 3;
+    private const SCHEMA_VERSION = 4;
 
     public PDO $pdo;
 
@@ -146,6 +146,33 @@ final class Db
                     key_idx         TEXT NOT NULL,
                     data            TEXT NOT NULL
                 );
+                CREATE INDEX verifications_arts ON verifications(arts_id);
+                CREATE INDEX verifications_patient ON verifications(patient_user_id);
+                CREATE INDEX verifications_key ON verifications(key_idx);
+                SQL);
+            }
+            if ($version < 4) {
+                // Praktijkmodel: artsen horen bij een praktijk; verificaties horen bij de praktijk en (optioneel) bij een arts.
+                // Verdwijnt een arts, dan blijft de patiënt bij de praktijk staan (arts_id wordt NULL).
+                $this->pdo->exec(<<<'SQL'
+                CREATE TABLE practices (
+                    id   TEXT PRIMARY KEY,
+                    data TEXT NOT NULL
+                ) WITHOUT ROWID;
+                ALTER TABLE users ADD COLUMN practice_id TEXT REFERENCES practices(id);
+                CREATE INDEX users_practice ON users(practice_id);
+
+                DROP TABLE IF EXISTS verifications;
+                CREATE TABLE verifications (
+                    seq             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id              TEXT NOT NULL UNIQUE,
+                    practice_id     TEXT NOT NULL REFERENCES practices(id) ON DELETE CASCADE,
+                    arts_id         TEXT REFERENCES users(id) ON DELETE SET NULL,
+                    patient_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+                    key_idx         TEXT NOT NULL,
+                    data            TEXT NOT NULL
+                );
+                CREATE INDEX verifications_practice ON verifications(practice_id);
                 CREATE INDEX verifications_arts ON verifications(arts_id);
                 CREATE INDEX verifications_patient ON verifications(patient_user_id);
                 CREATE INDEX verifications_key ON verifications(key_idx);

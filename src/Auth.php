@@ -32,6 +32,12 @@ final class Auth
         return password_hash($password, PASSWORD_ARGON2ID);
     }
 
+    /** Leesbaar tijdelijk wachtwoord (nu doorgeven; de gebruiker moet het bij de eerste login wijzigen). */
+    public function temporaryPassword(): string
+    {
+        return rtrim(strtr(base64_encode(random_bytes(15)), '+/', '-_'), '=');
+    }
+
     /** Controleert e-mail + wachtwoord; geeft de gebruiker terug of null. Kost altijd evenveel tijd. */
     public function attempt(string $email, string $password): ?array
     {

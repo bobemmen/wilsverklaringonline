@@ -72,11 +72,15 @@ final class App
         $r = $this->router;
         $auth = ['auth', 'twofa'];
         $patient = ['auth', 'twofa', 'role:patient'];
-        $arts = ['auth', 'twofa', 'role:arts'];
+        $artsAny = ['auth', 'twofa', 'role:arts'];
+        $arts = ['auth', 'twofa', 'role:arts', 'pwcurrent'];
 
         $r->get('/', [C\HomeController::class, 'index']);
         $r->get('/weergave', [C\PreferencesController::class, 'show']);
         $r->get('/up', [C\HomeController::class, 'health']);
+        $r->get('/pilot', [C\LegalController::class, 'pilot']);
+        $r->get('/privacy', [C\LegalController::class, 'privacy']);
+        $r->get('/voorwaarden', [C\LegalController::class, 'voorwaarden']);
 
         $r->get('/inloggen', [C\AuthController::class, 'loginForm'], ['guest']);
         $r->post('/inloggen', [C\AuthController::class, 'login'], ['guest']);
@@ -88,6 +92,13 @@ final class App
         $r->post('/2fa/instellen', [C\TwoFactorController::class, 'confirm'], ['auth']);
         $r->get('/2fa/controle', [C\TwoFactorController::class, 'challenge'], ['auth']);
         $r->post('/2fa/controle', [C\TwoFactorController::class, 'verify'], ['auth']);
+        $r->get('/2fa/herstel', [C\TwoFactorController::class, 'recoveryForm'], ['auth']);
+        $r->post('/2fa/herstel', [C\TwoFactorController::class, 'recoveryUse'], ['auth']);
+        $r->get('/2fa/herstelcodes', [C\TwoFactorController::class, 'recoveryCodes'], $auth);
+        $r->post('/2fa/herstelcodes/bewaard', [C\TwoFactorController::class, 'recoveryCodesSaved'], $auth);
+        $r->post('/2fa/herstelcodes/nieuw', [C\TwoFactorController::class, 'newRecoveryCodes'], $auth);
+        $r->get('/2fa/beheer', [C\TwoFactorController::class, 'manage'], $auth);
+        $r->post('/2fa/opnieuw', [C\TwoFactorController::class, 'newDevice'], $auth);
 
         $r->get('/dashboard', [C\DashboardController::class, 'index'], $patient);
 
@@ -117,6 +128,16 @@ final class App
         $r->get('/arts/patienten/{id}', [C\ArtsController::class, 'patient'], $arts);
         $r->post('/arts/patienten/{id}/papiercode', [C\ArtsController::class, 'paperCode'], $arts);
         $r->post('/arts/patienten/{id}/intrekken', [C\ArtsController::class, 'revoke'], $arts);
+        $r->post('/arts/patienten/{id}/overnemen', [C\ArtsController::class, 'takeOver'], $arts);
+
+        $r->get('/arts/team', [C\ArtsTeamController::class, 'index'], $arts);
+        $r->post('/arts/team', [C\ArtsTeamController::class, 'create'], $arts);
+        $r->post('/arts/team/{id}/verwijderen', [C\ArtsTeamController::class, 'remove'], $arts);
+        $r->post('/arts/team/{id}/beheerder', [C\ArtsTeamController::class, 'toggleAdmin'], $arts);
+        $r->post('/arts/team/{id}/wachtwoord', [C\ArtsTeamController::class, 'resetPassword'], $arts);
+        $r->post('/arts/team/{id}/2fa-reset', [C\ArtsTeamController::class, 'reset2fa'], $arts);
+        $r->get('/arts/wachtwoord', [C\ArtsAccountController::class, 'form'], $artsAny);
+        $r->post('/arts/wachtwoord', [C\ArtsAccountController::class, 'save'], $artsAny);
 
         $r->get('/v/{token}', [C\PublicController::class, 'show'], ['throttle:public,10,60']);
         $r->get('/v/{token}/bevestig/{proof}', [C\PublicController::class, 'confirm'], ['throttle:public,10,60']);
@@ -206,6 +227,11 @@ final class App
                     return $isArts ? null : throw new HttpException(403);
                 }
                 return $isArts ? Response::redirect('/arts') : null;
+
+            case 'pwcurrent':
+                // een tijdelijk wachtwoord moet eerst worden vervangen
+                $u = $this->auth->user();
+                return ($u !== null && !empty($u['must_change_password'])) ? Response::redirect('/arts/wachtwoord') : null;
 
             case 'throttle':
                 [$bucket, $max, $seconds] = explode(',', $arg) + [2 => '60'];

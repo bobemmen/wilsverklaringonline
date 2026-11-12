@@ -13,6 +13,8 @@ $items = [
 if ($user && ($user['role'] ?? 'patient') === 'arts') {
     $items = [
         ['/arts', 'Patiënten'],
+        ['/arts/team', 'Team'],
+        ['/2fa/beheer', 'Beveiliging'],
     ];
 }
 ?>

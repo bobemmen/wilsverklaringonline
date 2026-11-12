@@ -12,6 +12,8 @@
     <button type="submit" class="btn btn-primary btn-block">Bevestigen</button>
 </form>
 
+<p class="guest-links"><a href="/2fa/herstel">Telefoon kwijt? Gebruik een herstelcode</a></p>
+
 <form method="post" action="/uitloggen" class="guest-links">
     <?= $this->csrf() ?>
     <button type="submit" class="btn btn-text">Uitloggen</button>

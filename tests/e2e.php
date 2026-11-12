@@ -40,6 +40,8 @@ for ($i = 0; $i < 50; $i++) {
 final class Client
 {
     public array $cookies = [];
+    public array $recovery = [];
+    public string $secret = '';
     public function __construct(private string $base) {}
 
     /** @return array{status:int,body:string,headers:array<string,string>,location:?string} */
@@ -102,7 +104,7 @@ $his = 'C333CBA-F0C0-4521-8A75-33C6911C1E2C';
 function invitePatient(Client $arts, string $name, string $email, string $bsn = '111222333', array $over = []): ?string
 {
     global $his;
-    $r = $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => $name, 'email' => $email, 'bsn' => $bsn, 'his_id' => $his, 'seen' => '1', 'identity' => '1']);
+    $r = $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => $name, 'email' => $email, 'bsn' => $bsn, 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
     $page = $arts->follow($r);
     return preg_match('#class="paper-code"[^>]*>(\d{3}) (\d{3})<#', $page['body'], $m) ? $m[1] . $m[2] : null;
 }
@@ -113,7 +115,7 @@ function register(string $base, string $name, string $email, string $pw): Client
     (new PDO('sqlite:' . $dbfile))->exec('DELETE FROM throttle');
     $code = invitePatient($arts, $name, $email) ?? '';
     $c = new Client($base);
-    $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'bsn' => '111222333', 'code' => $code, 'password' => $pw, 'password_confirmation' => $pw]);
+    $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'bsn' => '111222333', 'code' => $code, 'password' => $pw, 'password_confirmation' => $pw, 'akkoord' => '1']);
     $page = $c->follow($r);
     preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
     $secret = str_replace(' ', '', $m[1] ?? '');
@@ -137,8 +139,17 @@ T::eq($r['location'], '/2fa/instellen', 'huisarts moet eerst 2FA instellen');
 $page = $arts->follow($r);
 preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
 $arts->secret = str_replace(' ', '', $m[1] ?? '');
-$arts->submit('/2fa/instellen', '/2fa/instellen', ['code' => Totp::generateCode($arts->secret)]);
-T::eq($arts->get('/arts')['status'], 200, 'huisarts bereikt /arts na 2FA');
+$r = $arts->submit('/2fa/instellen', '/2fa/instellen', ['code' => Totp::generateCode($arts->secret)]);
+T::eq($r['location'], '/2fa/herstelcodes', 'na 2FA-instellen volgen de herstelcodes');
+$page = $arts->follow($r);
+preg_match_all('#<li>([A-Z2-9]{5}-[A-Z2-9]{5})</li>#', $page['body'], $rc);
+T::eq(count($rc[1]), 10, '10 herstelcodes getoond');
+$arts->recovery = $rc[1];
+T::eq($arts->get('/arts')['location'], '/arts/wachtwoord', 'tijdelijk wachtwoord moet eerst worden gewijzigd');
+$arts->submit('/2fa/herstelcodes', '/2fa/herstelcodes/bewaard', []);
+$r = $arts->submit('/arts/wachtwoord', '/arts/wachtwoord', ['current' => $artsPw, 'password' => 'Nieuw-artswachtwoord-1', 'password_confirmation' => 'Nieuw-artswachtwoord-1']);
+$artsPw = 'Nieuw-artswachtwoord-1';
+T::eq($arts->get('/arts')['status'], 200, 'huisarts bereikt /arts na 2FA en wachtwoordwijziging');
 T::eq($arts->get('/dashboard')['location'], '/arts', 'dashboard van huisarts → /arts');
 T::eq($arts->get('/verklaring/wizard')['location'], '/arts', 'huisarts heeft geen patiëntwizard');
 
@@ -169,7 +180,7 @@ T::ok(str_contains($r['body'], 'Identiteit bevestigd door uw huisarts') && str_c
 
 T::section('Registreren alleen met uitnodiging, code, e-mailadres en BSN');
 clearThrottle($dbfile);
-$regBody = function (array $f) use ($base) { $cl = new Client($base); $r = $cl->submit('/registreren', '/registreren', $f + ['name' => 'Carla Smit', 'email' => 'carla@voorbeeld.nl', 'bsn' => '111222333', 'code' => '000000', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123']); return $cl->follow($r)['body']; };
+$regBody = function (array $f) use ($base) { $cl = new Client($base); $r = $cl->submit('/registreren', '/registreren', $f + ['name' => 'Carla Smit', 'email' => 'carla@voorbeeld.nl', 'bsn' => '111222333', 'code' => '000000', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']); return $cl->follow($r)['body']; };
 $pw2 = 'Een-lang-wachtwoord-123';
 T::ok(str_contains((new Client($base))->get('/registreren')['body'], 'Code van uw huisarts'), 'registratieformulier vraagt om de code van de huisarts');
 T::ok(str_contains($regBody(['password' => $pw2]), 'klopt niet'), 'zonder uitnodiging is registreren niet mogelijk');
@@ -180,11 +191,11 @@ T::ok(str_contains($regBody(['bsn' => '123456782', 'code' => $carla]), 'klopt ni
 T::ok(str_contains($regBody(['bsn' => '123456789', 'code' => $carla]), 'geen geldig BSN'), 'ongeldig BSN (elfproef) wordt geweigerd');
 T::ok(str_contains($regBody(['code' => $carla, 'password' => 'kort']), 'minimaal 10'), 'te kort wachtwoord wordt geweigerd');
 T::ok(str_contains($regBody(['code' => $carla === '123456' ? '654321' : '123456']), 'klopt niet'), 'foute code wordt geweigerd');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Anna', 'email' => 'anna@voorbeeld.nl', 'bsn' => '111222333', 'his_id' => $his, 'seen' => '1', 'identity' => '1']);
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Anna', 'email' => 'anna@voorbeeld.nl', 'bsn' => '111222333', 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
 T::ok(str_contains($arts->follow($r)['body'], 'bestaat al een account'), 'arts kan niet uitnodigen met een bestaand e-mailadres');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'bsn' => '111222333', 'his_id' => $his, 'seen' => '1']);
-T::ok(str_contains($arts->follow($r)['body'], 'beide verklaringen'), 'arts moet beide bevestigingsvinkjes aanvinken');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'bsn' => '123456789', 'his_id' => 'x', 'seen' => '1', 'identity' => '1']);
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'bsn' => '111222333', 'his_id' => $his, 'seen' => '1', 'toestemming' => '1']);
+T::ok(str_contains($arts->follow($r)['body'], 'alle drie de verklaringen'), 'arts moet alle bevestigingsvinkjes aanvinken');
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'bsn' => '123456789', 'his_id' => 'x', 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
 $b = $arts->follow($r)['body'];
 T::ok(str_contains($b, 'elfproef') && str_contains($b, 'patiënt-ID'), 'arts: ongeldig BSN en patiënt-ID worden geweigerd');
 T::eq($c->get('/arts')['status'], 403, 'patiënt heeft geen toegang tot /arts');
@@ -473,6 +484,117 @@ if (trim((string) shell_exec('command -v pdftotext'))) {
 $pub = (new Client($base))->get('/v/' . $token);
 T::ok(str_contains($pub['body'], 'Identiteit bevestigd door de huisarts') && str_contains($pub['body'], 'Nieuwe tekst na de bevestiging'), 'na wijziging blijft de identiteitsbevestiging gelden');
 T::ok(str_contains($arts->get("/arts/patienten/$vid")['body'], 'Nieuwe tekst na de bevestiging'), 'arts ziet de nieuwe tekst zonder opnieuw te bevestigen');
+
+T::section('Praktijk: team, elkaars patiënten, overnemen');
+clearThrottle($dbfile);
+/** Logt een nieuwe arts in met het tijdelijke wachtwoord en doorloopt wachtwoordwijziging + 2FA + herstelcodes. */
+$onboardArts = function (string $email, string $tempPw, string $newPw) use ($base): Client {
+    $cl = new Client($base);
+    $page = $cl->follow($cl->submit('/inloggen', '/inloggen', ['email' => $email, 'password' => $tempPw]));
+    preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
+    $cl->secret = str_replace(' ', '', $m[1] ?? '');
+    $page = $cl->follow($cl->submit('/2fa/instellen', '/2fa/instellen', ['code' => Totp::generateCode($cl->secret)]));
+    preg_match_all('#<li>([A-Z2-9]{5}-[A-Z2-9]{5})</li>#', $page['body'], $rc);
+    $cl->recovery = $rc[1];
+    $cl->submit('/2fa/herstelcodes', '/2fa/herstelcodes/bewaard', []);
+    $cl->submit('/arts/wachtwoord', '/arts/wachtwoord', ['current' => $tempPw, 'password' => $newPw, 'password_confirmation' => $newPw]);
+    return $cl;
+};
+$team = $arts->get('/arts/team')['body'];
+T::ok(str_contains($team, 'Team van Huisartsenpraktijk Wanroij') && str_contains($team, 'Arts toevoegen'), 'beheerder ziet het team en het formulier om een arts toe te voegen');
+$page = $arts->follow($arts->submit('/arts/team', '/arts/team', ['name' => 'Dr. Bakker', 'email' => 'bakker@praktijk.nl']))['body'];
+preg_match('#class="paper-code" aria-label="Tijdelijk wachtwoord">([^<]+)<#', $page, $m);
+$bakkerTemp = $m[1] ?? '';
+T::ok($bakkerTemp !== '' && str_contains($page, 'Dr. Bakker'), 'nieuwe arts krijgt een tijdelijk wachtwoord (eenmalig getoond)');
+T::ok(!str_contains($arts->get('/arts/team')['body'], $bakkerTemp), 'tijdelijk wachtwoord wordt daarna niet meer getoond');
+$bakkerPw = 'Bakker-nieuw-wachtwoord-1';
+$bakker = $onboardArts('bakker@praktijk.nl', $bakkerTemp, $bakkerPw);
+T::eq(count($bakker->recovery), 10, 'nieuwe arts krijgt 10 herstelcodes');
+T::eq($bakker->get('/arts')['status'], 200, 'nieuwe arts bereikt /arts na wachtwoordwijziging en 2FA');
+$list = $bakker->get('/arts')['body'];
+T::ok(str_contains($list, 'Anna de Vries') && str_contains($list, 'Dr. Jansen'), 'collega ziet de patiënten van een andere arts, met de arts erbij');
+$bp = $bakker->get("/arts/patienten/$vid")['body'];
+T::ok(str_contains($bp, 'Nieuwe tekst na de bevestiging'), 'collega kan de gepubliceerde verklaring inzien');
+T::ok(str_contains($bp, 'Begeleidend arts') && str_contains($bp, 'Identiteit bevestigd door: <strong>Dr. Jansen') && str_contains($bp, 'Deze patiënt van Dr. Jansen overnemen'), 'duidelijk welke arts bij de patiënt hoort en wie de identiteit bevestigde');
+T::ok(str_contains($c->get('/token')['body'], 'Huisarts Dr. Bakker'), 'patiënt ziet in zijn overzicht dat Dr. Bakker de verklaring las');
+T::eq($bakker->submit('/arts/team', '/arts/team', ['name' => 'X', 'email' => 'x@praktijk.nl'])['status'], 403, 'arts zonder beheerdersrol kan geen arts toevoegen');
+$page = $bakker->follow($bakker->submit("/arts/patienten/$vid", "/arts/patienten/$vid/overnemen", []))['body'];
+T::ok(str_contains($page, 'staat nu bij u') && str_contains($page, 'overgenomen door Dr. Bakker') && str_contains($page, 'was: Dr. Jansen'), 'collega neemt de patiënt over; dit staat in de historie');
+T::ok(str_contains($page, 'Identiteit bevestigd door: <strong>Dr. Jansen'), 'na overnemen blijft de bevestigende arts Dr. Jansen');
+T::ok(str_contains($pubBody = (new Client($base))->get('/v/' . $token)['body'], 'Dr. Jansen'), 'leesweergave toont nog steeds de arts die de identiteit bevestigde');
+$zoek2 = fn(Client $cl, array $f) => $cl->submit('/arts', '/arts/zoeken', $f + ['q' => '', 'bsn' => '', 'status' => '', 'arts' => ''])['body'];
+T::ok(str_contains($zoek2($bakker, ['arts' => 'mine']), 'Anna de Vries') && !str_contains($zoek2($arts, ['arts' => 'mine']), 'Anna de Vries'), 'filter “mijn patiënten” klopt voor beide artsen');
+
+// herstelcodes
+$bm = $bakker->get('/2fa/beheer')['body'];
+T::ok(str_contains($bm, '10 over'), 'beveiligingspagina toont aantal herstelcodes');
+$login = function (string $email, string $pw) use ($base): Client { $cl = new Client($base); $cl->submit('/inloggen', '/inloggen', ['email' => $email, 'password' => $pw]); return $cl; };
+$b2 = $login('bakker@praktijk.nl', $bakkerPw);
+$r = $b2->submit('/2fa/herstel', '/2fa/herstel', ['code' => strtolower($bakker->recovery[0])]);
+T::eq($r['location'], '/2fa/beheer', 'inloggen met een herstelcode lukt (hoofdletterongevoelig)');
+T::ok(str_contains($b2->follow($r)['body'], 'nog 9 over'), 'na gebruik zijn er nog 9 codes over');
+T::eq($b2->get('/arts')['status'], 200, 'met herstelcode is 2FA doorlopen');
+$b3 = $login('bakker@praktijk.nl', $bakkerPw);
+$r = $b3->submit('/2fa/herstel', '/2fa/herstel', ['code' => $bakker->recovery[0]]);
+T::ok(str_contains($b3->follow($r)['body'], 'klopt niet of is al gebruikt'), 'een herstelcode werkt maar één keer');
+$b3->submit('/2fa/herstel', '/2fa/herstel', ['code' => 'AAAAA-AAAAA']);
+T::eq($b3->get('/arts')['location'], '/2fa/controle', 'zonder geldige code blijft 2FA vereist');
+$r = $b2->submit('/2fa/beheer', '/2fa/herstelcodes/nieuw', ['password' => 'fout-wachtwoord']);
+T::ok(str_contains($b2->follow($r)['body'], 'wachtwoord klopt niet'), 'nieuwe herstelcodes vragen om het wachtwoord');
+$page = $b2->follow($b2->submit('/2fa/beheer', '/2fa/herstelcodes/nieuw', ['password' => $bakkerPw]))['body'];
+preg_match_all('#<li>([A-Z2-9]{5}-[A-Z2-9]{5})</li>#', $page, $rc2);
+T::eq(count($rc2[1]), 10, 'met wachtwoord komen er 10 nieuwe codes');
+$b4 = $login('bakker@praktijk.nl', $bakkerPw);
+$r = $b4->submit('/2fa/herstel', '/2fa/herstel', ['code' => $bakker->recovery[1]]);
+T::ok(str_contains($b4->follow($r)['body'], 'klopt niet of is al gebruikt'), 'oude herstelcodes werken niet meer na nieuwe codes');
+
+// andere praktijk ziet niets
+$out = (string) shell_exec($cmdEnv . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg("$root/bin/console") . ' arts:aanmaken "Dr. Elders" elders@andere.nl "Andere Praktijk" 2>&1');
+preg_match('/wachtwoord[^:]*: (\S+)/', $out, $mm);
+$elders = $onboardArts('elders@andere.nl', $mm[1] ?? '', 'Elders-nieuw-wachtwoord-1');
+T::ok(!str_contains($elders->get('/arts')['body'], 'Anna de Vries'), 'arts van een andere praktijk ziet de patiënten niet');
+T::eq($elders->get("/arts/patienten/$vid")['status'], 404, 'arts van een andere praktijk kan de patiënt niet openen');
+T::eq($elders->submit('/arts', "/arts/patienten/$vid/overnemen", [])['status'], 404, 'en kan hem ook niet overnemen');
+
+// arts verwijderen: patiënt blijft bij de praktijk
+$tm = $arts->get('/arts/team')['body'];
+preg_match('#/arts/team/([a-f0-9]{32})/verwijderen#', $tm, $m);
+$bakkerId = $m[1] ?? '';
+T::ok($bakkerId !== '' && !str_contains($tm, 'Andere Praktijk') && !str_contains($tm, 'Dr. Elders'), 'teamlijst bevat alleen de eigen praktijk');
+$page = $arts->follow($arts->submit('/arts/team', "/arts/team/$bakkerId/verwijderen", []))['body'];
+T::ok(str_contains($page, 'Dr. Bakker is verwijderd') && str_contains($page, '1 patiënt(en) staan nu bij de praktijk'), 'arts verwijderen: patiënt blijft bij de praktijk');
+T::eq($bakker->get('/arts')['location'], '/inloggen', 'verwijderde arts is direct uitgelogd');
+$g = new Client($base);
+T::ok(str_contains($g->follow($g->submit('/inloggen', '/inloggen', ['email' => 'bakker@praktijk.nl', 'password' => $bakkerPw]))['body'], 'komen niet overeen'), 'verwijderde arts kan niet meer inloggen');
+$page = $arts->get("/arts/patienten/$vid")['body'];
+T::ok(str_contains($page, 'geen (staat bij Huisartsenpraktijk Wanroij)') && str_contains($page, 'Dr. Bakker is uit de praktijk verwijderd') && str_contains($page, 'Nieuwe tekst na de bevestiging'), 'patiënt zonder arts: staat bij de praktijk, historie, verklaring nog zichtbaar voor de praktijk');
+T::ok(str_contains($zoek2($arts, ['arts' => 'none']), 'Anna de Vries'), 'filter “zonder arts” toont de patiënt');
+$arts->submit("/arts/patienten/$vid", "/arts/patienten/$vid/overnemen", []);
+T::ok(str_contains($zoek2($arts, ['arts' => 'mine']), 'Anna de Vries'), 'Dr. Jansen wijst de patiënt aan zichzelf toe');
+$tm = $arts->get('/arts/team')['body'];
+T::ok(!str_contains($tm, '/verwijderen'), 'beheerder kan zichzelf niet verwijderen (geen knop)');
+
+// niet-gebruikte uitnodigingen worden opgeruimd
+$st = new WV\Store(new WV\Db($dbfile), new WV\Crypto(WV\Crypto::parseKey($key)));
+$j = $st->userByEmail('jansen@praktijk.nl');
+$old = $st->addVerification($j['id'], $j['practice_id'], 'oud@voorbeeld.nl', '111222333', ['patient_name' => 'Oud Persoon', 'his_id' => 'X1234567', 'arts_name' => 'Dr. Jansen', 'practice' => 'x'])['verification'];
+$old['expires_at'] = time() - 40 * 86400;
+$st->saveVerification($old);
+T::ok($st->purgeUnusedInvitations() >= 1 && $st->verificationById($old['id']) === null, 'verlopen uitnodiging wordt 30 dagen na verlopen opgeruimd');
+$fresh = $st->addVerification($j['id'], $j['practice_id'], 'vers@voorbeeld.nl', '111222333', ['patient_name' => 'Vers Persoon', 'his_id' => 'X1234567', 'arts_name' => 'Dr. Jansen', 'practice' => 'x'])['verification'];
+$st->purgeUnusedInvitations();
+T::ok($st->verificationById($fresh['id']) !== null, 'een lopende uitnodiging blijft staan');
+$st->db->run('DELETE FROM verifications WHERE id = ?', [$fresh['id']]);
+
+T::section('Juridische teksten en toestemming');
+foreach (['/pilot' => 'Pilotinformatie', '/privacy' => 'Privacyverklaring', '/voorwaarden' => 'Gebruiksvoorwaarden'] as $path => $title) {
+    $r = (new Client($base))->get($path);
+    T::ok($r['status'] === 200 && str_contains($r['body'], "<h1>$title") && str_contains($r['body'], 'invullen in .env'), "$path is openbaar en toont de (nog in te vullen) gegevens van de exploitant");
+}
+T::ok(str_contains($regBody(['akkoord' => '']), 'toestemming geven'), 'registreren vereist toestemming (pilotinformatie en privacyverklaring)');
+T::ok(str_contains((new Client($base))->get('/registreren')['body'], 'href="/pilot"') && str_contains((new Client($base))->get('/')['body'], 'href="/privacy"'), 'links naar de teksten staan op het registratieformulier en in de voettekst');
+
+
 // intrekken door patiënt
 $page = $c->get('/dashboard');
 preg_match('#/verificatie/([a-f0-9]{32})/intrekken#', $page['body'], $m);
@@ -489,7 +611,7 @@ foreach (['111222333', '111 222 333', 'C333CBA', 'jansen@praktijk', 'Wanroij', '
 }
 $cols2 = [];
 foreach ($rawArts->query('PRAGMA table_info(verifications)') as $col) { $cols2[] = $col['name']; }
-T::eq($cols2, ['seq', 'id', 'arts_id', 'patient_user_id', 'key_idx', 'data'], 'verificatietabel bevat geen leesbare persoonsgegevens');
+T::eq($cols2, ['seq', 'id', 'practice_id', 'arts_id', 'patient_user_id', 'key_idx', 'data'], 'verificatietabel bevat geen leesbare persoonsgegevens');
 
 T::section('Versleuteling in het databasebestand');
 $pdo = new PDO('sqlite:' . $dbfile);
@@ -519,7 +641,7 @@ T::eq((new Client($base))->get('/v/' . $token)['status'], 404, 'toegangscodes zi
 $left = (int) $pdo->query('SELECT (SELECT COUNT(*) FROM versions) + (SELECT COUNT(*) FROM shares) + (SELECT COUNT(*) FROM access_logs) + (SELECT COUNT(*) FROM declarations WHERE user_id NOT IN (SELECT id FROM users))')->fetchColumn();
 T::eq($left, 0, 'geen verweesde versies, uitnodigingen of logs na verwijderen');
 $bas = (int) $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-T::eq($bas, 2, 'alleen Bas en de huisarts bestaan nog');
+T::eq($bas, 3, 'alleen Bas, Dr. Jansen en Dr. Elders (andere praktijk) bestaan nog');
 T::eq((int) $pdo->query('SELECT COUNT(*) FROM verifications WHERE patient_user_id IS NOT NULL')->fetchColumn(), 1, 'alleen de verificatie van Bas (nog actief) bestaat; die van de verwijderde patiënt is weg');
 
 $log = @file_get_contents("$tmp/server.log") ?: '';

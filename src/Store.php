@@ -49,8 +49,13 @@ final class Store
         if ($id === null || $id === '') {
             return null;
         }
-        $row = $this->db->one('SELECT id, data FROM users WHERE id = ?', [$id]);
-        return $row ? $this->unseal('users', $row) : null;
+        $row = $this->db->one('SELECT id, practice_id, data FROM users WHERE id = ?', [$id]);
+        return $row ? $this->hydrateUser($row) : null;
+    }
+
+    private function hydrateUser(array $row): array
+    {
+        return $this->unseal('users', $row) + ['practice_id' => $row['practice_id'] ?? null];
     }
 
     public function isArts(?array $user): bool
@@ -60,8 +65,8 @@ final class Store
 
     public function userByEmail(string $email): ?array
     {
-        $row = $this->db->one('SELECT id, data FROM users WHERE email_idx = ?', [$this->emailIndex($email)]);
-        return $row ? $this->unseal('users', $row) : null;
+        $row = $this->db->one('SELECT id, practice_id, data FROM users WHERE email_idx = ?', [$this->emailIndex($email)]);
+        return $row ? $this->hydrateUser($row) : null;
     }
 
     /** @return array|null null als het e-mailadres al bestaat */
@@ -74,7 +79,7 @@ final class Store
             'password' => $passwordHash,
             'created_at' => time(),
             'role' => 'patient',
-            'practice' => null,
+            'recovery_codes' => [],
             'two_factor_secret' => null,
             'two_factor_confirmed_at' => null,
             'two_factor_last_step' => 0,
@@ -90,14 +95,161 @@ final class Store
             }
             throw $e;
         }
-        return ['id' => $id] + $data;
+        return ['id' => $id, 'practice_id' => null] + $data;
     }
 
     public function saveUser(array $user): void
     {
         $id = $user['id'];
-        unset($user['id']);
+        unset($user['id'], $user['practice_id']);
         $this->db->run('UPDATE users SET data = ? WHERE id = ?', [$this->seal('users', $id, $user), $id]);
+    }
+
+    // -------------------------------------------------------------- praktijken
+
+    public function createPractice(string $name): array
+    {
+        $id = $this->newId();
+        $data = ['name' => $name, 'created_at' => time()];
+        $this->db->run('INSERT INTO practices (id, data) VALUES (?, ?)', [$id, $this->seal('practices', $id, $data)]);
+        return ['id' => $id] + $data;
+    }
+
+    public function practiceById(?string $id): ?array
+    {
+        if ($id === null || $id === '') {
+            return null;
+        }
+        $row = $this->db->one('SELECT id, data FROM practices WHERE id = ?', [$id]);
+        return $row ? $this->unseal('practices', $row) : null;
+    }
+
+    /** @return list<array> */
+    public function practices(): array
+    {
+        return array_map(fn($r) => $this->unseal('practices', $r), $this->db->all('SELECT id, data FROM practices'));
+    }
+
+    public function practiceByName(string $name): ?array
+    {
+        foreach ($this->practices() as $p) {
+            if (mb_strtolower($p['name']) === mb_strtolower(trim($name))) {
+                return $p;
+            }
+        }
+        return null;
+    }
+
+    /** De praktijk van een arts (altijd aanwezig; een arts zonder praktijk krijgt een eigen praktijk). */
+    public function practiceOf(array &$arts): array
+    {
+        if (empty($arts['practice_id'])) {
+            $arts['practice_id'] = $this->userById($arts['id'])['practice_id'] ?? null; // al eerder in dit verzoek aangemaakt?
+        }
+        $p = $this->practiceById($arts['practice_id'] ?? null);
+        if ($p === null) {
+            $p = $this->createPractice('Praktijk van ' . $arts['name']);
+            $this->db->run('UPDATE users SET practice_id = ? WHERE id = ?', [$p['id'], $arts['id']]);
+            $arts['practice_id'] = $p['id'];
+            $arts['is_admin'] = true;
+            $this->saveUser($arts);
+        }
+        return $p;
+    }
+
+    /** Maakt een huisartsaccount in een praktijk. @return array|null null als het e-mailadres al bestaat */
+    public function createArts(string $practiceId, string $name, string $email, string $passwordHash, bool $admin, bool $mustChangePassword): ?array
+    {
+        $user = $this->createUser($name, $email, $passwordHash);
+        if ($user === null) {
+            return null;
+        }
+        $this->db->run('UPDATE users SET practice_id = ? WHERE id = ?', [$practiceId, $user['id']]);
+        $user['practice_id'] = $practiceId;
+        $user['role'] = 'arts';
+        $user['is_admin'] = $admin;
+        $user['must_change_password'] = $mustChangePassword;
+        $this->saveUser($user);
+        return $user;
+    }
+
+    /** @return list<array> artsen van deze praktijk, op naam gesorteerd */
+    public function artsInPractice(string $practiceId): array
+    {
+        $rows = $this->db->all('SELECT id, practice_id, data FROM users WHERE practice_id = ?', [$practiceId]);
+        $list = array_map(fn($r) => $this->hydrateUser($r), $rows);
+        usort($list, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+        return $list;
+    }
+
+    /**
+     * Verwijdert een arts. Zijn patiënten blijven bij de praktijk staan (zonder arts) en dat wordt in hun historie vastgelegd.
+     * De identiteitsbevestiging (naam van de arts die de patiënt zag) blijft ongewijzigd bij de verificatie bewaard.
+     */
+    public function removeArts(string $artsId, string $byName): void
+    {
+        $arts = $this->userById($artsId);
+        if (!$this->isArts($arts)) {
+            return;
+        }
+        $this->db->transaction(function () use ($artsId, $arts, $byName) {
+            foreach ($this->db->all('SELECT id, practice_id, arts_id, patient_user_id, data FROM verifications WHERE arts_id = ?', [$artsId]) as $row) {
+                $v = $this->hydrateVerification($row);
+                $v['history'][] = ['at' => time(), 'action' => 'arts_verwijderd', 'from' => $arts['name'], 'by' => $byName];
+                $v['arts_id'] = null;
+                $this->saveVerification($v);
+            }
+            $this->db->run('DELETE FROM sessions WHERE user_idx = ?', [$this->crypto->index('session-user', $artsId)]);
+            $this->db->run('DELETE FROM users WHERE id = ?', [$artsId]);
+        });
+    }
+
+    public function endSessions(string $userId): void
+    {
+        $this->db->run('DELETE FROM sessions WHERE user_idx = ?', [$this->crypto->index('session-user', $userId)]);
+    }
+
+    // --------------------------------------------------------------- herstelcodes
+
+    private const RECOVERY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+    private function recoveryMac(string $userId, string $code): string
+    {
+        return $this->crypto->mac('recovery', $userId . '|' . strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $code) ?? ''));
+    }
+
+    /**
+     * Maakt 10 nieuwe herstelcodes en vervangt de oude. De codes zelf staan alleen in het antwoord; bewaard wordt een HMAC.
+     * @return list<string> bijvoorbeeld "K7QM2-X9PDA"
+     */
+    public function newRecoveryCodes(array &$user): array
+    {
+        $codes = [];
+        for ($i = 0; $i < 10; $i++) {
+            $c = '';
+            for ($j = 0; $j < 10; $j++) {
+                $c .= self::RECOVERY_ALPHABET[random_int(0, 31)];
+            }
+            $codes[] = substr($c, 0, 5) . '-' . substr($c, 5);
+        }
+        $user['recovery_codes'] = array_map(fn($c) => $this->recoveryMac($user['id'], $c), $codes);
+        $this->saveUser($user);
+        return $codes;
+    }
+
+    /** Gebruikt een herstelcode (eenmalig). Geeft true als de code klopte. */
+    public function useRecoveryCode(array &$user, string $code): bool
+    {
+        $mac = $this->recoveryMac($user['id'], $code);
+        foreach ($user['recovery_codes'] ?? [] as $i => $stored) {
+            if (hash_equals($stored, $mac)) {
+                unset($user['recovery_codes'][$i]);
+                $user['recovery_codes'] = array_values($user['recovery_codes']);
+                $this->saveUser($user);
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Verwijdert gebruiker en (via ON DELETE CASCADE) alle bijbehorende gegevens + sessies. */
@@ -304,7 +456,7 @@ final class Store
      * Legt de uitnodiging van de arts vast; de arts heeft de patiënt daarbij in persoon gezien en geïdentificeerd.
      * @return array{verification: array, code: string} de code staat alleen hier in platte tekst
      */
-    public function addVerification(string $artsId, string $email, string $bsn, array $fields): array
+    public function addVerification(string $artsId, string $practiceId, string $email, string $bsn, array $fields): array
     {
         $id = $this->newId();
         $code = $this->newCode();
@@ -320,19 +472,20 @@ final class Store
             'verified_at' => null,
             'revoked_at' => null,
             'revoked_by' => null,
+            'history' => [],
         ];
         $this->db->run(
-            'INSERT INTO verifications (id, arts_id, patient_user_id, key_idx, data) VALUES (?, ?, NULL, ?, ?)',
-            [$id, $artsId, $this->verificationKey($email, $bsn), $this->seal('verifications', $id, $data)]
+            'INSERT INTO verifications (id, practice_id, arts_id, patient_user_id, key_idx, data) VALUES (?, ?, ?, NULL, ?, ?)',
+            [$id, $practiceId, $artsId, $this->verificationKey($email, $bsn), $this->seal('verifications', $id, $data)]
         );
-        return ['verification' => ['id' => $id, 'arts_id' => $artsId, 'patient_user_id' => null] + $data, 'code' => $code];
+        return ['verification' => ['id' => $id, 'practice_id' => $practiceId, 'arts_id' => $artsId, 'patient_user_id' => null] + $data, 'code' => $code];
     }
 
     /** Openstaande uitnodigingen voor dit e-mailadres + BSN (nieuwste eerst). @return list<array> */
     public function openVerifications(string $email, string $bsn): array
     {
         $rows = $this->db->all(
-            'SELECT id, arts_id, patient_user_id, data FROM verifications WHERE key_idx = ? ORDER BY seq DESC',
+            'SELECT id, practice_id, arts_id, patient_user_id, data FROM verifications WHERE key_idx = ? ORDER BY seq DESC',
             [$this->verificationKey($email, $bsn)]
         );
         $open = [];
@@ -347,26 +500,27 @@ final class Store
 
     private function hydrateVerification(array $row): array
     {
-        return $this->unseal('verifications', $row) + ['arts_id' => $row['arts_id'], 'patient_user_id' => $row['patient_user_id']];
+        return $this->unseal('verifications', $row) + ['history' => []]
+            + ['practice_id' => $row['practice_id'], 'arts_id' => $row['arts_id'], 'patient_user_id' => $row['patient_user_id']];
     }
 
     public function verificationById(string $id): ?array
     {
-        $row = $this->db->one('SELECT id, arts_id, patient_user_id, data FROM verifications WHERE id = ?', [$id]);
+        $row = $this->db->one('SELECT id, practice_id, arts_id, patient_user_id, data FROM verifications WHERE id = ?', [$id]);
         return $row ? $this->hydrateVerification($row) : null;
     }
 
-    /** Nieuwste eerst. @return list<array> */
-    public function verificationsForArts(string $artsId): array
+    /** Alle patiënten van de praktijk, nieuwste eerst. @return list<array> */
+    public function verificationsForPractice(string $practiceId): array
     {
-        $rows = $this->db->all('SELECT id, arts_id, patient_user_id, data FROM verifications WHERE arts_id = ? ORDER BY seq DESC', [$artsId]);
+        $rows = $this->db->all('SELECT id, practice_id, arts_id, patient_user_id, data FROM verifications WHERE practice_id = ? ORDER BY seq DESC', [$practiceId]);
         return array_map(fn($r) => $this->hydrateVerification($r), $rows);
     }
 
     /** Nieuwste eerst. @return list<array> */
     public function verificationsForPatient(string $patientId): array
     {
-        $rows = $this->db->all('SELECT id, arts_id, patient_user_id, data FROM verifications WHERE patient_user_id = ? ORDER BY seq DESC', [$patientId]);
+        $rows = $this->db->all('SELECT id, practice_id, arts_id, patient_user_id, data FROM verifications WHERE patient_user_id = ? ORDER BY seq DESC', [$patientId]);
         return array_map(fn($r) => $this->hydrateVerification($r), $rows);
     }
 
@@ -374,11 +528,39 @@ final class Store
     {
         $id = $v['id'];
         $patient = $v['patient_user_id'] ?? null;
-        unset($v['id'], $v['arts_id'], $v['patient_user_id']);
+        $arts = $v['arts_id'] ?? null;
+        unset($v['id'], $v['arts_id'], $v['patient_user_id'], $v['practice_id']);
         $this->db->run(
-            'UPDATE verifications SET patient_user_id = ?, data = ? WHERE id = ?',
-            [$patient, $this->seal('verifications', $id, $v), $id]
+            'UPDATE verifications SET arts_id = ?, patient_user_id = ?, data = ? WHERE id = ?',
+            [$arts, $patient, $this->seal('verifications', $id, $v), $id]
         );
+    }
+
+    /** Wijst een patiënt toe aan een arts van dezelfde praktijk (of aan niemand) en legt dat vast in de historie. */
+    public function assignVerification(array $v, ?array $newArts, string $byName): void
+    {
+        $from = $v['arts_id'] ? ($this->userById($v['arts_id'])['name'] ?? null) : null;
+        $v['history'][] = ['at' => time(), 'action' => 'overgenomen', 'from' => $from, 'to' => $newArts['name'] ?? null, 'by' => $byName];
+        $v['arts_id'] = $newArts['id'] ?? null;
+        $this->saveVerification($v);
+    }
+
+    /**
+     * Ruimt uitnodigingen op die nooit tot een registratie leidden (verlopen of ingetrokken) zodra de bewaartermijn voorbij is.
+     * Zo blijven er geen gegevens van mensen achter die geen account hebben genomen.
+     * @return int aantal verwijderde uitnodigingen
+     */
+    public function purgeUnusedInvitations(int $graceSeconds = 30 * 86400): int
+    {
+        $n = 0;
+        foreach ($this->db->all('SELECT id, practice_id, arts_id, patient_user_id, data FROM verifications WHERE patient_user_id IS NULL') as $row) {
+            $v = $this->hydrateVerification($row);
+            $end = $v['status'] === 'ingetrokken' ? (int) ($v['revoked_at'] ?? 0) : (int) $v['expires_at'];
+            if ($v['status'] !== 'geverifieerd' && $end + $graceSeconds < time()) {
+                $n += $this->db->run('DELETE FROM verifications WHERE id = ?', [$v['id']]);
+            }
+        }
+        return $n;
     }
 
     /**

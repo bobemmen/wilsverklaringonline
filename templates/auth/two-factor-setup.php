@@ -3,7 +3,8 @@
 
 <?php if ($confirmed): ?>
     <div class="callout"><p>Tweestapsverificatie staat aan. Om veiligheidsredenen tonen wij de geheime sleutel niet opnieuw.</p></div>
-    <p class="muted">Is uw telefoon kwijt? Neem dan contact op met de beheerder van deze installatie; die kan tweestapsverificatie opnieuw instellen.</p>
+    <p class="muted">Is uw telefoon kwijt? Log dan in met een van uw herstelcodes. Heeft u die niet meer, neem dan contact op met uw huisartsenpraktijk.</p>
+    <a href="/2fa/beheer" class="btn btn-block">Herstelcodes en nieuw apparaat</a>
     <a href="/dashboard" class="btn btn-primary btn-block">Naar het dashboard</a>
 <?php else: ?>
     <p>Uw verklaring is alleen bereikbaar met een tweede stap: een code uit een app op uw telefoon, zoals Google Authenticator, Microsoft Authenticator of Aegis.</p>

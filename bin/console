@@ -96,25 +96,27 @@ switch ($cmd) {
         break;
 
     case 'arts:aanmaken':
-        [$name, $email, $practice] = $args + [null, null, null];
+        $flags = array_values(array_filter($args, fn($a) => str_starts_with($a, '--')));
+        $pos = array_values(array_filter($args, fn($a) => !str_starts_with($a, '--')));
+        [$name, $email, $practiceName] = $pos + [null, null, null];
         if (!$name || !$email) {
-            fail('Gebruik: php bin/console arts:aanmaken "<naam>" <e-mailadres> ["<praktijk>"]');
+            fail('Gebruik: php bin/console arts:aanmaken "<naam>" <e-mailadres> ["<praktijk>"] [--beheerder]');
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             fail('Ongeldig e-mailadres.');
         }
         $store = store();
+        $practice = $practiceName ? $store->practiceByName($practiceName) : null;
+        $admin = in_array('--beheerder', $flags, true) || $practice === null; // eerste arts van een praktijk is beheerder
+        $practice ??= $store->createPractice($practiceName ?: 'Praktijk van ' . $name);
         $password = rtrim(strtr(base64_encode(random_bytes(15)), '+/', '-_'), '=');
-        $user = $store->createUser($name, $email, password_hash($password, PASSWORD_ARGON2ID));
+        $user = $store->createArts($practice['id'], $name, $email, password_hash($password, PASSWORD_ARGON2ID), $admin, true);
         if ($user === null) {
             fail('Dit e-mailadres is al in gebruik.');
         }
-        $user['role'] = 'arts';
-        $user['practice'] = $practice;
-        $store->saveUser($user);
-        out("Huisartsaccount aangemaakt voor $name <$email>.");
+        out("Huisartsaccount aangemaakt voor $name <$email> bij {$practice['name']}" . ($admin ? ' (beheerder).' : '.'));
         out("Tijdelijk wachtwoord (nu doorgeven, daarna wijzigen): $password");
-        out('Bij de eerste login moet tweestapsverificatie worden ingesteld.');
+        out('Bij de eerste login volgen een verplichte wachtwoordwijziging en het instellen van tweestapsverificatie (met herstelcodes).');
         break;
 
     case 'backup':
@@ -133,7 +135,8 @@ switch ($cmd) {
         $store = store();
         $n = $store->db->run('DELETE FROM sessions WHERE expires_at < ?', [time()]);
         $m = $store->db->run('DELETE FROM throttle WHERE reset_at < ?', [time()]);
-        out("Verlopen sessies verwijderd: $n; verlopen tellers verwijderd: $m.");
+        $i = $store->purgeUnusedInvitations();
+        out("Verlopen sessies verwijderd: $n; verlopen tellers verwijderd: $m; niet gebruikte uitnodigingen (30 dagen na verlopen) verwijderd: $i.");
         break;
 
     case 'serve':
@@ -145,11 +148,11 @@ switch ($cmd) {
     default:
         out('WilsVerklaring beheer');
         out('  install [url]           maak .env (met nieuwe APP_KEY) en de database aan; url = publiek adres');
-        out('  arts:aanmaken <naam> <email> [praktijk]  maak een huisartsaccount aan');
+        out('  arts:aanmaken <naam> <email> [praktijk] [--beheerder]  maak een huisartsaccount aan (eerste arts van een praktijk wordt beheerder)');
         out('  migrate                 werk het databaseschema bij');
         out('  key:generate            toon een nieuwe APP_KEY');
         out('  user:reset-2fa <email>  reset tweestapsverificatie van een gebruiker');
         out('  backup <bestand>        consistente back-up van de (versleutelde) database');
-        out('  purge                   ruim verlopen sessies/tellers op');
+        out('  purge                   ruim verlopen sessies/tellers en niet gebruikte uitnodigingen op');
         out('  serve [poort]           ontwikkelserver');
 }

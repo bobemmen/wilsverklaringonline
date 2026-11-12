@@ -143,6 +143,21 @@ Een patiënt kan zich **alleen** registreren nadat zijn huisarts hem heeft uitge
 
 Op `/arts` ziet de huisarts uitsluitend de eigen uitgenodigde patiënten. Zoeken kan op naam, e-mailadres of HIS-patiënt-ID (deelmatch), en apart op BSN (alleen exact, vergelijking via de HMAC-proof; het BSN staat nergens leesbaar). Het zoekformulier gebruikt POST (`/arts/zoeken`) zodat het BSN niet in URL, serverlog of browsergeschiedenis terechtkomt. Verder: statusfilter (geregistreerd / wacht op registratie / ingetrokken / verlopen) en paginering (20 per pagina).
 
+## Praktijk, team en herstelcodes
+
+- **Praktijkmodel:** artsen horen bij een praktijk en zien elkaars patiënten en gepubliceerde verklaringen. Per patiënt staat welke arts hem begeleidt en welke arts de identiteit bevestigde (die laatste blijft altijd staan, als bewijs).
+- **Overnemen:** elke arts kan een patiënt aan zichzelf toewijzen (ook een patiënt van een collega, of een patiënt zonder arts). Elke overdracht staat in de historie van de patiënt.
+- **Team beheren (`/arts/team`):** praktijkbeheerders voegen artsen toe (tijdelijk wachtwoord, eenmalig getoond), verwijderen artsen, maken collega's beheerder, geven een nieuw wachtwoord of resetten 2FA. Verwijder je een arts, dan blijven zijn patiënten bij de praktijk staan.
+- **Eerste arts van een praktijk:** `php bin/console arts:aanmaken "<naam>" <email> "<praktijk>"` (wordt beheerder; verdere artsen via het teamscherm of met `--beheerder`).
+- **2FA:** verplicht voor iedereen. Bij het instellen volgen 10 herstelcodes (eenmalig, alleen een HMAC wordt bewaard). Inloggen met een herstelcode: `/2fa/herstel`. Nieuwe codes of een nieuw apparaat: `/2fa/beheer` (met wachtwoord).
+- **Inzagelijst voor de patiënt:** onder “Arts-toegang” ziet de patiënt wie zijn verklaring las en wanneer (huisarts met naam).
+- **Toestemming:** bij registratie vastgelegd met tijd en tekstversie (`Legal::VERSION`).
+- **Opschonen:** `bin/console purge` verwijdert verlopen sessies, tellers en uitnodigingen die 30 dagen na verlopen nog niet gebruikt zijn. Plan dit dagelijks.
+
+## Juridische stukken
+
+Zie `docs/juridisch/README.md`: rollen en BSN-grondslag, DPIA, verwerkersovereenkomst, datalekprocedure, pilotinformatie, privacyverklaring en gebruiksvoorwaarden (de laatste drie worden op `/pilot`, `/privacy` en `/voorwaarden` getoond; vul `OPERATOR_NAME`, `OPERATOR_ADDRESS`, `PRIVACY_CONTACT_EMAIL` en `PILOT_PRACTICE_NAME` in `.env` in). Alles is concept en moet door een jurist/FG worden getoetst.
+
 ## Identificatie en ondertekening
 
 - Stap 1 vraagt voornamen, achternaam, geboortenaam (optioneel), geboortedatum en geboorteplaats; stap 16 datum en plaats van ondertekening.
