@@ -2,6 +2,6 @@
 
 <div class="field">
     <label for="euthanasie_brief">Brief aan de arts (uw persoonlijke aanvulling)</label>
-    <p class="hint" id="brief-hint">Dit is uw persoonlijke aanvulling op het euthanasieverzoek. Schrijf op wat voor u ondraaglijk lijden is. Als u zelf niet meer kunt praten, kijkt uw arts hier als eerste naar.</p>
+    <p class="hint" id="brief-hint">Dit is uw persoonlijke aanvulling op het euthanasieverzoek. Schrijf in uw eigen woorden op wat voor u ondraaglijk lijden is; een eigen tekst weegt zwaarder dan een formulier. Als u zelf niet meer kunt praten, kijkt uw arts hier als eerste naar.</p>
     <?= $this->textarea('euthanasie_brief', $data['euthanasie_brief'], 'Beste dokter, ik wil u iets over mezelf vertellen …', 'tall', 'brief-hint') ?>
 </div>

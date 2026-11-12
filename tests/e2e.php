@@ -317,6 +317,7 @@ foreach ([1, 2, 3, 4, 5, 6, 8, 9, 10, 13] as $n) {
     $pg = $c->get('/verklaring/wizard?stap=' . $n)['body'];
     T::ok(str_contains($pg, '<details class="more">') && str_contains($pg, 'NVVE-brochure'), "stap $n: uitleg en bronvermelding aanwezig");
 }
+T::ok(str_contains($c->get('/verklaring/wizard?stap=10')['body'], 'Euthanasie en dementie: wat u moet weten'), 'stap 10: dementie-uitleg met realistische verwachtingen');
 $pg = $c->get('/verklaring/wizard?stap=14')['body'];
 T::ok(str_contains($pg, 'Hulp en advies') && str_contains($pg, '0800-0113') && str_contains($pg, 'Piet de Vries, zoon'), 'overzicht: hulpblok en gevolmachtigde');
 

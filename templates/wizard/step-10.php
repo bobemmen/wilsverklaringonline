@@ -1,5 +1,26 @@
 <div class="callout"><p>Soms kan iemand later zelf niet meer om euthanasie vragen, bijvoorbeeld door dementie of een herseninfarct. U kunt op voorhand aangeven of u ook dan wilt dat uw eerdere wens wordt uitgevoerd.</p></div>
 
+<section class="notice" aria-labelledby="dem-titel">
+    <h2 id="dem-titel">Euthanasie en dementie: wat u moet weten</h2>
+
+    <h3>Een wilsverklaring is belangrijk, maar geen garantie</h3>
+    <p>Als u een euthanasieverklaring hebt geschreven, betekent dat niet automatisch dat de arts later euthanasie uitvoert. De arts moet zelf overtuigd zijn dat aan alle regels is voldaan. Dat geldt ook als u uw wens duidelijk op papier hebt gezet.</p>
+    <p>Een belangrijke voorwaarde is dat u op dat moment ondraaglijk en uitzichtloos lijdt. Bij gevorderde dementie kunt u dat zelf niet meer vertellen. De arts moet het dan zien aan uw gedrag en aan wat u laat merken. Ook praat de arts met zorgverleners en met uw naasten. Dit is moeilijk vast te stellen, en daarom komt euthanasie bij gevorderde dementie maar zelden voor.</p>
+
+    <h3>Het komt weinig voor</h3>
+    <p>In Nederland krijgen maar weinig mensen met gevorderde dementie euthanasie. In 2023 ging het om 9 mensen. In de jaren daarvoor waren dat er nog minder. Veel artsen zijn hier terughoudend in. Een arts is ook nooit verplicht om euthanasie uit te voeren, ook niet als u het in een verklaring hebt gevraagd.</p>
+
+    <h3>Zo maakt u uw verklaring sterker</h3>
+    <ul>
+        <li><strong>Wees concreet.</strong> Schrijf op in welke situatie u het leven niet meer wilt verlengen. Bijvoorbeeld: wanneer u uw naasten niet meer herkent, of wanneer u 24 uur per dag zorg nodig hebt. Wat voor u ondraaglijk is, is voor iemand anders misschien anders.</li>
+        <li><strong>Schrijf het in uw eigen woorden.</strong> Een eigen tekst weegt zwaarder dan een kant-en-klaar formulier.</li>
+        <li><strong>Bespreek het met uw huisarts.</strong> Zo weet uw arts wat u bedoelt en waarom.</li>
+        <li><strong>Bevestig uw wens regelmatig.</strong> Lees de verklaring af en toe door en bespreek haar opnieuw met uw huisarts, vooral als uw gezondheid verandert. Een recente verklaring weegt zwaarder dan een oude.</li>
+        <li><strong>Laat uw naasten weten wat u wilt.</strong> Zij worden bij de beoordeling betrokken.</li>
+    </ul>
+</section>
+
+
 <details class="more">
     <summary>Euthanasie bij dementie: de zes fasen</summary>
     <div class="more-body">
