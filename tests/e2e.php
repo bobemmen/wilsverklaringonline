@@ -19,7 +19,7 @@ $base = "http://127.0.0.1:$port";
 $key = WV\Crypto::generateKey();
 $env = [
     'APP_KEY' => $key, 'APP_ENV' => 'local', 'APP_DEBUG' => 'true', 'APP_URL' => $base,
-    'DB_PATH' => "$tmp/db/e2e.sqlite", 'MAIL_DRIVER' => 'log', 'SMS_ENABLED' => 'true', 'PATH' => getenv('PATH'),
+    'DB_PATH' => "$tmp/db/e2e.sqlite", 'MAIL_DRIVER' => 'log', 'PATH' => getenv('PATH'),
 ];
 $proc = proc_open(
     [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', "$root/public", "$root/public/index.php"],
@@ -94,10 +94,26 @@ final class Client
     }
 }
 
+$dbfile = "$tmp/db/e2e.sqlite";
+$arts = null;
+$his = 'C333CBA-F0C0-4521-8A75-33C6911C1E2C';
+
+/** De huisarts nodigt een patiënt uit; geeft de code op papier of null. */
+function invitePatient(Client $arts, string $name, string $email, string $bsn = '111222333', array $over = []): ?string
+{
+    global $his;
+    $r = $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => $name, 'email' => $email, 'bsn' => $bsn, 'his_id' => $his, 'seen' => '1', 'identity' => '1']);
+    $page = $arts->follow($r);
+    return preg_match('#class="paper-code"[^>]*>(\d{3}) (\d{3})<#', $page['body'], $m) ? $m[1] . $m[2] : null;
+}
+
 function register(string $base, string $name, string $email, string $pw): Client
 {
+    global $arts, $dbfile;
+    (new PDO('sqlite:' . $dbfile))->exec('DELETE FROM throttle');
+    $code = invitePatient($arts, $name, $email) ?? '';
     $c = new Client($base);
-    $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'password' => $pw, 'password_confirmation' => $pw]);
+    $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'bsn' => '111222333', 'code' => $code, 'password' => $pw, 'password_confirmation' => $pw]);
     $page = $c->follow($r);
     preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
     $secret = str_replace(' ', '', $m[1] ?? '');
@@ -108,6 +124,23 @@ function register(string $base, string $name, string $email, string $pw): Client
 
 $pw = 'Een-lang-wachtwoord-123';
 $intro = 'Ik houd van mijn tuin en mijn hond Bram.';
+
+T::section('Huisarts-account');
+$cmdEnv = 'APP_KEY=' . escapeshellarg($key) . ' DB_PATH=' . escapeshellarg($dbfile) . ' APP_ENV=local MAIL_DRIVER=log ';
+$out = (string) shell_exec($cmdEnv . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg("$root/bin/console") . ' arts:aanmaken "Dr. Jansen" jansen@praktijk.nl "Huisartsenpraktijk Wanroij" 2>&1');
+preg_match('/wachtwoord[^:]*: (\S+)/', $out, $mm);
+$artsPw = $mm[1] ?? '';
+T::ok($artsPw !== '' && str_contains($out, 'aangemaakt'), 'bin/console arts:aanmaken maakt een huisartsaccount');
+$arts = new Client($base);
+$r = $arts->submit('/inloggen', '/inloggen', ['email' => 'jansen@praktijk.nl', 'password' => $artsPw]);
+T::eq($r['location'], '/2fa/instellen', 'huisarts moet eerst 2FA instellen');
+$page = $arts->follow($r);
+preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
+$arts->secret = str_replace(' ', '', $m[1] ?? '');
+$arts->submit('/2fa/instellen', '/2fa/instellen', ['code' => Totp::generateCode($arts->secret)]);
+T::eq($arts->get('/arts')['status'], 200, 'huisarts bereikt /arts na 2FA');
+T::eq($arts->get('/dashboard')['location'], '/arts', 'dashboard van huisarts → /arts');
+T::eq($arts->get('/verklaring/wizard')['location'], '/arts', 'huisarts heeft geen patiëntwizard');
 
 T::section('Toegangscontrole & beveiligingsheaders');
 $anon = new Client($base);
@@ -132,12 +165,47 @@ $r = $c->get('/dashboard');
 T::eq($r['status'], 200, 'dashboard bereikbaar na 2FA');
 T::ok(str_contains($r['body'], 'Concept'), 'nieuwe verklaring staat op Concept');
 T::ok(str_contains($r['body'], 'Welkom, '), 'persoonlijke begroeting');
-// tweede registratie met hetzelfde adres
-$c2 = new Client($base);
-$r = $c2->submit('/registreren', '/registreren', ['name' => 'X', 'email' => 'ANNA@voorbeeld.nl', 'password' => $pw, 'password_confirmation' => $pw]);
-T::ok(str_contains($c2->follow($r)['body'], 'al in gebruik'), 'dubbel e-mailadres wordt geweigerd');
-$r = $c2->submit('/registreren', '/registreren', ['name' => 'X', 'email' => 'x@y.nl', 'password' => 'kort', 'password_confirmation' => 'kort']);
-T::ok(str_contains($c2->follow($r)['body'], 'minimaal 10'), 'te kort wachtwoord wordt geweigerd');
+T::ok(str_contains($r['body'], 'Identiteit bevestigd door uw huisarts') && str_contains($r['body'], 'Dr. Jansen') && str_contains($r['body'], 'Bevestigd op ' . date('d-m-Y')), 'na registratie is de identiteit meteen bevestigd door de huisarts');
+
+T::section('Registreren alleen met uitnodiging, code, e-mailadres en BSN');
+clearThrottle($dbfile);
+$regBody = function (array $f) use ($base) { $cl = new Client($base); $r = $cl->submit('/registreren', '/registreren', $f + ['name' => 'Carla Smit', 'email' => 'carla@voorbeeld.nl', 'bsn' => '111222333', 'code' => '000000', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123']); return $cl->follow($r)['body']; };
+$pw2 = 'Een-lang-wachtwoord-123';
+T::ok(str_contains((new Client($base))->get('/registreren')['body'], 'Code van uw huisarts'), 'registratieformulier vraagt om de code van de huisarts');
+T::ok(str_contains($regBody(['password' => $pw2]), 'klopt niet'), 'zonder uitnodiging is registreren niet mogelijk');
+$carla = invitePatient($arts, 'Carla Smit', 'carla@voorbeeld.nl');
+T::ok($carla !== null && strlen($carla) === 6, 'huisarts nodigt uit en krijgt een code van 6 cijfers');
+T::ok(str_contains($regBody(['email' => 'mallory@voorbeeld.nl', 'code' => $carla]), 'klopt niet'), 'andere e-mailadres met de juiste code en BSN werkt niet');
+T::ok(str_contains($regBody(['bsn' => '123456782', 'code' => $carla]), 'klopt niet'), 'ander BSN met de juiste code werkt niet');
+T::ok(str_contains($regBody(['bsn' => '123456789', 'code' => $carla]), 'geen geldig BSN'), 'ongeldig BSN (elfproef) wordt geweigerd');
+T::ok(str_contains($regBody(['code' => $carla, 'password' => 'kort']), 'minimaal 10'), 'te kort wachtwoord wordt geweigerd');
+T::ok(str_contains($regBody(['code' => $carla === '123456' ? '654321' : '123456']), 'klopt niet'), 'foute code wordt geweigerd');
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Anna', 'email' => 'anna@voorbeeld.nl', 'bsn' => '111222333', 'his_id' => $his, 'seen' => '1', 'identity' => '1']);
+T::ok(str_contains($arts->follow($r)['body'], 'bestaat al een account'), 'arts kan niet uitnodigen met een bestaand e-mailadres');
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'bsn' => '111222333', 'his_id' => $his, 'seen' => '1']);
+T::ok(str_contains($arts->follow($r)['body'], 'beide verklaringen'), 'arts moet beide bevestigingsvinkjes aanvinken');
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'bsn' => '123456789', 'his_id' => 'x', 'seen' => '1', 'identity' => '1']);
+$b = $arts->follow($r)['body'];
+T::ok(str_contains($b, 'elfproef') && str_contains($b, 'patiënt-ID'), 'arts: ongeldig BSN en patiënt-ID worden geweigerd');
+T::eq($c->get('/arts')['status'], 403, 'patiënt heeft geen toegang tot /arts');
+// blokkade na 5 foute codes
+clearThrottle($dbfile);
+for ($i = 0; $i < 5; $i++) { clearThrottle($dbfile); $regBody(['code' => '11111' . $i]); }
+T::ok(str_contains($regBody(['code' => $carla]), 'klopt niet'), 'na 5 foute codes vervalt de uitnodiging (ook de juiste code werkt niet meer)');
+$carla2 = invitePatient($arts, 'Carla Smit', 'carla@voorbeeld.nl');
+$carla3 = invitePatient($arts, 'Carla Smit', 'carla@voorbeeld.nl');
+clearThrottle($dbfile);
+T::ok(str_contains($regBody(['code' => $carla2]), 'klopt niet'), 'een nieuwe uitnodiging vervangt de vorige (oude code werkt niet meer)');
+$art = $arts->get('/arts')['body'];
+T::ok(str_contains($art, 'Wacht op registratie') && str_contains($art, 'Code op papier'), 'arts ziet openstaande uitnodiging met knop voor een nieuwe code');
+preg_match_all('#/arts/patienten/([a-f0-9]{32})/papiercode#', $art, $pm);
+$r = $arts->submit('/arts', '/arts/patienten/' . $pm[1][0] . '/papiercode', []);
+$page = $arts->follow($r);
+preg_match('#class="paper-code"[^>]*>(\d{3}) (\d{3})<#', $page['body'], $pc);
+$carla4 = ($pc[1] ?? '') . ($pc[2] ?? '');
+clearThrottle($dbfile);
+T::ok(strlen($carla4) === 6 && str_contains($regBody(['code' => $carla3]), 'klopt niet'), 'nieuwe code maakt de vorige ongeldig');
+$arts->submit('/arts', '/arts/patienten/' . $pm[1][0] . '/intrekken', []);
 
 T::section('Inloggen: 2FA mag niet te omzeilen zijn');
 $l = new Client($base);
@@ -346,172 +414,45 @@ T::ok(!str_contains($r['body'], 'password') && !str_contains($r['body'], 'two_fa
 $r = $c->submit('/account', '/account/verwijderen', ['password' => 'fout']);
 T::ok(str_contains($c->follow($r)['body'], 'klopt niet'), 'verwijderen vraagt het juiste wachtwoord');
 
-T::section('Huisarts: patiënt uitnodigen en bevestigen');
+T::section('Huisarts: verificatie zichtbaar en intrekken');
 clearThrottle($dbfile);
-$cmdEnv = 'APP_KEY=' . escapeshellarg($key) . ' DB_PATH=' . escapeshellarg($dbfile) . ' APP_ENV=local MAIL_DRIVER=log ';
-$out = (string) shell_exec($cmdEnv . escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg("$root/bin/console") . ' arts:aanmaken "Dr. Jansen" jansen@praktijk.nl "Huisartsenpraktijk Wanroij" 2>&1');
-preg_match('/wachtwoord[^:]*: (\S+)/', $out, $mm);
-$artsPw = $mm[1] ?? '';
-T::ok($artsPw !== '' && str_contains($out, 'aangemaakt'), 'bin/console arts:aanmaken maakt een huisartsaccount');
-$arts = new Client($base);
-$r = $arts->submit('/inloggen', '/inloggen', ['email' => 'jansen@praktijk.nl', 'password' => $artsPw]);
-T::eq($r['location'], '/2fa/instellen', 'huisarts moet eerst 2FA instellen');
-$page = $arts->follow($r);
-preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
-$arts->secret = str_replace(' ', '', $m[1] ?? '');
-$arts->submit('/2fa/instellen', '/2fa/instellen', ['code' => Totp::generateCode($arts->secret)]);
-T::eq($arts->get('/arts')['status'], 200, 'huisarts bereikt /arts na 2FA');
-T::eq($arts->get('/dashboard')['location'], '/arts', 'dashboard van huisarts → /arts');
-T::eq($arts->get('/verklaring/wizard')['location'], '/arts', 'huisarts heeft geen patiëntwizard');
-T::eq($c->get('/arts')['status'], 403, 'patiënt heeft geen toegang tot /arts');
-T::eq((new Client($base))->get('/arts')['location'], '/inloggen', 'anoniem → inloggen');
-
 $r = $c->submit('/token', '/token/genereer', []);
 preg_match('#token-box">' . preg_quote($base, '#') . '/v/([a-f0-9]{64})<#', $c->follow($r)['body'], $m);
 $token = $m[1] ?? '';
-$his = 'C333CBA-F0C0-4521-8A75-33C6911C1E2C';
-$invite = fn(array $over = []) => $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => 'Anna de Vries', 'email' => 'anna@voorbeeld.nl', 'dob' => '1950-03-07', 'bsn' => '111222333', 'his_id' => $his, 'phone' => '06 12345678', 'method' => 'sms']);
-$r = $invite(['bsn' => '123456789']);
-T::ok(str_contains($arts->follow($r)['body'], 'elfproef'), 'ongeldig BSN (elfproef) wordt geweigerd');
-$r = $invite(['phone' => '12']);
-T::ok(str_contains($arts->follow($r)['body'], 'mobiel nummer'), 'ongeldig mobiel nummer wordt geweigerd');
-$r = $invite(['his_id' => 'x']);
-T::ok(str_contains($arts->follow($r)['body'], 'patiënt-ID'), 'te kort patiënt-ID wordt geweigerd');
-$r = $invite(['dob' => '2999-01-01']);
-T::ok(str_contains($arts->follow($r)['body'], 'geldige geboortedatum'), 'geboortedatum in de toekomst wordt geweigerd');
-$r = $invite();
-$page = $arts->follow($r);
-preg_match('#token-box">' . preg_quote($base, '#') . '/uitnodiging/([a-f0-9]{64})<#', $page['body'], $m);
-$inv = $m[1] ?? '';
-T::ok($inv !== '' && str_contains($page['body'], 'Uitnodiging verstuurd'), 'uitnodiging aangemaakt en gemaild');
-T::ok(!str_contains($page['body'], $his), 'patiënt-ID wordt niet in de uitnodigingsmelding herhaald');
-
-// patiënt
-$anon = new Client($base);
-$r = $anon->get('/uitnodiging/' . $inv);
-T::ok($r['status'] === 200 && str_contains($r['body'], 'Dr. Jansen') && !str_contains($r['body'], 'Anna') && !str_contains($r['body'], $his), 'anoniem: alleen arts zichtbaar, geen patiëntgegevens');
-T::eq($anon->get('/uitnodiging/' . str_repeat('a', 64))['status'], 404, 'onbekende uitnodiging → 404');
-T::eq($arts->get('/uitnodiging/' . $inv)['status'], 403, 'een huisarts kan geen uitnodiging als patiënt openen');
-$r = $c->get('/uitnodiging/' . $inv);
-T::ok($r['status'] === 200 && str_contains($r['body'], 'name="bsn"'), 'ingelogde patiënt ziet het koppelformulier');
-$r = $c->submit('/uitnodiging/' . $inv, '/uitnodiging/' . $inv, ['dob' => '1950-03-08', 'bsn' => '111222333', 'consent' => '1']);
-T::ok(str_contains($c->follow($r)['body'], 'komen niet overeen'), 'verkeerde geboortedatum wordt geweigerd');
-$r = $c->submit('/uitnodiging/' . $inv, '/uitnodiging/' . $inv, ['dob' => '1950-03-07', 'bsn' => '111222333']);
-T::ok(str_contains($c->follow($r)['body'], 'toestemming'), 'zonder toestemming geen koppeling');
-$r = $c->submit('/uitnodiging/' . $inv, '/uitnodiging/' . $inv, ['dob' => '1950-03-07', 'bsn' => '111 222 333', 'consent' => '1']);
-T::eq($r['location'], '/uitnodiging/' . $inv, 'juiste geboortedatum + BSN → nog niet gekoppeld, eerst sms-code');
-@unlink("$root/storage/logs/sms.log");
-$page = $c->get('/uitnodiging/' . $inv);
-T::ok(str_contains($page['body'], 'name="code"') && str_contains($page['body'], '+316 ••• ••• 78') && !str_contains($page['body'], '12345678'), 'codepagina toont afgeschermd mobiel nummer');
-T::eq($c->get('/dashboard')['status'], 200, 'nog geen koppeling zichtbaar');
-$r = $c->submit('/uitnodiging/' . $inv, '/uitnodiging/' . $inv . '/opnieuw', []);
-$sms = (string) @file_get_contents("$root/storage/logs/sms.log");
-preg_match_all('/code is (\d{6})/', $sms, $cm);
-$smsCode = end($cm[1]) ?: '';
-T::ok(str_contains($sms, '+31612345678') && strlen($smsCode) === 6, 'sms-code naar het door de arts opgegeven nummer verstuurd (log)');
-$r = $c->submit('/uitnodiging/' . $inv, '/uitnodiging/' . $inv . '/code', ['code' => $smsCode === '000000' ? '111111' : '000000']);
-T::ok(str_contains($c->follow($r)['body'], 'klopt niet'), 'foute sms-code wordt geweigerd');
-$r = $arts->get('/arts');
-T::ok(!str_contains($r['body'], 'Wacht op uw bevestiging'), 'zonder juiste code is er niets gekoppeld');
-$r = $c->submit('/uitnodiging/' . $inv, '/uitnodiging/' . $inv . '/code', ['code' => $smsCode]);
-T::eq($r['location'], '/dashboard', 'juiste sms-code → gekoppeld');
-$dash = $c->get('/dashboard')['body'];
-T::ok(str_contains($dash, 'Identiteit bevestigd door uw huisarts') && str_contains($dash, 'Dr. Jansen') && str_contains($dash, 'Wacht op uw huisarts'), 'dashboard toont koppeling, nog niet bevestigd');
-clearThrottle($dbfile);
-T::eq($other->get('/uitnodiging/' . $inv)['status'], 404, 'een gebruikte uitnodiging werkt niet voor een ander');
-
-// arts bevestigt
-$page = $arts->get('/arts');
-preg_match('#/arts/patienten/([a-f0-9]{32})#', $page['body'], $m);
+$art = $arts->get('/arts')['body'];
+preg_match('#Anna de Vries</th>.*?/arts/patienten/([a-f0-9]{32})">Openen#s', $art, $m);
 $vid = $m[1] ?? '';
-T::ok($vid !== '' && str_contains($page['body'], 'Wacht op uw bevestiging'), 'arts ziet gekoppelde patiënt');
+T::ok($vid !== '' && str_contains($art, 'Geregistreerd'), 'arts ziet geregistreerde patiënt');
 $p = $arts->get("/arts/patienten/$vid");
-T::ok(str_contains($p['body'], $his), 'arts ziet het volledige patiënt-ID');
-T::ok(str_contains($p['body'], 'Ik houd van mijn tuin'), 'arts leest de gepubliceerde verklaring');
-$r = $arts->submit("/arts/patienten/$vid", "/arts/patienten/$vid/bevestigen", ['seen' => '1']);
-T::ok(str_contains($arts->follow($r)['body'], 'beide verklaringen'), 'beide vinkjes zijn verplicht');
+T::ok(str_contains($p['body'], $his) && str_contains($p['body'], 'Ik houd van mijn tuin'), 'arts ziet volledig patiënt-ID en de gepubliceerde verklaring');
 T::eq($other->get("/arts/patienten/$vid")['status'], 403, 'patiënt (Bas) heeft geen toegang tot artspagina');
-$r = $arts->submit("/arts/patienten/$vid", "/arts/patienten/$vid/bevestigen", ['seen' => '1', 'identity' => '1']);
-T::ok(str_contains($arts->follow($r)['body'], 'Identiteit bevestigd op'), 'arts bevestigt eenmalig de identiteit');
-
 $pub = (new Client($base))->get('/v/' . $token);
 T::ok(str_contains($pub['body'], 'Identiteit bevestigd door de huisarts') && str_contains($pub['body'], 'Dr. Jansen') && str_contains($pub['body'], 'Huisartsenpraktijk Wanroij'), 'leesweergave toont bevestiging door huisarts');
 T::ok(str_contains($pub['body'], '…1C1E2C') && !str_contains($pub['body'], $his), 'leesweergave toont alleen afgeschermd patiënt-ID');
-$pdfRes = $c->get('/verklaring/pdf');
-T::ok(str_starts_with($pdfRes['body'], '%PDF'), 'PDF met bevestiging wordt gegenereerd');
-T::ok(str_contains($c->get('/dashboard')['body'], 'Bevestigd op ' . date('d-m-Y')), 'dashboard toont bevestiging');
-
-// wijziging na bevestiging
+T::ok(str_starts_with($c->get('/verklaring/pdf')['body'], '%PDF'), 'PDF met bevestiging wordt gegenereerd');
+// wijziging: bevestiging blijft gelden
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Nieuwe tekst na de bevestiging.']]);
 $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
 $pub = (new Client($base))->get('/v/' . $token);
-T::ok(str_contains($pub['body'], 'Identiteit bevestigd door de huisarts') && str_contains($pub['body'], 'Nieuwe tekst na de bevestiging'), 'na wijziging blijft de identiteitsbevestiging gelden (geen nieuwe bevestiging nodig)');
-$ap = $arts->get("/arts/patienten/$vid")['body'];
-T::ok(!str_contains($ap, 'name="seen"') && str_contains($ap, 'Nieuwe tekst na de bevestiging'), 'arts hoeft niet opnieuw te bevestigen; ziet wel de nieuwe tekst');
-
-// blokkade na vijf foute pogingen
-$r = $invite(['email' => 'bas@voorbeeld.nl', 'name' => 'Bas Bakker', 'dob' => '1960-01-01']);
-preg_match('#token-box">' . preg_quote($base, '#') . '/uitnodiging/([a-f0-9]{64})<#', $arts->follow($r)['body'], $m);
-$inv2 = $m[1] ?? '';
-$st = 0;
-clearThrottle($dbfile);
-for ($i = 0; $i < 5; $i++) {
-    $r = $other->submit('/uitnodiging/' . $inv2, '/uitnodiging/' . $inv2, ['dob' => '1960-01-02', 'bsn' => '111222333', 'consent' => '1']);
-    $st = $r['status'];
-}
-T::eq($other->get('/uitnodiging/' . $inv2)['status'], 404, 'na 5 foute pogingen vervalt de uitnodiging');
-clearThrottle($dbfile);
-// blokkade na vijf foute sms-codes
-$r = $invite(['email' => 'bas2@voorbeeld.nl', 'name' => 'Bas Bakker', 'dob' => '1961-01-01']);
-preg_match('#token-box">' . preg_quote($base, '#') . '/uitnodiging/([a-f0-9]{64})<#', $arts->follow($r)['body'], $m);
-$inv3 = $m[1] ?? '';
-$other->submit('/uitnodiging/' . $inv3, '/uitnodiging/' . $inv3, ['dob' => '1961-01-01', 'bsn' => '111222333', 'consent' => '1']);
-clearThrottle($dbfile);
-for ($i = 0; $i < 5; $i++) {
-    $other->submit('/uitnodiging/' . $inv3, '/uitnodiging/' . $inv3 . '/code', ['code' => '12345' . $i]);
-}
-T::eq($other->get('/uitnodiging/' . $inv3)['status'], 404, 'na 5 foute sms-codes vervalt de uitnodiging');
-clearThrottle($dbfile);
-
-// code op papier
-$r = $invite(['email' => 'bas3@voorbeeld.nl', 'name' => 'Bas Bakker', 'dob' => '1962-02-02', 'method' => 'papier', 'phone' => '']);
-$page = $arts->follow($r);
-preg_match('#token-box">' . preg_quote($base, '#') . '/uitnodiging/([a-f0-9]{64})<#', $page['body'], $m);
-$inv4 = $m[1] ?? '';
-preg_match('#class="paper-code"[^>]*>(\d{3}) (\d{3})<#', $page['body'], $pc);
-$paper = ($pc[1] ?? '') . ($pc[2] ?? '');
-T::ok($inv4 !== '' && strlen($paper) === 6, 'arts krijgt een code van 6 cijfers voor op papier (zonder mobiel nummer)');
-T::ok(!str_contains($arts->get('/arts')['body'], $paper . ''), 'de papieren code wordt maar één keer getoond');
-@unlink("$root/storage/logs/sms.log");
-clearThrottle($dbfile);
-$r = $other->submit('/uitnodiging/' . $inv4, '/uitnodiging/' . $inv4, ['dob' => '1962-02-02', 'bsn' => '111222333', 'consent' => '1']);
-T::ok(!is_file("$root/storage/logs/sms.log"), 'bij papieren code wordt geen sms verstuurd');
-$pg = $other->get('/uitnodiging/' . $inv4);
-T::ok(str_contains($pg['body'], 'op papier heeft meegegeven') && !str_contains($pg['body'], 'Stuur een nieuwe code'), 'patiënt wordt om de papieren code gevraagd');
-$r = $other->submit('/uitnodiging/' . $inv4, '/uitnodiging/' . $inv4 . '/code', ['code' => $paper === '123456' ? '654321' : '123456']);
-T::ok(str_contains($other->follow($r)['body'], 'klopt niet'), 'foute papieren code wordt geweigerd');
-$r = $other->submit('/uitnodiging/' . $inv4, '/uitnodiging/' . $inv4 . '/code', ['code' => $paper]);
-T::eq($r['location'], '/dashboard', 'juiste papieren code → gekoppeld');
-clearThrottle($dbfile);
-
+T::ok(str_contains($pub['body'], 'Identiteit bevestigd door de huisarts') && str_contains($pub['body'], 'Nieuwe tekst na de bevestiging'), 'na wijziging blijft de identiteitsbevestiging gelden');
+T::ok(str_contains($arts->get("/arts/patienten/$vid")['body'], 'Nieuwe tekst na de bevestiging'), 'arts ziet de nieuwe tekst zonder opnieuw te bevestigen');
 // intrekken door patiënt
 $page = $c->get('/dashboard');
 preg_match('#/verificatie/([a-f0-9]{32})/intrekken#', $page['body'], $m);
 $r = $c->submit('/dashboard', '/verificatie/' . ($m[1] ?? 'x') . '/intrekken', []);
 T::ok(str_contains($c->follow($r)['body'], 'ingetrokken'), 'patiënt trekt koppeling in');
-$pub = (new Client($base))->get('/v/' . $token);
-T::ok(!str_contains($pub['body'], 'door de huisarts'), 'na intrekken geen bevestiging meer zichtbaar');
+T::ok(!str_contains((new Client($base))->get('/v/' . $token)['body'], 'door de huisarts'), 'na intrekken geen bevestiging meer zichtbaar');
 $p = $arts->get("/arts/patienten/$vid");
-T::ok(!str_contains($p['body'], 'Bevestigen als huisarts') && !str_contains($p['body'], 'Ik houd van mijn tuin'), 'arts ziet na intrekken de verklaring niet meer');
-$rawArts = $pdoTmp = new PDO('sqlite:' . $dbfile);
+T::ok(str_contains($p['body'], 'ingetrokken') && !str_contains($p['body'], 'Nieuwe tekst'), 'arts ziet na intrekken de verklaring niet meer');
+$rawArts = new PDO('sqlite:' . $dbfile);
 $rawArts->exec('PRAGMA wal_checkpoint(TRUNCATE)');
 $rawDb = file_get_contents($dbfile) . (is_file("$dbfile-wal") ? file_get_contents("$dbfile-wal") : '');
-foreach (['111222333', 'C333CBA', '1950-03-07', '+31612345678', '0612345678', 'jansen@praktijk', 'Wanroij', $inv, $inv2] as $needle) {
+foreach (['111222333', '111 222 333', 'C333CBA', 'jansen@praktijk', 'Wanroij', 'carla@voorbeeld', $carla, $carla4] as $needle) {
     T::ok(!str_contains($rawDb, $needle), "'" . substr($needle, 0, 14) . "' niet leesbaar in database (verificaties)");
 }
 $cols2 = [];
 foreach ($rawArts->query('PRAGMA table_info(verifications)') as $col) { $cols2[] = $col['name']; }
-T::eq($cols2, ['seq', 'id', 'arts_id', 'patient_user_id', 'token_idx', 'data'], 'verificatietabel bevat geen leesbare persoonsgegevens');
+T::eq($cols2, ['seq', 'id', 'arts_id', 'patient_user_id', 'key_idx', 'data'], 'verificatietabel bevat geen leesbare persoonsgegevens');
 
 T::section('Versleuteling in het databasebestand');
 $pdo = new PDO('sqlite:' . $dbfile);

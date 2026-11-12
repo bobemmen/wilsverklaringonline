@@ -129,14 +129,12 @@ storage/         database en logs (buiten de webroot, 0700)
 tests/           unit- en end-to-end tests
 ```
 
-## Huisarts-verificatie
+## Registratie alleen via de huisarts
 
-Een huisarts bevestigt **eenmalig** dat een account bij een patiënt hoort. Latere wijzigingen van de verklaring hoeven niet opnieuw te worden bevestigd.
+Een patiënt kan zich **alleen** registreren nadat zijn huisarts hem heeft uitgenodigd. Zo is de identiteit van elke patiënt meteen door een arts bevestigd.
 
 - Huisartsaccounts worden alleen door de beheerder aangemaakt: `php bin/console arts:aanmaken "Dr. Jansen" jansen@praktijk.nl "Praktijknaam"`. Het tijdelijke wachtwoord wordt eenmalig getoond; tweestapsverificatie is verplicht.
-- In `/arts` vult de arts naam, e-mail, geboortedatum, BSN (elfproef), mobiel nummer en het HIS-patiënt-ID in. De patiënt krijgt een e-mail met een persoonlijke link (14 dagen geldig).
-- Tweede controle naar keuze: een sms-code, of een **code op papier**: de arts krijgt een 6-cijferige code (eenmalig getoond, alleen als HMAC bewaard) die hij de patiënt meegeeft. In `/arts` kan per openstaande uitnodiging een nieuwe papieren code worden aangemaakt (de oude vervalt).
-- De patiënt maakt een account of logt in, bevestigt geboortedatum en BSN (vergeleken via HMAC; nooit leesbaar opgeslagen) en voert daarna een 6-cijferige sms-code in die naar het door de arts opgegeven nummer gaat (10 minuten geldig, maximaal 3 keer versturen, 5 pogingen).
-- Daarna bevestigt de arts met twee vinkjes. Lezers zien arts, praktijk, datum en de laatste 6 tekens van het HIS-ID (ook in de PDF). Patiënt en arts kunnen de koppeling intrekken.
-- De sms-keuze is standaard verborgen (alleen codes op papier). Zet `SMS_ENABLED=true` in `.env` om haar weer te tonen.
-- SMS: `SMS_DRIVER=log` (ontwikkeling, schrijft naar `storage/logs/sms.log`) of `SMS_DRIVER=bird`. De Bird-koppeling (bird.com) is nog niet gebouwd: zie `src/Sms.php`, methode `bird()`. Zonder werkende sms-dienst kan een patiënt in productie niet koppelen (er wordt nooit stilzwijgend "verstuurd").
+- In `/arts` vult de arts naam, e-mailadres, BSN (elfproef) en het HIS-patiënt-ID in en vinkt aan dat hij de patiënt in persoon heeft gezien en de identiteit heeft gecontroleerd. Hij krijgt een code van 6 cijfers (eenmalig getoond, alleen als HMAC bewaard) en geeft die de patiënt op papier mee. De patiënt krijgt ook een e-mail met de registratiepagina (zonder code).
+- De patiënt registreert zich op `/registreren` met naam, BSN, hetzelfde e-mailadres, wachtwoord en de code. E-mailadres, BSN en code moeten bij dezelfde uitnodiging horen (14 dagen geldig); een ander e-mailadres werkt niet. Na 5 foute codes vervalt de uitnodiging. Het BSN wordt nooit leesbaar opgeslagen.
+- Met de registratie is de identiteit bevestigd. Lezers zien arts, praktijk, datum en de laatste 6 tekens van het HIS-ID (ook in de PDF). De bevestiging geldt voor het account en hoeft niet te worden herhaald na wijzigingen. De arts kan een nieuwe code maken of de uitnodiging intrekken; de patiënt kan de koppeling met de huisarts intrekken.
+- De arts kan de gepubliceerde verklaring van zijn geregistreerde patiënten lezen (dat wordt gelogd).

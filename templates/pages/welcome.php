@@ -9,7 +9,7 @@
     <?php if ($loggedIn): ?>
         <a href="/dashboard" class="btn btn-primary">Naar mijn dashboard</a>
     <?php else: ?>
-        <a href="/registreren" class="btn btn-primary">Begin nu</a>
+        <a href="/registreren" class="btn btn-primary">Registreren met code van uw huisarts</a>
         <a href="/inloggen" class="btn">Inloggen</a>
     <?php endif ?>
 </div>
@@ -17,7 +17,7 @@
 <div class="card">
     <h2 class="card-title">Hoe werkt het?</h2>
     <ol class="steps">
-        <li><strong>Maak een account</strong> en stel tweestapsverificatie in, zodat alleen u erbij kunt.</li>
+        <li><strong>Uw huisarts nodigt u uit</strong> en geeft u een code op papier. Daarmee registreert u zich; uw identiteit is dan meteen bevestigd. Stel daarna tweestapsverificatie in.</li>
         <li><strong>Doorloop de vragen</strong> in zes hoofdstukken: wie u bent, wat u wel en niet wilt, en waar uw grens ligt. U kunt altijd stoppen en later verdergaan.</li>
         <li><strong>Publiceer uw verklaring.</strong> Uw huisarts en naasten kunnen via een persoonlijke link altijd de nieuwste versie lezen.</li>
     </ol>

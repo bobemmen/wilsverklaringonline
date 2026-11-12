@@ -8,39 +8,33 @@ use WV\Content;
 use WV\HttpException;
 use WV\Response;
 
-/** Omgeving voor de huisarts: patiënten uitnodigen en hun verklaring als "echt deze patiënt" bevestigen. */
+/**
+ * Omgeving voor de huisarts. De arts nodigt een patiënt uit na persoonlijk contact en geeft hem een code op papier.
+ * Met die code (plus e-mailadres en BSN) registreert de patiënt zich; daarmee is zijn identiteit meteen bevestigd.
+ */
 final class ArtsController extends Controller
 {
     public function index(): Response
     {
-        $store = $this->app->store;
         $items = [];
-        foreach ($store->verificationsForArts($this->user()['id']) as $v) {
+        foreach ($this->app->store->verificationsForArts($this->user()['id']) as $v) {
             $items[] = $v + ['effective' => $this->effectiveStatus($v)];
         }
-        $token = $this->app->session->flashed('invite_plaintext_token');
-
         return $this->view('arts/index', [
             'items' => $items,
-            'smsEnabled' => \WV\Config::bool('SMS_ENABLED'),
             'paperCode' => $this->app->session->flashed('paper_code'),
-            'inviteUrl' => $token ? $this->app->url('/uitnodiging/' . $token) : null,
         ]);
     }
 
     public function invite(): Response
     {
         $arts = $this->user();
+        $store = $this->app->store;
         $name = trim($this->input('name'));
         $email = mb_strtolower(trim($this->input('email')));
-        $dobRaw = trim($this->input('dob'));
         $bsn = trim($this->input('bsn'));
         $his = strtoupper(trim($this->input('his_id')));
-        $phoneRaw = trim($this->input('phone'));
-        $phone = normalize_phone($phoneRaw);
-        $smsOn = \WV\Config::bool('SMS_ENABLED');
-        $method = ($smsOn && $this->input('method') === 'sms') ? 'sms' : 'papier';
-        $old = ['name' => $name, 'email' => $email, 'dob' => $dobRaw, 'his_id' => $his, 'phone' => $phoneRaw, 'method' => $method];
+        $old = ['name' => $name, 'email' => $email, 'his_id' => $his];
 
         $errors = [];
         if ($name === '' || mb_strlen($name) > 120) {
@@ -49,18 +43,17 @@ final class ArtsController extends Controller
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
             $errors['email'] = 'Vul een geldig e-mailadres in.';
         }
-        $dob = parse_birthdate($dobRaw);
-        if ($dob === null) {
-            $errors['dob'] = 'Vul een geldige geboortedatum in.';
-        }
         if (!valid_bsn($bsn)) {
             $errors['bsn'] = 'Dit is geen geldig BSN (de elfproef klopt niet).';
         }
         if (!preg_match('/^[A-Z0-9-]{8,64}$/', $his)) {
             $errors['his_id'] = 'Vul het patiënt-ID uit het HIS in (8–64 tekens: letters, cijfers en streepjes).';
         }
-        if ($method === 'sms' && $phone === null) {
-            $errors['phone'] = 'Vul een geldig mobiel nummer in, bijvoorbeeld 06 12345678 of +31 6 12345678.';
+        if ($this->input('seen') !== '1' || $this->input('identity') !== '1') {
+            $errors['seen'] = 'Vink beide verklaringen aan: u heeft de patiënt gezien en zijn identiteit gecontroleerd.';
+        }
+        if (!$errors && $store->userByEmail($email) !== null) {
+            $errors['email'] = 'Met dit e-mailadres bestaat al een account.';
         }
         if (!$errors && !$this->app->limiter->attempt('invite-arts|' . $arts['id'], 30, 3600)) {
             $errors['email'] = 'U heeft het uurlimiet van 30 uitnodigingen bereikt. Probeer het later opnieuw.';
@@ -69,41 +62,54 @@ final class ArtsController extends Controller
             return $this->fail('/arts', $errors, $old);
         }
 
-        $store = $this->app->store;
-        $result = $store->addVerification($arts['id'], [
+        // een nieuwe uitnodiging voor dezelfde patiënt vervangt openstaande eerdere (met een andere code)
+        foreach ($store->openVerifications($email, $bsn) as $prev) {
+            $prev['status'] = 'ingetrokken';
+            $prev['revoked_at'] = time();
+            $prev['revoked_by'] = 'vervangen';
+            $store->saveVerification($prev);
+        }
+
+        $result = $store->addVerification($arts['id'], $email, $bsn, [
             'patient_name' => $name,
-            'patient_email' => $email,
             'his_id' => $his,
-            'phone' => $phone,
-            'code_method' => $method,
-            'dob_proof' => $store->dobProof($dob->format('Y-m-d')),
-            'bsn_proof' => $store->bsnProof($bsn),
             'arts_name' => $arts['name'],
             'practice' => $arts['practice'] ?? null,
         ]);
 
-        if ($method === 'papier') {
-            $paper = $this->issuePaperCode($result['verification']);
-            $this->app->session->flash('paper_code', $paper);
-        }
-        $url = $this->app->url('/uitnodiging/' . $result['token']);
         $practice = ($arts['practice'] ?? '') !== '' ? ' (' . $arts['practice'] . ')' : '';
         $sent = $this->app->mailer->send(
             $email,
             'Uitnodiging van uw huisarts voor uw wilsverklaring',
             "Beste $name,\n\n"
-            . "Uw huisarts, {$arts['name']}$practice, nodigt u uit om uw wilsverklaring online te maken en door uw huisarts te laten bevestigen.\n\n"
-            . "Met die bevestiging kan uw huisarts vastleggen dat de verklaring echt van u is.\n\n"
-            . "Open deze link (veertien dagen geldig):\n$url\n\n"
-            . "U maakt een account aan of logt in, bevestigt uw geboortedatum en BSN en voert een code in. " . ($method === 'papier' ? "Die code heeft uw huisarts u op papier meegegeven. " : "Die code sturen we per sms naar uw mobiele nummer. ")
-            . "Uw huisarts heeft die gegevens al; ze worden alleen gebruikt om te controleren dat u de juiste persoon bent.\n\n"
-            . "Deel deze link met niemand. Verwachtte u deze e-mail niet? Dan kunt u hem negeren."
+            . "Uw huisarts, {$arts['name']}$practice, nodigt u uit om uw wilsverklaring online te maken.\n\n"
+            . "U registreert u op deze pagina (veertien dagen geldig):\n" . $this->app->url('/registreren') . "\n\n"
+            . "Vul daar uw naam, dit e-mailadres, uw BSN en een wachtwoord in, samen met de code van 6 cijfers die uw huisarts u op papier heeft gegeven. "
+            . "Daarmee is meteen uw identiteit bevestigd.\n\n"
+            . "Deel de code met niemand. Verwachtte u deze e-mail niet? Dan kunt u hem negeren."
         );
 
-        $this->app->session->flash('invite_plaintext_token', $result['token']);
+        $this->app->session->flash('paper_code', $result['code']);
         $this->flash($sent
-            ? "Uitnodiging verstuurd naar $email."
-            : 'De e-mail kon niet worden verstuurd. Geef de onderstaande link zelf door aan de patiënt.');
+            ? "Uitnodiging verstuurd naar $email. Geef de patiënt de code hieronder op papier mee."
+            : 'De e-mail kon niet worden verstuurd. Geef de patiënt de code op papier mee en wijs hem op de registratiepagina.');
+        return $this->redirect('/arts');
+    }
+
+    /** Nieuwe code (bijvoorbeeld kwijtgeraakt); de oude code werkt dan niet meer. */
+    public function paperCode(string $id): Response
+    {
+        $v = $this->mine($id);
+        if ($v['status'] !== 'uitgenodigd' || $v['expires_at'] < time()) {
+            throw new HttpException(404);
+        }
+        $code = $this->app->store->newCode();
+        $v['code_mac'] = $this->app->store->codeMac($v['id'], $code);
+        $v['attempts'] = 0;
+        $this->app->store->saveVerification($v);
+
+        $this->app->session->flash('paper_code', $code);
+        $this->flash('Nieuwe code aangemaakt voor ' . $v['patient_name'] . '. Eerdere codes werken niet meer.');
         return $this->redirect('/arts');
     }
 
@@ -111,17 +117,9 @@ final class ArtsController extends Controller
     {
         $v = $this->mine($id);
         $store = $this->app->store;
-        $effective = $this->effectiveStatus($v);
+        $data = ['v' => $v, 'version' => null, 'doc' => null];
 
-        $data = [
-            'v' => $v,
-            'effective' => $effective,
-            'declaration' => null,
-            'version' => null,
-            'doc' => null,
-        ];
-
-        if (in_array($v['status'], ['gekoppeld', 'geverifieerd'], true) && $v['patient_user_id']) {
+        if ($v['status'] === 'geverifieerd' && $v['patient_user_id']) {
             $declaration = $store->declarationForUser($v['patient_user_id']);
             $version = $store->version($declaration['current_version_id'], $declaration['id']);
             if ($declaration['is_published'] && $version) {
@@ -132,65 +130,11 @@ final class ArtsController extends Controller
                     $this->app->request->ip(),
                     $this->app->request->userAgent()
                 );
-                $data['declaration'] = $declaration;
                 $data['version'] = $version;
                 $data['doc'] = Content::normalize($version['content']);
             }
         }
         return $this->view('arts/patient', $data);
-    }
-
-    public function confirm(string $id): Response
-    {
-        $v = $this->mine($id);
-        $store = $this->app->store;
-        if (!in_array($v['status'], ['gekoppeld', 'geverifieerd'], true) || !$v['patient_user_id']) {
-            throw new HttpException(404);
-        }
-        $back = '/arts/patienten/' . $v['id'];
-
-        if ($v['status'] === 'geverifieerd') {
-            return $this->redirect($back); // eenmalig: opnieuw bevestigen is niet nodig
-        }
-        if ($this->input('seen') !== '1' || $this->input('identity') !== '1') {
-            return $this->fail($back, ['verify' => 'Vink beide verklaringen aan om te bevestigen.']);
-        }
-
-        $arts = $this->user();
-        $v['status'] = 'geverifieerd';
-        $v['verified_at'] = time();
-        $v['arts_name'] = $arts['name'];
-        $v['practice'] = $arts['practice'] ?? null;
-        $store->saveVerification($v);
-
-        $this->flash('Bevestigd. Dit hoeft u niet te herhalen: ook latere wijzigingen van de patiënt blijven bij dit account horen.');
-        return $this->redirect($back);
-    }
-
-    /** Nieuwe code om op papier mee te geven (vervangt een eerdere code; patiënt begint de koppelstappen opnieuw). */
-    public function paperCode(string $id): Response
-    {
-        $v = $this->mine($id);
-        if ($v['status'] !== 'uitgenodigd' || $v['expires_at'] < time()) {
-            throw new HttpException(404);
-        }
-        $this->app->session->flash('paper_code', $this->issuePaperCode($v));
-        $this->flash('Nieuwe code aangemaakt voor ' . $v['patient_name'] . '. Eerdere codes werken niet meer.');
-        return $this->redirect('/arts');
-    }
-
-    private function issuePaperCode(array $v): string
-    {
-        $store = $this->app->store;
-        $code = $store->newCode();
-        $v['code_method'] = 'papier';
-        $v['paper_code_mac'] = $store->codeMac($v['id'], $code);
-        $v['pending_user_id'] = null;
-        $v['sms_code_mac'] = null;
-        $v['sms_expires_at'] = null;
-        $v['sms_attempts'] = 0;
-        $store->saveVerification($v);
-        return $code;
     }
 
     public function revoke(string $id): Response
@@ -206,8 +150,6 @@ final class ArtsController extends Controller
         return $this->redirect('/arts');
     }
 
-    // ---------------------------------------------------------------- helpers
-
     private function mine(string $id): array
     {
         $v = $this->app->store->verificationById($id);
@@ -217,12 +159,8 @@ final class ArtsController extends Controller
         return $v;
     }
 
-    /** Status zoals de arts hem ziet, inclusief "verlopen". */
     private function effectiveStatus(array $v): string
     {
-        if ($v['status'] === 'uitgenodigd' && $v['expires_at'] < time()) {
-            return 'verlopen';
-        }
-        return $v['status'];
+        return ($v['status'] === 'uitgenodigd' && $v['expires_at'] < time()) ? 'verlopen' : $v['status'];
     }
 }

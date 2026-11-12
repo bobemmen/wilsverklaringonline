@@ -61,11 +61,7 @@
     <?php foreach ($verifications as $v): ?>
         <div class="stat-row">
             <strong><?= e($v['arts_name']) ?><?= !empty($v['practice']) ? ' · ' . e($v['practice']) : '' ?></strong>
-            <?php if ($v['status'] === 'geverifieerd'): ?>
-                <span class="badge badge-ok">Bevestigd op <?= e(fmt_date($v['verified_at'])) ?></span>
-            <?php else: ?>
-                <span class="badge badge-brand">Wacht op uw huisarts</span>
-            <?php endif ?>
+            <span class="badge badge-ok">Bevestigd op <?= e(fmt_date($v['attested_at'] ?? $v['verified_at'])) ?></span>
         </div>
         <form method="post" action="/verificatie/<?= e($v['id']) ?>/intrekken" class="inline-form">
             <?= $this->csrf() ?>

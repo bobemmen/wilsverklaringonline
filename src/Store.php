@@ -288,55 +288,66 @@ final class Store
         return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     }
 
-    /** BSN en geboortedatum worden nooit bewaard, alleen als HMAC om later te kunnen vergelijken. */
+    /** Het BSN wordt nooit bewaard, alleen als HMAC om later te kunnen vergelijken. */
     public function bsnProof(string $bsn): string
     {
         return $this->crypto->mac('bsn', preg_replace('/\D/', '', $bsn));
     }
 
-    public function dobProof(string $isoDate): string
+    /** Zoeksleutel: een uitnodiging hoort bij precies één combinatie van e-mailadres en BSN. */
+    public function verificationKey(string $email, string $bsn): string
     {
-        return $this->crypto->mac('dob', $isoDate);
+        return $this->crypto->index('invite', mb_strtolower(trim($email)) . '|' . preg_replace('/\D/', '', $bsn));
     }
 
-    /** @return array{verification: array, token: string} */
-    public function addVerification(string $artsId, array $fields): array
+    /**
+     * Legt de uitnodiging van de arts vast; de arts heeft de patiënt daarbij in persoon gezien en geïdentificeerd.
+     * @return array{verification: array, code: string} de code staat alleen hier in platte tekst
+     */
+    public function addVerification(string $artsId, string $email, string $bsn, array $fields): array
     {
         $id = $this->newId();
-        $token = bin2hex(random_bytes(32));
+        $code = $this->newCode();
         $data = $fields + [
-            'status' => 'uitgenodigd', // uitgenodigd | gekoppeld | geverifieerd | ingetrokken
+            'patient_email' => mb_strtolower(trim($email)),
+            'bsn_proof' => $this->bsnProof($bsn),
+            'code_mac' => $this->codeMac($id, $code),
+            'status' => 'uitgenodigd', // uitgenodigd | geverifieerd | ingetrokken
             'attempts' => 0,
             'expires_at' => time() + 14 * 86400,
             'created_at' => time(),
-            'linked_at' => null,
+            'attested_at' => time(),
             'verified_at' => null,
-            'code_method' => 'sms', // sms | papier
-            'paper_code_mac' => null,
-            'pending_user_id' => null,
-            'sms_code_mac' => null,
-            'sms_expires_at' => null,
-            'sms_attempts' => 0,
-            'sms_sends' => 0,
             'revoked_at' => null,
             'revoked_by' => null,
         ];
         $this->db->run(
-            'INSERT INTO verifications (id, arts_id, patient_user_id, token_idx, data) VALUES (?, ?, NULL, ?, ?)',
-            [$id, $artsId, $this->tokenIndex($token), $this->seal('verifications', $id, $data)]
+            'INSERT INTO verifications (id, arts_id, patient_user_id, key_idx, data) VALUES (?, ?, NULL, ?, ?)',
+            [$id, $artsId, $this->verificationKey($email, $bsn), $this->seal('verifications', $id, $data)]
         );
-        return ['verification' => ['id' => $id, 'arts_id' => $artsId, 'patient_user_id' => null] + $data, 'token' => $token];
+        return ['verification' => ['id' => $id, 'arts_id' => $artsId, 'patient_user_id' => null] + $data, 'code' => $code];
+    }
+
+    /** Openstaande uitnodigingen voor dit e-mailadres + BSN (nieuwste eerst). @return list<array> */
+    public function openVerifications(string $email, string $bsn): array
+    {
+        $rows = $this->db->all(
+            'SELECT id, arts_id, patient_user_id, data FROM verifications WHERE key_idx = ? ORDER BY seq DESC',
+            [$this->verificationKey($email, $bsn)]
+        );
+        $open = [];
+        foreach ($rows as $r) {
+            $v = $this->hydrateVerification($r);
+            if ($v['status'] === 'uitgenodigd' && $v['expires_at'] >= time()) {
+                $open[] = $v;
+            }
+        }
+        return $open;
     }
 
     private function hydrateVerification(array $row): array
     {
         return $this->unseal('verifications', $row) + ['arts_id' => $row['arts_id'], 'patient_user_id' => $row['patient_user_id']];
-    }
-
-    public function verificationByToken(string $token): ?array
-    {
-        $row = $this->db->one('SELECT id, arts_id, patient_user_id, data FROM verifications WHERE token_idx = ?', [$this->tokenIndex($token)]);
-        return $row ? $this->hydrateVerification($row) : null;
     }
 
     public function verificationById(string $id): ?array
@@ -385,7 +396,7 @@ final class Store
             return [
                 'arts_name' => $v['arts_name'] ?? '',
                 'practice' => $v['practice'] ?? null,
-                'verified_at' => $v['verified_at'],
+                'verified_at' => $v['attested_at'] ?? $v['verified_at'],
                 'his_masked' => $id === '' ? '' : '…' . substr($id, -6),
             ];
         }

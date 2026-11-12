@@ -51,8 +51,11 @@ final class AuthController extends Controller
 
     public function register(): Response
     {
+        $store = $this->app->store;
         $name = trim($this->input('name'));
         $email = mb_strtolower(trim($this->input('email')));
+        $bsn = trim($this->input('bsn'));
+        $code = preg_replace('/\D/', '', $this->input('code')) ?? '';
         $password = $this->input('password');
         $old = ['name' => $name, 'email' => $email];
 
@@ -63,6 +66,12 @@ final class AuthController extends Controller
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
             $errors['email'] = 'Vul een geldig e-mailadres in.';
         }
+        if (!valid_bsn($bsn)) {
+            $errors['bsn'] = 'Dit is geen geldig BSN.';
+        }
+        if (strlen($code) !== 6) {
+            $errors['code'] = 'Vul de code van 6 cijfers in die uw huisarts u op papier heeft gegeven.';
+        }
         if (mb_strlen($password) < self::MIN_PASSWORD) {
             $errors['password'] = 'Uw wachtwoord moet minimaal ' . self::MIN_PASSWORD . ' tekens bevatten.';
         } elseif (strlen($password) > 1024) {
@@ -70,21 +79,55 @@ final class AuthController extends Controller
         } elseif ($password !== $this->input('password_confirmation')) {
             $errors['password'] = 'De wachtwoorden komen niet overeen.';
         }
-
-        if (!$this->app->limiter->attempt('register|' . $this->app->request->ip(), 10, 3600)) {
-            $errors['email'] = 'Te veel registraties vanaf dit adres. Probeer het later opnieuw.';
-        }
         if ($errors) {
             return $this->fail('/registreren', $errors, $old);
         }
 
-        $user = $this->app->store->createUser($name, $email, $this->app->auth->hashPassword($password));
-        if ($user === null) {
-            return $this->fail('/registreren', ['email' => 'Dit e-mailadres is al in gebruik.'], $old);
+        // Pogingen tellen per adres én per e-mailadres, ook als het adres niet is uitgenodigd (geen detectie van uitgenodigde adressen).
+        $ipOk = $this->app->limiter->attempt('register|' . $this->app->request->ip(), 10, 3600);
+        $mailOk = $this->app->limiter->attempt('register-mail|' . $this->app->crypto->index('email', $email), 8, 3600);
+        $mismatch = 'Deze combinatie van e-mailadres, BSN en code klopt niet, of de uitnodiging is verlopen. Vraag uw huisarts om hulp.';
+        if (!$ipOk || !$mailOk) {
+            return $this->fail('/registreren', ['code' => 'Te veel pogingen. Probeer het later opnieuw.'], $old);
         }
 
+        $match = null;
+        foreach ($store->openVerifications($email, $bsn) as $v) {
+            if (hash_equals($v['code_mac'], $store->codeMac($v['id'], $code))) {
+                $match = $v;
+                break;
+            }
+        }
+        if ($match === null) {
+            // foute code bij een bestaande uitnodiging telt mee; na 5 pogingen vervalt hij
+            foreach ($store->openVerifications($email, $bsn) as $v) {
+                $v['attempts'] = (int) $v['attempts'] + 1;
+                if ($v['attempts'] >= 5) {
+                    $v['status'] = 'ingetrokken';
+                    $v['revoked_at'] = time();
+                    $v['revoked_by'] = 'blokkade';
+                }
+                $store->saveVerification($v);
+            }
+            $this->app->auth->hashPassword($password); // vergelijkbare rekentijd
+            return $this->fail('/registreren', ['code' => $mismatch], $old);
+        }
+
+        $user = $store->createUser($name, $email, $this->app->auth->hashPassword($password));
+        if ($user === null) {
+            return $this->fail('/registreren', ['email' => 'Met dit e-mailadres bestaat al een account. Log in, of vraag uw huisarts om hulp.'], $old);
+        }
+
+        // De huisarts heeft bij het uitnodigen al bevestigd dat hij deze patiënt in persoon heeft gezien en geïdentificeerd.
+        $match['status'] = 'geverifieerd';
+        $match['patient_user_id'] = $user['id'];
+        $match['verified_at'] = time();
+        $match['attempts'] = 0;
+        $match['code_mac'] = null;
+        $store->saveVerification($match);
+
         $this->app->auth->login($user);
-        $this->flash('Welkom. Stel tweestapsverificatie in om verder te gaan.');
+        $this->flash('Welkom. Uw identiteit is bevestigd door uw huisarts. Stel nu tweestapsverificatie in om verder te gaan.');
         return $this->redirect('/2fa/instellen');
     }
 

@@ -13,7 +13,7 @@ use PDO;
  */
 final class Db
 {
-    private const SCHEMA_VERSION = 2;
+    private const SCHEMA_VERSION = 3;
 
     public PDO $pdo;
 
@@ -132,6 +132,23 @@ final class Db
                 );
                 CREATE INDEX verifications_arts ON verifications(arts_id);
                 CREATE INDEX verifications_patient ON verifications(patient_user_id);
+                SQL);
+            }
+            if ($version < 3) {
+                // Registratie alleen op uitnodiging: opzoeken gaat via een HMAC van e-mail + BSN (geen token meer).
+                $this->pdo->exec(<<<'SQL'
+                DROP TABLE IF EXISTS verifications;
+                CREATE TABLE verifications (
+                    seq             INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id              TEXT NOT NULL UNIQUE,
+                    arts_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    patient_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+                    key_idx         TEXT NOT NULL,
+                    data            TEXT NOT NULL
+                );
+                CREATE INDEX verifications_arts ON verifications(arts_id);
+                CREATE INDEX verifications_patient ON verifications(patient_user_id);
+                CREATE INDEX verifications_key ON verifications(key_idx);
                 SQL);
             }
             $this->pdo->exec('PRAGMA user_version = ' . self::SCHEMA_VERSION);
