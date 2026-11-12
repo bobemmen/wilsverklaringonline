@@ -16,12 +16,55 @@ final class ArtsController extends Controller
 {
     public function index(): Response
     {
+        return $this->overview(false);
+    }
+
+    /** Zoeken gaat via POST, zodat een BSN nooit in een URL, browsergeschiedenis of serverlog terechtkomt. */
+    public function search(): Response
+    {
+        return $this->overview(true);
+    }
+
+    private function overview(bool $searching): Response
+    {
+        $store = $this->app->store;
+        $q = $searching ? mb_strtolower(trim($this->input('q'))) : '';
+        $bsn = $searching ? (preg_replace('/\D/', '', $this->input('bsn')) ?? '') : '';
+        $status = $searching ? $this->input('status') : '';
+        $statuses = ['geverifieerd', 'uitgenodigd', 'ingetrokken', 'verlopen'];
+        $bsnProof = $bsn !== '' ? $store->bsnProof($bsn) : null;
+
+        $total = 0;
         $items = [];
-        foreach ($this->app->store->verificationsForArts($this->user()['id']) as $v) {
-            $items[] = $v + ['effective' => $this->effectiveStatus($v)];
+        foreach ($store->verificationsForArts($this->user()['id']) as $v) {
+            $total++;
+            $v['effective'] = $this->effectiveStatus($v);
+            if ($status !== '' && in_array($status, $statuses, true) && $v['effective'] !== $status) {
+                continue;
+            }
+            if ($q !== '' && !str_contains(mb_strtolower($v['patient_name'] . ' ' . $v['patient_email'] . ' ' . $v['his_id']), $q)) {
+                continue;
+            }
+            // BSN: alleen exacte treffers, vergeleken met de bewaarde HMAC; het BSN zelf staat nergens
+            if ($bsnProof !== null && !hash_equals($v['bsn_proof'], $bsnProof)) {
+                continue;
+            }
+            $items[] = $v;
         }
+
+        $perPage = $searching ? PHP_INT_MAX : 20;
+        $matched = count($items);
+        $pages = max(1, (int) ceil($matched / $perPage));
+        $page = $searching ? 1 : min(max(1, (int) $this->input('pagina')), $pages);
+        $items = array_slice($items, ($page - 1) * $perPage, $perPage);
+
         return $this->view('arts/index', [
             'items' => $items,
+            'total' => $total,
+            'matched' => $matched,
+            'page' => $page,
+            'pages' => $pages,
+            'filter' => ['q' => $searching ? trim($this->input('q')) : '', 'bsn' => $searching ? $this->input('bsn') : '', 'status' => in_array($status, $statuses, true) ? $status : ''],
             'paperCode' => $this->app->session->flashed('paper_code'),
         ]);
     }

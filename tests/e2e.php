@@ -414,6 +414,27 @@ T::ok(!str_contains($r['body'], 'password') && !str_contains($r['body'], 'two_fa
 $r = $c->submit('/account', '/account/verwijderen', ['password' => 'fout']);
 T::ok(str_contains($c->follow($r)['body'], 'klopt niet'), 'verwijderen vraagt het juiste wachtwoord');
 
+T::section('Huisarts: patiënten zoeken');
+clearThrottle($dbfile);
+invitePatient($arts, 'Eva Zoeker', 'eva@voorbeeld.nl', '123456782');
+$zoek = fn(array $f) => $arts->submit('/arts', '/arts/zoeken', $f + ['q' => '', 'bsn' => '', 'status' => ''])['body'];
+$b = $zoek(['q' => 'zoeker']);
+T::ok(str_contains($b, 'Eva Zoeker') && !str_contains($b, 'Anna de Vries') && str_contains($b, '1 van'), 'zoeken op (een deel van de) naam, hoofdletterongevoelig');
+$b = $zoek(['q' => 'eva@voorbeeld']);
+T::ok(str_contains($b, 'Eva Zoeker'), 'zoeken op e-mailadres');
+$b = $zoek(['bsn' => '123 456 782']);
+T::ok(str_contains($b, 'Eva Zoeker') && !str_contains($b, 'Anna de Vries'), 'zoeken op BSN vindt exact één patiënt');
+T::ok(!str_contains(preg_replace('#<input[^>]*name="bsn"[^>]*>#', '', $b), '123456782'), 'het BSN wordt nergens in de lijst getoond');
+$b = $zoek(['bsn' => '123456783']);
+T::ok(str_contains($b, 'Geen patiënten gevonden'), 'ander BSN → niets gevonden');
+$b = $zoek(['status' => 'geverifieerd']);
+T::ok(str_contains($b, 'Anna de Vries') && !str_contains($b, 'Eva Zoeker'), 'filter op status: alleen geregistreerde patiënten');
+$b = $zoek(['status' => 'uitgenodigd']);
+T::ok(str_contains($b, 'Eva Zoeker') && !str_contains($b, 'Anna de Vries'), 'filter op status: wacht op registratie');
+T::ok(str_contains($arts->get('/arts')['body'], 'method="post" action="/arts/zoeken"'), 'zoekformulier gebruikt POST (BSN komt niet in de URL)');
+T::eq($c->req('POST', '/arts/zoeken', ['q' => 'x', '_token' => 'x'])['status'], 419, 'zoeken vereist CSRF-token');
+T::eq($c->submit('/dashboard', '/arts/zoeken', ['q' => 'Anna'])['status'], 403, 'een patiënt kan niet zoeken in artspatiënten');
+
 T::section('Huisarts: verificatie zichtbaar en intrekken');
 clearThrottle($dbfile);
 $r = $c->submit('/token', '/token/genereer', []);

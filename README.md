@@ -139,6 +139,10 @@ Een patiënt kan zich **alleen** registreren nadat zijn huisarts hem heeft uitge
 - Met de registratie is de identiteit bevestigd. Lezers zien arts, praktijk, datum en de laatste 6 tekens van het HIS-ID (ook in de PDF). De bevestiging geldt voor het account en hoeft niet te worden herhaald na wijzigingen. De arts kan een nieuwe code maken of de uitnodiging intrekken; de patiënt kan de koppeling met de huisarts intrekken.
 - De arts kan de gepubliceerde verklaring van zijn geregistreerde patiënten lezen (dat wordt gelogd).
 
+### Patiënten terugzoeken (huisarts)
+
+Op `/arts` ziet de huisarts uitsluitend de eigen uitgenodigde patiënten. Zoeken kan op naam, e-mailadres of HIS-patiënt-ID (deelmatch), en apart op BSN (alleen exact, vergelijking via de HMAC-proof; het BSN staat nergens leesbaar). Het zoekformulier gebruikt POST (`/arts/zoeken`) zodat het BSN niet in URL, serverlog of browsergeschiedenis terechtkomt. Verder: statusfilter (geregistreerd / wacht op registratie / ingetrokken / verlopen) en paginering (20 per pagina).
+
 ## Identificatie en ondertekening
 
 - Stap 1 vraagt voornamen, achternaam, geboortenaam (optioneel), geboortedatum en geboorteplaats; stap 16 datum en plaats van ondertekening.

@@ -112,6 +112,7 @@ final class App
         $r->post('/verificatie/{id}/intrekken', [C\VerificationController::class, 'patientRevoke'], $patient);
 
         $r->get('/arts', [C\ArtsController::class, 'index'], $arts);
+        $r->post('/arts/zoeken', [C\ArtsController::class, 'search'], $arts);
         $r->post('/arts/uitnodigen', [C\ArtsController::class, 'invite'], $arts);
         $r->get('/arts/patienten/{id}', [C\ArtsController::class, 'patient'], $arts);
         $r->post('/arts/patienten/{id}/papiercode', [C\ArtsController::class, 'paperCode'], $arts);

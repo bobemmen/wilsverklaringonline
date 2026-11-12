@@ -57,8 +57,37 @@
 
 <section class="card" aria-labelledby="i-lijst">
     <h2 class="card-title" id="i-lijst">Uitnodigingen en verificaties</h2>
-    <?php if (!$items): ?>
+    <?php $filtered = $filter['q'] !== '' || $filter['bsn'] !== '' || $filter['status'] !== '' ?>
+    <?php if ($total > 0): ?>
+    <form method="post" action="/arts/zoeken" class="search" role="search" aria-label="Zoek in uw patiënten" autocomplete="off">
+        <?= $this->csrf() ?>
+        <div class="field">
+            <label for="q">Zoek op naam, e-mailadres of HIS-ID</label>
+            <input type="search" id="q" name="q" value="<?= e($filter['q']) ?>" autocomplete="off">
+        </div>
+        <div class="field">
+            <label for="zbsn">Zoek op BSN (exact)</label>
+            <input type="text" id="zbsn" name="bsn" value="<?= e($filter['bsn']) ?>" inputmode="numeric" maxlength="11" autocomplete="off">
+        </div>
+        <div class="field">
+            <label for="zstatus">Status</label>
+            <select id="zstatus" name="status">
+                <?php foreach (['' => 'Alle', 'geverifieerd' => 'Geregistreerd', 'uitgenodigd' => 'Wacht op registratie', 'ingetrokken' => 'Ingetrokken', 'verlopen' => 'Verlopen'] as $val => $label): ?>
+                    <option value="<?= e($val) ?>"<?= $filter['status'] === $val ? ' selected' : '' ?>><?= e($label) ?></option>
+                <?php endforeach ?>
+            </select>
+        </div>
+        <div class="btn-row">
+            <button type="submit" class="btn btn-primary">Zoeken</button>
+            <?php if ($filtered): ?><a class="btn" href="/arts">Wis zoekopdracht</a><?php endif ?>
+        </div>
+    </form>
+    <p class="muted" role="status"><?= $filtered ? (int) $matched . ' van ' . (int) $total . ' gevonden' : (int) $total . ' in totaal' ?></p>
+    <?php endif ?>
+    <?php if ($total === 0): ?>
         <p class="mb0">U heeft nog niemand uitgenodigd.</p>
+    <?php elseif (!$items): ?>
+        <p class="mb0">Geen patiënten gevonden met deze zoekopdracht.</p>
     <?php else: ?>
         <div class="table-wrap">
             <table>
@@ -97,5 +126,13 @@
                 </tbody>
             </table>
         </div>
+    <?php endif ?>
+    <?php if ($pages > 1): ?>
+        <nav aria-label="Pagina's" class="btn-row mt">
+            <?php $qs = fn(int $p) => '/arts?pagina=' . $p ?>
+            <?php if ($page > 1): ?><a class="btn btn-small" href="<?= e($qs($page - 1)) ?>">← Vorige</a><?php endif ?>
+            <span class="muted">Pagina <?= (int) $page ?> van <?= (int) $pages ?></span>
+            <?php if ($page < $pages): ?><a class="btn btn-small" href="<?= e($qs($page + 1)) ?>">Volgende →</a><?php endif ?>
+        </nav>
     <?php endif ?>
 </section>
