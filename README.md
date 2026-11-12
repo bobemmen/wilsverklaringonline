@@ -1,66 +1,115 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# WilsVerklaring
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Een online wizard waarmee iemand stap voor stap een persoonlijke wilsverklaring opstelt (behandelverbod,
+palliatieve sedatie, euthanasieverzoek, orgaandonatie, uitvaart), die publiceert en deelt met de huisarts
+(via een persoonlijke link, met optionele e-mailbevestiging) en met naasten. Inclusief PDF om te ondertekenen.
 
-## About Laravel
+Dit is een **framework-vrije** PHP-applicatie: geen Laravel, geen Composer-pakketten, geen externe diensten.
+Alle gegevens staan in **één SQLite-bestand** waarin elke waarde **versleuteld** is.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.2+ met de extensies `pdo_sqlite`, `sodium` en `mbstring` (standaard aanwezig in PHP)
+- Zelf te hosten op elke Linux-server met nginx/Caddy/Apache + PHP-FPM
+- Lettertypen worden lokaal geserveerd; de applicatie doet geen verzoeken naar externe partijen
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Snel proberen (lokaal)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```sh
+php bin/console install http://127.0.0.1:8000   # maakt .env met een nieuwe APP_KEY en de database
+php bin/console serve                            # ontwikkelserver op http://127.0.0.1:8000
+```
 
-## Learning Laravel
+Zonder e-mailserver schrijft `MAIL_DRIVER=log` (alleen bij `APP_ENV=local`) de bevestigingsmail naar `storage/logs/mail.log`.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Op een eigen server zetten
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+1. Zet de bestanden in bijv. `/var/www/wilsverklaring` en laat de webserver **alleen `public/`** als documentroot gebruiken
+   (voorbeelden: `deploy/nginx.conf.example`, `deploy/Caddyfile.example`). HTTPS is verplicht.
+2. `php bin/console install https://wilsverklaring.example.nl` — maakt `.env` (rechten 0600) met een nieuwe `APP_KEY` en de database.
+3. Vul in `.env` de mailinstellingen in (`MAIL_HOST`, `MAIL_USERNAME`, …) zodat de arts een bevestigingsmail kan krijgen.
+4. Zorg dat de gebruiker van PHP-FPM schrijfrechten heeft op `storage/` en `.env` kan lezen, en dat niemand anders dat kan.
+5. **Bewaar een kopie van `APP_KEY` op een veilige plek, los van de database-back-ups.** Zonder die sleutel zijn alle gegevens
+   onherstelbaar onleesbaar; dat is ook precies de bedoeling.
+6. Plan een back-up (`deploy/backup.sh.example`) en test eens of je die kunt terugzetten.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Aanbevolen in `php.ini`: `expose_php=Off`, OPcache aan.
 
-## Laravel Sponsors
+### Configuratie (`.env`)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+| Variabele | Betekenis |
+|---|---|
+| `APP_URL` | Publiek adres. Verplicht in productie; wordt gebruikt voor links in e-mails (nooit de Host-header). |
+| `APP_KEY` | Hoofdsleutel voor alle versleuteling (32 bytes, base64). |
+| `APP_ENV` | `production` of `local`. |
+| `DB_PATH` | Pad van het SQLite-bestand (standaard `storage/database/wilsverklaring.sqlite`). |
+| `SESSION_LIFETIME` | Minuten inactiviteit voor uitloggen (standaard 120). |
+| `TRUSTED_PROXIES` | Alleen nodig als de app achter nóg een proxy draait; dan wordt `X-Forwarded-For` vertrouwd vanaf deze IP's. |
+| `MAIL_*` | SMTP (`tls`=STARTTLS, `ssl`, `none`), of `MAIL_DRIVER=mail` voor lokale sendmail. |
 
-### Premium Partners
+## Beheer
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```sh
+php bin/console migrate                 # databaseschema bijwerken
+php bin/console user:reset-2fa <email>  # gebruiker heeft zijn authenticator kwijt
+php bin/console backup <bestand>        # consistente back-up (VACUUM INTO); bestand is 0600
+php bin/console purge                   # verlopen sessies en tellers opruimen (gebeurt ook automatisch)
+php bin/console key:generate            # toont een nieuwe sleutel (zonder iets te wijzigen)
+```
 
-## Contributing
+## Beveiligingsmodel
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**Versleuteling.** Elke rij heeft één kolom `data` met een JSON-document, versleuteld met XChaCha20-Poly1305 (libsodium).
+Het rij-adres (`tabel:id`) is geauthenticeerde context, dus een versleutelde waarde kan niet ongemerkt naar een andere rij
+worden gekopieerd. Waarden worden opgevuld tot blokken van 256 bytes zodat de lengte weinig verraadt.
+Versleuteld zijn onder meer: naam, e-mail, wachtwoordhash, 2FA-geheim, alle inhoud van verklaringen en versies,
+concepten, e-mailadres van de arts, uitnodigingen, toegangslog (IP, user-agent) en de sessie-inhoud.
 
-## Code of Conduct
+**Zoeken zonder te ontsleutelen.** E-mailadressen en toegangscodes worden opgezocht via een HMAC-index (met een aparte
+afgeleide sleutel). De codes zelf worden nergens bewaard; alleen de HMAC. Een databaselek zonder `APP_KEY` levert dus
+geen werkende links of e-mailadressen op.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+**In platte tekst in de database:** willekeurige id's, de HMAC-indexen, de volgorde van invoegen (rij-nummers) en de
+verlooptijd van sessies/tellers. Dus wél zichtbaar: hoeveel rijen er zijn en in welke volgorde ze zijn aangemaakt, maar niet van wie of wanneer.
 
-## Security Vulnerabilities
+**Wat dit wel en niet beschermt.** Het beschermt tegen diefstal of lekken van het databasebestand, een back-up of de schijf.
+Het beschermt *niet* tegen iemand die de draaiende server (en dus `.env`) overneemt: de applicatie moet de sleutel immers
+kunnen gebruiken. Bescherm de server daarom goed (updates, SSH-sleutels, firewall) en houd `.env` en back-ups gescheiden.
+Sleutelrotatie is niet ingebouwd.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**Overig.**
+- Wachtwoorden: Argon2id, minimaal 10 tekens. Inloggen heeft rate limiting per e-mail+IP en per IP.
+- Tweestapsverificatie (TOTP) is verplicht voor alle pagina's met gegevens; een code kan niet twee keer worden gebruikt;
+  het 2FA-geheim wordt na het instellen niet meer getoond.
+- Sessie-ID's zijn willekeurig en worden bij inloggen en na 2FA vernieuwd; cookie `HttpOnly`, `SameSite=Lax`, `Secure` onder HTTPS.
+  In de database staat alleen een HMAC van het sessie-ID.
+- CSRF-token op elk formulier; strikte Content-Security-Policy (geen inline scripts, geen externe bronnen),
+  `Referrer-Policy: no-referrer` (de geheime links lekken dus niet via de Referer), `no-store`, HSTS, `X-Frame-Options: DENY`.
+- Arts-link: optioneel bevestigingsmail naar de arts (link 1 uur geldig, gebonden aan de huidige code), maximaal 1 mail per 5 minuten.
+- Account en alle gegevens kunnen door de gebruiker worden geëxporteerd (JSON) en definitief verwijderd (`/account`).
 
-## License
+> Dit is geen medisch of juridisch hulpmiddel en er is geen onafhankelijke beveiligingsaudit uitgevoerd.
+> Laat de authenticatie- en versleutelingscode (`src/Crypto.php`, `Session.php`, `Auth.php`, `Store.php`) beoordelen
+> voordat er echte patiëntgegevens in komen. Over verwerking van gezondheidsgegevens gelden AVG-verplichtingen
+> (o.a. verwerkingsregister, verwerkersafspraken met de hostingpartij, datalekprocedure).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Tests
+
+```sh
+tests/run.sh     # unit-tests + end-to-end tests (start zelf een tijdelijke server en database)
+```
+
+De end-to-end test doorloopt registreren, 2FA, wizard, publiceren, arts- en naastenlinks, PDF, export en verwijderen,
+en controleert dat het databasebestand geen leesbare persoonsgegevens bevat. (Voor de PDF-inhoudscontrole zijn
+`pdftotext` en `qpdf` handig, maar niet verplicht.)
+
+## Indeling
+
+```
+public/          webroot: index.php, assets (css, js, lettertypen)
+src/             applicatiecode (namespace WV): Crypto, Db, Store, Session, Auth, Router, Pdf, Mailer, …
+src/Controllers/ de pagina's
+templates/       PHP-templates (alles wat de gebruiker invoert gaat door e())
+bin/console      beheercommando's
+deploy/          voorbeeldconfiguraties (nginx, Caddy, back-up)
+storage/         database en logs (buiten de webroot, 0700)
+tests/           unit- en end-to-end tests
+```

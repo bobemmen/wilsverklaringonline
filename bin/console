@@ -1,0 +1,132 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') {
+    exit(1);
+}
+
+$root = dirname(__DIR__);
+require $root . '/src/bootstrap.php';
+
+use WV\Config;
+use WV\Crypto;
+use WV\Db;
+use WV\Store;
+
+Config::load($root);
+date_default_timezone_set(Config::get('APP_TIMEZONE', 'Europe/Amsterdam'));
+
+function out(string $line = ''): void { fwrite(STDOUT, $line . "\n"); }
+function fail(string $line): never { fwrite(STDERR, $line . "\n"); exit(1); }
+
+function store(): Store
+{
+    $key = Config::get('APP_KEY') ?? fail('APP_KEY ontbreekt. Voer eerst uit: php bin/console install');
+    $crypto = new Crypto(Crypto::parseKey($key));
+    $db = new Db(Config::path(Config::get('DB_PATH', 'storage/database/wilsverklaring.sqlite')));
+    $store = new Store($db, $crypto);
+    $store->verifyKey();
+    return $store;
+}
+
+$cmd = $argv[1] ?? 'help';
+$args = array_slice($argv, 2);
+
+set_exception_handler(function (Throwable $e): never {
+    fwrite(STDERR, 'Fout: ' . $e->getMessage() . "\n");
+    exit(1);
+});
+
+switch ($cmd) {
+    case 'install':
+        $envFile = $root . '/.env';
+        if (!is_file($envFile)) {
+            $example = file_get_contents($root . '/.env.example');
+            $url = $args[0] ?? null;
+            if ($url !== null) {
+                if (!preg_match('#^https?://[A-Za-z0-9.:\[\]-]+/?$#', $url)) {
+                    fail('Ongeldige URL. Gebruik bijvoorbeeld: php bin/console install https://wilsverklaring.nl');
+                }
+                $example = preg_replace('/^APP_URL=.*$/m', 'APP_URL=' . rtrim($url, '/'), $example);
+                if (str_starts_with($url, 'http://')) {
+                    $example = preg_replace('/^APP_ENV=\w+/m', 'APP_ENV=local', $example);
+                }
+            }
+            $oldMask = umask(0o077);
+            file_put_contents($envFile, str_replace('APP_KEY=', 'APP_KEY=' . Crypto::generateKey(), $example));
+            umask($oldMask);
+            chmod($envFile, 0600);
+            Config::load($root);
+            out('.env aangemaakt met een nieuwe APP_KEY.');
+            out('BELANGRIJK: bewaar een kopie van APP_KEY op een veilige plek, los van de database-back-ups.');
+            out('Zonder deze sleutel zijn alle gegevens onherstelbaar onleesbaar.');
+            if ($url === null) {
+                out('LET OP: APP_URL in .env staat nog op het voorbeeldadres; pas die aan (of draai: php bin/console install https://uw-domein.nl).');
+            }
+        } elseif (!Config::get('APP_KEY')) {
+            fail('.env bestaat al maar APP_KEY is leeg. Genereer er een met: php bin/console key:generate');
+        } else {
+            out('.env bestaat al; ongewijzigd gelaten.');
+        }
+        store();
+        out('Database gereed: ' . Config::path(Config::get('DB_PATH', 'storage/database/wilsverklaring.sqlite')));
+        break;
+
+    case 'key:generate':
+        out(Crypto::generateKey());
+        break;
+
+    case 'migrate':
+        store();
+        out('Database is up-to-date.');
+        break;
+
+    case 'user:reset-2fa':
+        $email = $args[0] ?? fail('Gebruik: php bin/console user:reset-2fa <e-mailadres>');
+        $store = store();
+        $user = $store->userByEmail($email) ?? fail('Geen gebruiker met dit e-mailadres.');
+        $user['two_factor_secret'] = null;
+        $user['two_factor_confirmed_at'] = null;
+        $user['two_factor_last_step'] = 0;
+        $store->saveUser($user);
+        $store->db->run('DELETE FROM sessions WHERE user_idx = ?', [$store->crypto->index('session-user', $user['id'])]);
+        out('Tweestapsverificatie is gereset; de gebruiker moet bij de volgende login opnieuw instellen.');
+        break;
+
+    case 'backup':
+        $target = $args[0] ?? fail('Gebruik: php bin/console backup <doelbestand.sqlite>');
+        if (file_exists($target)) {
+            fail("Doelbestand bestaat al: $target");
+        }
+        $store = store();
+        $oldMask = umask(0o077);
+        $store->db->pdo->exec('VACUUM INTO ' . $store->db->pdo->quote($target));
+        umask($oldMask);
+        out("Back-up geschreven naar $target (alle gegevens daarin zijn versleuteld; bewaar APP_KEY apart).");
+        break;
+
+    case 'purge':
+        $store = store();
+        $n = $store->db->run('DELETE FROM sessions WHERE expires_at < ?', [time()]);
+        $m = $store->db->run('DELETE FROM throttle WHERE reset_at < ?', [time()]);
+        out("Verlopen sessies verwijderd: $n; verlopen tellers verwijderd: $m.");
+        break;
+
+    case 'serve':
+        $port = $args[0] ?? '8000';
+        out("WilsVerklaring (ontwikkelserver) op http://127.0.0.1:$port  — niet voor productie.");
+        passthru(sprintf('%s -S 127.0.0.1:%d -t %s %s', escapeshellarg(PHP_BINARY), (int) $port, escapeshellarg($root . '/public'), escapeshellarg($root . '/public/index.php')));
+        break;
+
+    default:
+        out('WilsVerklaring beheer');
+        out('  install [url]           maak .env (met nieuwe APP_KEY) en de database aan; url = publiek adres');
+        out('  migrate                 werk het databaseschema bij');
+        out('  key:generate            toon een nieuwe APP_KEY');
+        out('  user:reset-2fa <email>  reset tweestapsverificatie van een gebruiker');
+        out('  backup <bestand>        consistente back-up van de (versleutelde) database');
+        out('  purge                   ruim verlopen sessies/tellers op');
+        out('  serve [poort]           ontwikkelserver');
+}

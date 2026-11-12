@@ -1,0 +1,9 @@
+# Caddy regelt het TLS-certificaat automatisch.
+wilsverklaring.example.nl {
+    root * /var/www/wilsverklaring/public
+    encode gzip
+    php_fastcgi unix//run/php/php8.3-fpm.sock
+    file_server
+    @hidden path /.* 
+    respond @hidden 404
+}
