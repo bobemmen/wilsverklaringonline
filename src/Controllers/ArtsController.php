@@ -22,6 +22,7 @@ final class ArtsController extends Controller
 
         return $this->view('arts/index', [
             'items' => $items,
+            'smsEnabled' => \WV\Config::bool('SMS_ENABLED'),
             'paperCode' => $this->app->session->flashed('paper_code'),
             'inviteUrl' => $token ? $this->app->url('/uitnodiging/' . $token) : null,
         ]);
@@ -37,7 +38,8 @@ final class ArtsController extends Controller
         $his = strtoupper(trim($this->input('his_id')));
         $phoneRaw = trim($this->input('phone'));
         $phone = normalize_phone($phoneRaw);
-        $method = $this->input('method') === 'papier' ? 'papier' : 'sms';
+        $smsOn = \WV\Config::bool('SMS_ENABLED');
+        $method = ($smsOn && $this->input('method') === 'sms') ? 'sms' : 'papier';
         $old = ['name' => $name, 'email' => $email, 'dob' => $dobRaw, 'his_id' => $his, 'phone' => $phoneRaw, 'method' => $method];
 
         $errors = [];

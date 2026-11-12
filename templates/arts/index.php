@@ -22,7 +22,7 @@
 
 <section class="card" aria-labelledby="i-nieuw">
     <h2 class="card-title" id="i-nieuw">Patiënt uitnodigen</h2>
-    <p class="muted">De patiënt krijgt alleen een e-mail met een link. Geboortedatum, BSN en patiënt-ID worden niet gemaild. De patiënt bevestigt geboortedatum en BSN zelf en voert daarna een code in: per sms of de code die u op papier meegeeft. BSN en geboortedatum worden niet leesbaar opgeslagen.</p>
+    <p class="muted">De patiënt krijgt alleen een e-mail met een link. Geboortedatum, BSN en patiënt-ID worden niet gemaild. De patiënt bevestigt geboortedatum en BSN zelf en voert daarna de code in die u op papier meegeeft. BSN en geboortedatum worden niet leesbaar opgeslagen.</p>
     <form method="post" action="/arts/uitnodigen" autocomplete="off">
         <?= $this->csrf() ?>
         <div class="field">
@@ -45,6 +45,7 @@
             <input type="text" id="bsn" name="bsn" inputmode="numeric" pattern="[0-9 ]{8,11}" maxlength="11" required<?= $this->invalid('bsn') ?>>
             <?= $this->fieldError('bsn') ?>
         </div>
+        <?php if ($smsEnabled): ?>
         <?php $method = $this->old('method', 'sms') ?>
         <fieldset class="field">
             <legend>Tweede controle voor de patiënt</legend>
@@ -63,6 +64,10 @@
             <input type="tel" id="phone" name="phone" value="<?= e($this->old('phone')) ?>" autocomplete="off" inputmode="tel" aria-describedby="phone-hint"<?= $this->invalid('phone') ?>>
             <?= $this->fieldError('phone') ?>
         </div>
+        <?php else: ?>
+        <input type="hidden" name="method" value="papier">
+        <p class="hint">Na het koppelen geeft u de patiënt een code van 6 cijfers op papier mee. Die krijgt u na het uitnodigen te zien.</p>
+        <?php endif ?>
         <div class="field">
             <label for="his_id">Patiënt-ID uit het HIS</label>
             <p class="hint" id="his-hint">Kopieer het ID uit het patiëntdossier. De patiënt kent dit ID niet; het wordt als bewijs bij de verklaring bewaard.</p>

@@ -19,7 +19,7 @@ $base = "http://127.0.0.1:$port";
 $key = WV\Crypto::generateKey();
 $env = [
     'APP_KEY' => $key, 'APP_ENV' => 'local', 'APP_DEBUG' => 'true', 'APP_URL' => $base,
-    'DB_PATH' => "$tmp/db/e2e.sqlite", 'MAIL_DRIVER' => 'log', 'PATH' => getenv('PATH'),
+    'DB_PATH' => "$tmp/db/e2e.sqlite", 'MAIL_DRIVER' => 'log', 'SMS_ENABLED' => 'true', 'PATH' => getenv('PATH'),
 ];
 $proc = proc_open(
     [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', "$root/public", "$root/public/index.php"],
@@ -370,7 +370,7 @@ $r = $c->submit('/token', '/token/genereer', []);
 preg_match('#token-box">' . preg_quote($base, '#') . '/v/([a-f0-9]{64})<#', $c->follow($r)['body'], $m);
 $token = $m[1] ?? '';
 $his = 'C333CBA-F0C0-4521-8A75-33C6911C1E2C';
-$invite = fn(array $over = []) => $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => 'Anna de Vries', 'email' => 'anna@voorbeeld.nl', 'dob' => '1950-03-07', 'bsn' => '111222333', 'his_id' => $his, 'phone' => '06 12345678']);
+$invite = fn(array $over = []) => $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => 'Anna de Vries', 'email' => 'anna@voorbeeld.nl', 'dob' => '1950-03-07', 'bsn' => '111222333', 'his_id' => $his, 'phone' => '06 12345678', 'method' => 'sms']);
 $r = $invite(['bsn' => '123456789']);
 T::ok(str_contains($arts->follow($r)['body'], 'elfproef'), 'ongeldig BSN (elfproef) wordt geweigerd');
 $r = $invite(['phone' => '12']);
