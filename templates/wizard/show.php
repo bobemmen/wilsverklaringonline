@@ -1,6 +1,6 @@
 <?php
 $this->layout('layouts/app', ['title' => $stepTitle . ' · WilsVerklaring']);
-$chapterNames = [1 => 'Introductie', 2 => 'Behandelverbod', 3 => 'Palliatieve sedatie', 4 => 'Euthanasieverzoek', 5 => 'Afsluiting'];
+$chapterNames = \WV\Content::CHAPTER_NAMES;
 ?>
 <p class="eyebrow">Stap <?= (int) $step ?> van <?= (int) $total ?></p>
 <h1 class="wizard-title"><?= e($stepTitle) ?></h1>
@@ -32,7 +32,7 @@ $chapterNames = [1 => 'Introductie', 2 => 'Behandelverbod', 3 => 'Palliatieve se
                 <?php endif ?>
             </div>
             <div class="actions-right">
-                <?php if ($step === 8): ?>
+                <?php if (isset(\WV\Content::GATES[$step])): ?>
                     <button type="submit" name="actie" value="overslaan" class="btn">Ik sla dit over</button>
                 <?php endif ?>
                 <button type="submit" name="actie" value="concept" class="btn">Opslaan als concept</button>

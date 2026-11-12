@@ -74,7 +74,7 @@ final class DeclarationPdf
                 $pdf->field('Situatie', $c['euthanasie_situatie']);
             }
             if ($filled('euthanasie_wilsonbekwaam')) {
-                $pdf->choice('Bij wilsonbekwaamheid', $c['euthanasie_wilsonbekwaam']);
+                $pdf->choice('Als ik zelf niet meer kan vragen', $c['euthanasie_wilsonbekwaam']);
             }
             if ($filled('euthanasie_wilsonbekwaam_toelichting')) {
                 $pdf->quote($c['euthanasie_wilsonbekwaam_toelichting']);
@@ -82,6 +82,22 @@ final class DeclarationPdf
             if ($filled('euthanasie_brief')) {
                 $pdf->subheading('Brief aan de arts');
                 $pdf->quote($c['euthanasie_brief']);
+            }
+        }
+
+        if (Content::dementieIncluded($c)) {
+            $pdf->heading('Euthanasieverzoek bij dementie');
+            if ($filled('dementie_lijden')) {
+                $pdf->field('Situatie waarin ik mijn leven niet meer wil verlengen', $c['dementie_lijden']);
+            }
+            if ($filled('dementie_moment')) {
+                $pdf->choice('Vanaf welk moment', $c['dementie_moment']);
+            }
+            if ($filled('dementie_naasten')) {
+                $pdf->field('Wat mijn naasten moeten weten of doen', $c['dementie_naasten']);
+            }
+            if ($filled('dementie_huisarts')) {
+                $pdf->choice('Huisarts open voor euthanasie bij dementie', $c['dementie_huisarts']);
             }
         }
 

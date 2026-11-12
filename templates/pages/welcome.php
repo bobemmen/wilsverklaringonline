@@ -18,7 +18,7 @@
     <h2 class="card-title">Hoe werkt het?</h2>
     <ol class="steps">
         <li><strong>Maak een account</strong> en stel tweestapsverificatie in, zodat alleen u erbij kunt.</li>
-        <li><strong>Doorloop de vragen</strong> in vijf hoofdstukken: wie u bent, wat u wel en niet wilt, en waar uw grens ligt. U kunt altijd stoppen en later verdergaan.</li>
+        <li><strong>Doorloop de vragen</strong> in zes hoofdstukken: wie u bent, wat u wel en niet wilt, en waar uw grens ligt. U kunt altijd stoppen en later verdergaan.</li>
         <li><strong>Publiceer uw verklaring.</strong> Uw huisarts en naasten kunnen via een persoonlijke link altijd de nieuwste versie lezen.</li>
     </ol>
 </div>

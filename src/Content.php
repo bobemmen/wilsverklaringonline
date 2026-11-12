@@ -7,25 +7,33 @@ namespace WV;
 /** De inhoud van een wilsverklaring: velden, standaardwaarden en het wizardverloop. */
 final class Content
 {
-    public const TOTAL_STEPS = 14;
+    public const TOTAL_STEPS = 17;
     public const MAX_FIELD_LENGTH = 20000;
 
-    /** stap => [hoofdstuktitel, hoofdstuknummer] */
-    public const CHAPTERS = [
-        1 => ['Introductie', 1],
-        2 => ['Introductie', 1],
-        3 => ['Behandelverbod', 2],
-        4 => ['Behandelverbod', 2],
-        5 => ['Behandelverbod', 2],
-        6 => ['Palliatieve sedatie', 3],
-        7 => ['Palliatieve sedatie', 3],
-        8 => ['Euthanasieverzoek', 4],
-        9 => ['Euthanasieverzoek', 4],
-        10 => ['Euthanasieverzoek', 4],
-        11 => ['Euthanasieverzoek', 4],
-        12 => ['Afsluiting', 5],
-        13 => ['Afsluiting', 5],
-        14 => ['Afsluiting', 5],
+    /** Hoofdstukken (nummer => titel). */
+    public const CHAPTER_NAMES = [
+        1 => 'Introductie',
+        2 => 'Behandelverbod',
+        3 => 'Palliatieve sedatie',
+        4 => 'Euthanasieverzoek algemeen',
+        5 => 'Euthanasieverzoek dementie',
+        6 => 'Afsluiting',
+    ];
+
+    /** stap => hoofdstuknummer */
+    public const STEP_CHAPTER = [
+        1 => 1, 2 => 1,
+        3 => 2, 4 => 2, 5 => 2,
+        6 => 3, 7 => 3,
+        8 => 4, 9 => 4, 10 => 4, 11 => 4,
+        12 => 5, 13 => 5, 14 => 5,
+        15 => 6, 16 => 6, 17 => 6,
+    ];
+
+    /** Stappen waarmee een optioneel hoofdstuk wordt in- of uitgeschakeld: stap => [veld, eerstvolgende stap bij overslaan] */
+    public const GATES = [
+        8 => ['euthanasie_opgenomen', 12],
+        12 => ['dementie_opgenomen', 15],
     ];
 
     public const TITLES = [
@@ -40,9 +48,12 @@ final class Content
         9 => 'Lijden en situaties',
         10 => 'Wilsonbekwaamheid',
         11 => 'Persoonlijke brief',
-        12 => 'Orgaandonatie en uitvaart',
-        13 => 'Arts en ondertekening',
-        14 => 'Overzicht en publicatie',
+        12 => 'Euthanasie bij dementie',
+        13 => 'Mijn grens bij dementie',
+        14 => 'Mijn naasten en mijn huisarts',
+        15 => 'Orgaandonatie en uitvaart',
+        16 => 'Arts, volmacht en ondertekening',
+        17 => 'Overzicht en publicatie',
     ];
 
     /** Welke velden op welke stap worden ingevuld. */
@@ -58,9 +69,12 @@ final class Content
         9 => ['euthanasie_lijden', 'euthanasie_situatie'],
         10 => ['euthanasie_wilsonbekwaam', 'euthanasie_wilsonbekwaam_toelichting'],
         11 => ['euthanasie_brief'],
-        12 => ['orgaandonatie', 'uitvaart', 'overig'],
-        13 => ['volmacht', 'volmacht_contact', 'arts', 'besproken', 'datum'],
-        14 => [],
+        12 => ['dementie_opgenomen'],
+        13 => ['dementie_lijden', 'dementie_moment'],
+        14 => ['dementie_naasten', 'dementie_huisarts'],
+        15 => ['orgaandonatie', 'uitvaart', 'overig'],
+        16 => ['volmacht', 'volmacht_contact', 'arts', 'besproken', 'datum'],
+        17 => [],
     ];
 
     /** Velden met een vaste lijst toegestane waarden (keuzerondjes). */
@@ -73,6 +87,9 @@ final class Content
         'palliatief_wens' => ['ja', 'overleg', 'nee'],
         'palliatief_diepte' => ['licht', 'diep', 'arts'],
         'euthanasie_opgenomen' => ['ja', 'nee'],
+        'dementie_opgenomen' => ['ja', 'nee'],
+        'dementie_moment' => ['vroeg', 'omslag', 'later', 'bespreken'],
+        'dementie_huisarts' => ['ja', 'nee', 'onbekend'],
         'euthanasie_wilsonbekwaam' => ['ja', 'nee', 'voorwaarden'],
         'orgaandonatie' => ['ja', 'nee', 'register'],
         'besproken' => ['ja', 'binnenkort', 'nee'],
@@ -93,6 +110,11 @@ final class Content
             'diep' => 'Diepe sedatie',
             'arts' => 'Laat ik aan de arts over',
             'register' => 'Zie het Donorregister',
+            'vroeg' => 'Zodra ik duidelijk ondraaglijk lijd',
+            'omslag' => 'Uiterlijk in de omslagzone',
+            'later' => 'Ook bij gevorderde dementie, op basis van deze verklaring',
+            'bespreken' => 'Eerst te bespreken met mijn huisarts',
+            'onbekend' => 'Weet ik nog niet',
             'binnenkort' => 'Nog niet; afspraak wordt gepland',
         ][$value] ?? ucfirst_mb($value);
     }
@@ -122,6 +144,11 @@ final class Content
             'euthanasie_wilsonbekwaam' => '',
             'euthanasie_wilsonbekwaam_toelichting' => '',
             'euthanasie_brief' => '',
+            'dementie_opgenomen' => false,
+            'dementie_lijden' => '',
+            'dementie_moment' => '',
+            'dementie_naasten' => '',
+            'dementie_huisarts' => '',
             'orgaandonatie' => '',
             'uitvaart' => '',
             'overig' => '',
@@ -146,18 +173,37 @@ final class Content
         return $v === 'ja' || $v === true;
     }
 
+    public static function dementieIncluded(array $data): bool
+    {
+        $v = $data['dementie_opgenomen'] ?? false;
+        return $v === 'ja' || $v === true;
+    }
+
+    /** Is het optionele hoofdstuk achter deze poortstap ingeschakeld? */
+    private static function gateOpen(int $step, array $data): bool
+    {
+        return match ($step) {
+            8 => self::euthanasieIncluded($data),
+            12 => self::dementieIncluded($data),
+            default => true,
+        };
+    }
+
     public static function next(int $step, array $data): int
     {
-        if ($step === 8 && !self::euthanasieIncluded($data)) {
-            return 12;
+        if (isset(self::GATES[$step]) && !self::gateOpen($step, $data)) {
+            return self::GATES[$step][1];
         }
         return min($step + 1, self::TOTAL_STEPS);
     }
 
     public static function previous(int $step, array $data): int
     {
-        if ($step === 12 && !self::euthanasieIncluded($data)) {
-            return 8;
+        // terug vanaf de eerste stap na een uitgeschakeld hoofdstuk: naar de poortstap ervoor
+        foreach (self::GATES as $gate => [, $after]) {
+            if ($step === $after && !self::gateOpen($gate, $data)) {
+                return $gate;
+            }
         }
         return max($step - 1, 1);
     }

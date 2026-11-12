@@ -44,12 +44,21 @@ $sec = fn(string $t) => '<h2>' . e($t) . '</h2>';
         <?php foreach (['euthanasie_lijden' => 'Wat ik ondraaglijk vind', 'euthanasie_situatie' => 'Situatie'] as $k => $label): ?>
             <?php if ($has($k)) echo $block($label, $doc[$k]) ?>
         <?php endforeach ?>
-        <?php if ($has('euthanasie_wilsonbekwaam')) echo $row('Bij wilsonbekwaamheid', $doc['euthanasie_wilsonbekwaam']) ?>
+        <?php if ($has('euthanasie_wilsonbekwaam')) echo $row('Als ik zelf niet meer kan vragen', $doc['euthanasie_wilsonbekwaam']) ?>
         <?php if ($has('euthanasie_wilsonbekwaam_toelichting')) echo $quote($doc['euthanasie_wilsonbekwaam_toelichting']) ?>
         <?php if ($has('euthanasie_brief')): ?>
             <h3>Brief aan de arts</h3>
             <?= $quote($doc['euthanasie_brief']) ?>
         <?php endif ?>
+    </section>
+<?php endif ?>
+
+<?php if (\WV\Content::dementieIncluded($doc)): ?>
+    <section class="doc-section"><?= $sec('Euthanasieverzoek bij dementie') ?>
+        <?php if ($has('dementie_lijden')) echo $block('Situatie waarin ik mijn leven niet meer wil verlengen', $doc['dementie_lijden']) ?>
+        <?php if ($has('dementie_moment')) echo $row('Vanaf welk moment', $doc['dementie_moment']) ?>
+        <?php if ($has('dementie_naasten')) echo $block('Wat mijn naasten moeten weten of doen', $doc['dementie_naasten']) ?>
+        <?php if ($has('dementie_huisarts')) echo $row('Huisarts open voor euthanasie bij dementie', $doc['dementie_huisarts']) ?>
     </section>
 <?php endif ?>
 

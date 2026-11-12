@@ -1,67 +1,25 @@
-<div class="callout"><p>Lees uw verklaring nog eens rustig door. Klopt alles? Dan kunt u hieronder publiceren. Uw arts zal altijd de meest recente versie te zien krijgen.</p></div>
+<div class="callout"><p>Bij dementie is uw omgeving belangrijk. Uw naasten zien als eerste dat het slechter gaat, en uw arts betrekt hen bij de beoordeling. Zij moeten dus weten wat u wilt.</p></div>
 
-<?php
-$d = \WV\Content::normalize($data);
-$c = fn(string $k): string => $d[$k] === '' ? '' : \WV\Content::choiceLabel((string) $d[$k]);
-$blocks = [
-    'Introductie' => [
-        'Wie ik ben' => $d['intro'],
-        'Wat mijn leven waarde geeft' => $d['waarde'],
-    ],
-    'Grens en ervaring' => [
-        'Mijn grens' => $d['grens'],
-        'Vormende ervaringen' => $d['ervaring'],
-    ],
-    'Behandelverbod' => [
-        'Reanimatie' => $c('reanimatie') . ($d['reanimatie_toelichting'] ? ' — ' . $d['reanimatie_toelichting'] : ''),
-        'Beademing' => $c('beademing'),
-        'Intensive care' => $c('ic'),
-        'Antibiotica' => $c('antibiotica'),
-        'Sondevoeding' => $c('sonde'),
-        'Toelichting' => trim($d['beademing_toelichting'] . ' ' . $d['behandel_toelichting']),
-    ],
-    'Palliatieve sedatie' => [
-        'Wens' => $c('palliatief_wens'),
-        'Fysiek lijden' => $d['palliatief_fysiek'],
-        'Geestelijk lijden' => $d['palliatief_geestelijk'],
-        'Diepte' => $c('palliatief_diepte'),
-    ],
-];
-if (\WV\Content::euthanasieIncluded($d)) {
-    $blocks['Euthanasieverzoek'] = [
-        'Ondraaglijk lijden' => $d['euthanasie_lijden'],
-        'Concrete situatie' => $d['euthanasie_situatie'],
-        'Bij wilsonbekwaamheid' => $c('euthanasie_wilsonbekwaam'),
-        'Toelichting wilsonbekwaamheid' => $d['euthanasie_wilsonbekwaam_toelichting'],
-        'Brief aan de arts' => $d['euthanasie_brief'],
-    ];
-}
-$blocks['Na het overlijden'] = [
-    'Orgaandonatie' => $c('orgaandonatie'),
-    'Uitvaart' => $d['uitvaart'],
-    'Overig' => $d['overig'],
-];
-$blocks['Afsluiting'] = [
-    'Gevolmachtigde' => trim($d['volmacht'] . ($d['volmacht_contact'] !== '' ? ' — ' . $d['volmacht_contact'] : '')),
-    'Arts' => $d['arts'],
-    'Besproken met arts' => $c('besproken'),
-    'Datum' => fmt_iso_date($d['datum']),
-];
-?>
-<?php foreach ($blocks as $title => $items): ?>
-    <section class="summary" aria-labelledby="sam-<?= e(md5($title)) ?>">
-        <h2 id="sam-<?= e(md5($title)) ?>"><?= e($title) ?></h2>
-        <dl>
-            <?php foreach ($items as $label => $value): ?>
-                <dt><?= e($label) ?></dt>
-                <dd>
-                    <?php if (trim((string) $value) === ''): ?>
-                        <em>Niet ingevuld</em>
-                    <?php else: ?>
-                        <?= nl2br_e(trim((string) $value)) ?>
-                    <?php endif ?>
-                </dd>
-            <?php endforeach ?>
-        </dl>
-    </section>
-<?php endforeach ?>
+<details class="more">
+    <summary>Wat kunt u nu doen?</summary>
+    <div class="more-body">
+        <ul>
+            <li>Vraag uw naasten u te waarschuwen als ze denken dat u meer vergeet dan normaal, en als het moment dichtbij komt dat u niet meer kunt beslissen.</li>
+            <li>Vraag uw huisarts of die openstaat voor euthanasie bij dementie, en tot welk moment die bereid is euthanasie te verlenen.</li>
+            <li>Praat regelmatig met uw naasten en huisarts over uw wens, en werk uw verklaring bij als dat nodig is.</li>
+        </ul>
+    </div>
+</details>
+
+<div class="field">
+    <label for="dementie_naasten">Wat moeten mijn naasten weten of doen?</label>
+    <p class="hint" id="dementie_naasten-hint">Bijvoorbeeld: wie mij waarschuwt als het slechter gaat, welke tekenen ik belangrijk vind, en wie met mijn huisarts praat.</p>
+    <?= $this->textarea('dementie_naasten', $data['dementie_naasten'], 'Mijn naasten weten dat …', '', 'dementie_naasten-hint') ?>
+</div>
+
+<fieldset class="field">
+    <legend>Staat mijn huisarts open voor euthanasie bij dementie?</legend>
+    <?= $this->radio('dementie_huisarts', 'ja', 'Ja, dat heb ik besproken', null, $data['dementie_huisarts']) ?>
+    <?= $this->radio('dementie_huisarts', 'nee', 'Nee, mijn huisarts staat daar niet voor open', 'Vraag uw huisarts dan hoe u dit anders kunt regelen, bijvoorbeeld via het Expertisecentrum Euthanasie.', $data['dementie_huisarts']) ?>
+    <?= $this->radio('dementie_huisarts', 'onbekend', 'Dat weet ik nog niet', 'Bespreek het zo snel mogelijk met uw huisarts.', $data['dementie_huisarts']) ?>
+</fieldset>

@@ -171,7 +171,7 @@ T::ok(str_contains($b->follow($r)['body'], 'Te veel mislukte pogingen'), 'ook me
 
 T::section('Wizard');
 $r = $c->get('/verklaring/wizard');
-T::ok(str_contains($r['body'], 'Wie bent u') && str_contains($r['body'], 'Stap 1 van 14'), 'stap 1 getoond');
+T::ok(str_contains($r['body'], 'Wie bent u') && str_contains($r['body'], 'Stap 1 van 17'), 'stap 1 getoond');
 $r = $c->submit('/verklaring/wizard', '/verklaring/wizard', ['stap' => '1', 'actie' => 'volgende', 'data' => ['intro' => $intro, 'waarde' => "regel 1\nregel 2"]]);
 T::eq($r['location'], '/verklaring/wizard?stap=2', 'volgende → stap 2');
 $r = $c->get('/verklaring/wizard?stap=1');
@@ -182,23 +182,27 @@ T::ok(str_contains($r['body'], 'choice selected') && !str_contains($r['body'], '
 $r = $c->submit('/verklaring/wizard?stap=3', '/verklaring/wizard', ['stap' => '3', 'actie' => 'concept', 'data' => ['reanimatie' => 'hackerwaarde']]);
 T::ok(str_contains($c->get('/verklaring/wizard?stap=3')['body'], 'value="nee" checked'), 'ongeldige keuzewaarde overschrijft niets');
 $r = $c->submit('/verklaring/wizard?stap=8', '/verklaring/wizard', ['stap' => '8', 'actie' => 'overslaan']);
-T::eq($r['location'], '/verklaring/wizard?stap=12', 'euthanasiehoofdstuk overslaan → stap 12');
+T::eq($r['location'], '/verklaring/wizard?stap=12', 'euthanasiehoofdstuk overslaan → dementiepoort (stap 12)');
+$r = $c->submit('/verklaring/wizard?stap=12', '/verklaring/wizard', ['stap' => '12', 'actie' => 'overslaan']);
+T::eq($r['location'], '/verklaring/wizard?stap=15', 'dementiehoofdstuk overslaan → stap 15');
+$r = $c->submit('/verklaring/wizard?stap=15', '/verklaring/wizard', ['stap' => '15', 'actie' => 'terug']);
+T::eq($r['location'], '/verklaring/wizard?stap=12', 'terug vanaf 15 → 12');
 $r = $c->submit('/verklaring/wizard?stap=12', '/verklaring/wizard', ['stap' => '12', 'actie' => 'terug']);
 T::eq($r['location'], '/verklaring/wizard?stap=8', 'terug vanaf 12 → 8');
-$c->submit('/verklaring/wizard?stap=13', '/verklaring/wizard', ['stap' => '13', 'actie' => 'volgende', 'data' => ['volmacht' => 'Piet de Vries, zoon', 'volmacht_contact' => '06 12345678', 'arts' => 'Dr. Jansen', 'besproken' => 'ja', 'datum' => '2026-11-01']]);
-$r = $c->get('/verklaring/wizard?stap=14');
+$c->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'volgende', 'data' => ['volmacht' => 'Piet de Vries, zoon', 'volmacht_contact' => '06 12345678', 'arts' => 'Dr. Jansen', 'besproken' => 'ja', 'datum' => '2026-11-01']]);
+$r = $c->get('/verklaring/wizard?stap=17');
 T::ok(str_contains($r['body'], 'Overzicht en publicatie') && str_contains($r['body'], 'Dr. Jansen') && str_contains($r['body'], "regel 1<br>\nregel 2"), 'overzicht toont alle antwoorden');
-$r = $c->submit('/verklaring/wizard?stap=14', '/verklaring/wizard', ['stap' => '14', 'actie' => 'publiceer']);
+$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
 T::eq($r['location'], '/dashboard', 'publiceren → dashboard');
 $r = $c->get('/dashboard');
 T::ok(str_contains($r['body'], 'Definitief') && str_contains($r['body'], 'Laatst gepubliceerd op ' . date('d-m-Y')), 'dashboard: Definitief');
 $r = $c->get('/verklaring/versies');
 T::ok(str_contains($r['body'], 'Versie 1') && str_contains($r['body'], 'Huidig'), 'versieoverzicht');
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Gewijzigd concept']]);
-$c->submit('/verklaring/wizard?stap=14', '/verklaring/wizard', ['stap' => '14', 'actie' => 'publiceer']);
+$c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
 T::ok(str_contains($c->get('/verklaring/versies')['body'], 'Versie 2'), 'tweede publicatie wordt versie 2 (v1 blijft bewaard)');
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => $intro]]);
-$c->submit('/verklaring/wizard?stap=14', '/verklaring/wizard', ['stap' => '14', 'actie' => 'publiceer']);
+$c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
 
 function clearThrottle(string $dbfile): void { $p = new PDO('sqlite:' . $dbfile); $p->exec('DELETE FROM throttle'); }
 $dbfile = "$tmp/db/e2e.sqlite";
@@ -313,12 +317,24 @@ $r = $c->get('/verklaring/pdf?groot=1');
 T::ok($r['status'] === 200 && str_starts_with($r['body'], '%PDF'), 'PDF met grote letters');
 $r2 = $c->get('/verklaring/pdf');
 T::ok(strlen($r['body']) !== strlen($r2['body']), 'grote letters geven een ander document');
-foreach ([1, 2, 3, 4, 5, 6, 8, 9, 10, 13] as $n) {
+foreach ([1, 2, 3, 4, 5, 6, 8, 9, 12, 14, 16] as $n) {
     $pg = $c->get('/verklaring/wizard?stap=' . $n)['body'];
     T::ok(str_contains($pg, '<details class="more">') && str_contains($pg, 'NVVE-brochure'), "stap $n: uitleg en bronvermelding aanwezig");
 }
-T::ok(str_contains($c->get('/verklaring/wizard?stap=10')['body'], 'Euthanasie en dementie: wat u moet weten'), 'stap 10: dementie-uitleg met realistische verwachtingen');
-$pg = $c->get('/verklaring/wizard?stap=14')['body'];
+$p12 = $c->get('/verklaring/wizard?stap=12')['body'];
+T::ok(str_contains($p12, 'Euthanasie en dementie: wat u moet weten') && str_contains($p12, 'dementie-schema.jpg') && str_contains($p12, 'dementie_opgenomen'), 'stap 12: dementie-uitleg, schema en keuze om dementie op te nemen');
+T::ok(!str_contains($c->get('/verklaring/wizard?stap=10')['body'], 'dementie-schema.jpg'), 'stap 10 (algemeen) toont de dementie-uitleg niet');
+// dementiehoofdstuk apart invullen en publiceren
+$c->submit('/verklaring/wizard?stap=12', '/verklaring/wizard', ['stap' => '12', 'actie' => 'volgende', 'data' => ['dementie_opgenomen' => 'ja']]);
+$r = $c->submit('/verklaring/wizard?stap=13', '/verklaring/wizard', ['stap' => '13', 'actie' => 'volgende', 'data' => ['dementie_lijden' => 'Als ik mijn kinderen niet herken', 'dementie_moment' => 'omslag']]);
+T::eq($r['location'], '/verklaring/wizard?stap=14', 'dementie: stap 13 → 14');
+$r = $c->submit('/verklaring/wizard?stap=14', '/verklaring/wizard', ['stap' => '14', 'actie' => 'volgende', 'data' => ['dementie_naasten' => 'Piet waarschuwt mij', 'dementie_huisarts' => 'onbekend']]);
+T::eq($r['location'], '/verklaring/wizard?stap=15', 'dementie: stap 14 → 15');
+$ov = $c->get('/verklaring/wizard?stap=17')['body'];
+T::ok(str_contains($ov, '>Euthanasieverzoek dementie</h2>') && str_contains($ov, 'Als ik mijn kinderen niet herken') && str_contains($ov, 'Uiterlijk in de omslagzone') && !str_contains($ov, '>Euthanasieverzoek algemeen</h2>'), 'overzicht: dementie als apart onderdeel, algemeen weggelaten');
+$pdfx = $c->get('/verklaring/pdf');
+T::ok($pdfx['status'] === 200, 'pdf met dementieonderdeel');
+$pg = $c->get('/verklaring/wizard?stap=17')['body'];
 T::ok(str_contains($pg, 'Hulp en advies') && str_contains($pg, '0800-0113') && str_contains($pg, 'Piet de Vries, zoon'), 'overzicht: hulpblok en gevolmachtigde');
 
 

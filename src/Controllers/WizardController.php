@@ -25,7 +25,8 @@ final class WizardController extends Controller
         $step = ($step >= 1 && $step <= Content::TOTAL_STEPS) ? $step : 1;
         $declaration = $this->declaration();
 
-        [$chapterTitle, $chapter] = Content::CHAPTERS[$step];
+        $chapter = Content::STEP_CHAPTER[$step];
+        $chapterTitle = Content::CHAPTER_NAMES[$chapter];
         return $this->view('wizard/show', [
             'step' => $step,
             'total' => Content::TOTAL_STEPS,
@@ -47,8 +48,8 @@ final class WizardController extends Controller
 
         $data = Content::mergeStep($step, $this->app->request->inputArray('data'), $this->workingData($declaration));
 
-        if ($action === 'overslaan' && $step === 8) {
-            $data['euthanasie_opgenomen'] = 'nee';
+        if ($action === 'overslaan' && isset(Content::GATES[$step])) {
+            $data[Content::GATES[$step][0]] = 'nee';
         }
 
         if ($action === 'publiceer' && $step === Content::TOTAL_STEPS) {
@@ -69,7 +70,7 @@ final class WizardController extends Controller
         $target = match ($action) {
             'terug' => Content::previous($step, $data),
             'volgende' => Content::next($step, $data),
-            'overslaan' => $step === 8 ? 12 : Content::next($step, $data),
+            'overslaan' => Content::GATES[$step][1] ?? Content::next($step, $data),
             default => $step,
         };
         if ($action === 'concept') {

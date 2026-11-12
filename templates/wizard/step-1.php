@@ -17,7 +17,7 @@
     <li>Controleer uw verklaring af en toe. Bent u het nog eens? Zet er dan een nieuwe datum en handtekening onder.</li>
 </ul>
 <h2>Drie onderdelen</h2>
-<p>Een compleet pakket bestaat meestal uit een <strong>behandelverbod</strong> (wat u niet wilt), een <strong>medische volmacht</strong> (wie namens u beslist) en een <strong>euthanasieverzoek</strong> (wat u wel wilt als u ondraaglijk lijdt). In deze vragenlijst komen ze alle drie aan bod: het behandelverbod in hoofdstuk 2 en 3, het euthanasieverzoek in hoofdstuk 4 en de volmacht in stap 13.</p>
+<p>Een compleet pakket bestaat meestal uit een <strong>behandelverbod</strong> (wat u niet wilt), een <strong>medische volmacht</strong> (wie namens u beslist) en een <strong>euthanasieverzoek</strong> (wat u wel wilt als u ondraaglijk lijdt). In deze vragenlijst komen ze alle drie aan bod: het behandelverbod in hoofdstuk 2 en 3, het euthanasieverzoek in hoofdstuk 4 (algemeen) en 5 (dementie) en de volmacht in stap 16.</p>
     </div>
 </details>
 

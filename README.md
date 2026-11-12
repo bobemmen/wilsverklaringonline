@@ -91,6 +91,10 @@ Sleutelrotatie is niet ingebouwd.
 > voordat er echte patiëntgegevens in komen. Over verwerking van gezondheidsgegevens gelden AVG-verplichtingen
 > (o.a. verwerkingsregister, verwerkersafspraken met de hostingpartij, datalekprocedure).
 
+## Wizard
+
+Zes hoofdstukken, 17 stappen. Het euthanasieverzoek bestaat uit twee losse onderdelen, elk met een eigen "opnemen ja/nee"-keuze: **algemeen** (stap 8–11) en **dementie** (stap 12–14, met schema en praktijktabel). Overslaan, terug en volgende volgen `Content::GATES`.
+
 ## Toegankelijkheid
 
 Ontworpen voor ook oudere gebruikers (70+), getoetst met axe-core (WCAG 2.2 AA) op alle pagina's in drie thema's en vier tekstgroottes:
