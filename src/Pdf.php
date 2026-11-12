@@ -28,6 +28,8 @@ final class Pdf
     private array $pages = [];
     private string $stream = '';
     private float $y;
+    /** Vergrotingsfactor voor tekst (1.0 = normaal, 1.4 = grote letters). */
+    public float $scale = 1.0;
 
     public function __construct(private readonly string $title = '')
     {
@@ -147,6 +149,7 @@ final class Pdf
         float $leadingFactor = 1.4,
         float $keepWithNext = 0.0,
     ): void {
+        $size *= $this->scale;
         $maxW = $this->contentWidth() - $indent;
         $lines = $this->wrap($font, $text, $size, $maxW, $charSpace);
         $leading = $size * $leadingFactor;
@@ -265,29 +268,32 @@ final class Pdf
     /** Label gevolgd door een waarde in vet (voor keuzes zoals "Ja"/"Nee"). */
     public function choice(string $label, string $value): void
     {
-        $this->ensure(18);
+        $k = $this->scale;
+        $this->ensure(18 * $k);
         $this->space(4);
-        $baseline = $this->y - 10.5;
-        $this->textAt(self::MARGIN, $baseline, mb_strtoupper($label), 'H', 7.5, [136, 135, 128], 0.7);
-        $labelW = $this->textWidth('H', $this->enc(mb_strtoupper($label)), 7.5, 0.7);
-        $this->textAt(self::MARGIN + max($labelW + 10, 150), $baseline, ucfirst_mb($value), 'HB', 10.5, [38, 33, 92]);
-        $this->y -= 15;
+        $baseline = $this->y - 10.5 * $k;
+        $this->textAt(self::MARGIN, $baseline, mb_strtoupper($label), 'H', 7.5 * $k, [136, 135, 128], 0.7);
+        $labelW = $this->textWidth('H', $this->enc(mb_strtoupper($label)), 7.5 * $k, 0.7);
+        $this->textAt(self::MARGIN + max($labelW + 10, 150 * $k), $baseline, Content::choiceLabel($value), 'HB', 10.5 * $k, [38, 33, 92]);
+        $this->y -= 15 * $k;
     }
 
     /** Toelichting als citaat met balk. */
     public function quote(string $text): void
     {
         $this->space(4);
-        $lines = $this->wrap('TI', $text, 11, $this->contentWidth() - 16);
-        $leading = 11 * 1.4;
+        $fs = 11 * $this->scale;
+        $lines = $this->wrap('TI', $text, $fs, $this->contentWidth() - 16);
+        $leading = $fs * 1.4;
         foreach ($lines as $line) {
             $this->ensure($leading);
             $top = $this->y;
             $this->stream .= sprintf(
-                "BT /F5 11 Tf %s rg 0 Tc %.2F %.2F Td (%s) Tj ET\n",
+                "BT /F5 %.2F Tf %s rg 0 Tc %.2F %.2F Td (%s) Tj ET\n",
+                $fs,
                 self::rgb([68, 68, 68]),
                 self::MARGIN + 12,
-                $this->y - 11,
+                $this->y - $fs,
                 self::esc($line)
             );
             $this->bar($top, $top - $leading, [175, 169, 236]);

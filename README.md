@@ -91,6 +91,17 @@ Sleutelrotatie is niet ingebouwd.
 > voordat er echte patiëntgegevens in komen. Over verwerking van gezondheidsgegevens gelden AVG-verplichtingen
 > (o.a. verwerkingsregister, verwerkersafspraken met de hostingpartij, datalekprocedure).
 
+## Toegankelijkheid
+
+Ontworpen voor ook oudere gebruikers (70+), getoetst met axe-core (WCAG 2.2 AA) op alle pagina's in drie thema's en vier tekstgroottes:
+
+- Lettertypen: Source Serif 4 (koppen) en Atkinson Hyperlegible (tekst, ontworpen voor slechtzienden), lokaal geserveerd; basisgrootte ruim 18 punten.
+- Weergave-instellingen (kop: **A−/A+**, en pagina `/weergave`): tekstgrootte in vier stappen (tot 200%), contrast standaard / hoog / donker (volgt ook `prefers-contrast`), ruime regel- en letterafstand. Opgeslagen in een cookie `wv_prefs` zonder persoonsgegevens; werkt ook zonder JavaScript.
+- **Lees voor**: voorlezen via de spraaksynthese van de browser (hele pagina of selectie).
+- Grote keuzekaarten met echte keuzerondjes in `fieldset`/`legend`, doelgebieden van minimaal 44 px, zichtbare focus, sla-over-link, landmarks, foutsamenvatting met `role="alert"`, voortgang met `aria-current`.
+- Respecteert `prefers-reduced-motion` en forced-colors; bruikbaar tot 400% zoom zonder horizontaal scrollen.
+- PDF ook met grote letters (`/verklaring/pdf?groot=1`).
+
 ## Tests
 
 ```sh

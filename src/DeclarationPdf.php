@@ -7,9 +7,10 @@ namespace WV;
 /** Zet een verklaring om in een afdrukbare PDF (zelfde indeling als de online weergave). */
 final class DeclarationPdf
 {
-    public static function build(string $name, ?string $versionDate, array $c, bool $tokenActive): string
+    public static function build(string $name, ?string $versionDate, array $c, bool $tokenActive, float $scale = 1.0): string
     {
         $pdf = new Pdf('Wilsverklaring ' . $name);
+        $pdf->scale = $scale;
         $filled = fn(string ...$keys) => array_filter($keys, fn($k) => trim((string) ($c[$k] ?? '')) !== '');
 
         $pdf->title('Wilsverklaring');

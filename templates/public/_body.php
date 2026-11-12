@@ -1,77 +1,64 @@
 <?php
 $has = fn(string $k): bool => trim((string) ($doc[$k] ?? '')) !== '';
-$pillRow = function (string $label, string $value, string $mb = '8px'): string {
-    return '<div style="margin-bottom: ' . $mb . ';"><span class="summary-label" style="display: inline-block; min-width: 150px;">' . e($label)
-        . '</span><span class="pill">' . e(ucfirst_mb($value)) . '</span></div>';
-};
-$block = function (string $label, string $value, string $mb = '12px'): string {
-    return '<div style="margin-bottom: ' . $mb . ';"><div class="summary-label">' . e($label) . '</div><div class="summary-value">' . nl2br_e($value) . '</div></div>';
-};
-$quote = '<div class="summary-value" style="margin-top: 10px; font-style: italic; color: var(--wv-text-muted); border-left: 2px solid var(--wv-purple-light); padding-left: 10px;">';
+$row = fn(string $label, string $value): string => '<div class="doc-row"><span class="doc-label">' . e($label) . '</span><span class="badge badge-brand">' . e(\WV\Content::choiceLabel($value)) . '</span></div>';
+$block = fn(string $label, string $value): string => '<h3>' . e($label) . '</h3><p class="doc-text">' . nl2br_e($value) . '</p>';
+$quote = fn(string $value): string => '<blockquote class="doc-quote">' . nl2br_e($value) . '</blockquote>';
+$sec = fn(string $t) => '<h2>' . e($t) . '</h2>';
 ?>
-
+<div class="card">
 <?php if ($has('intro') || $has('waarde')): ?>
-    <div class="block-header">Over mij</div>
-    <div class="block-section">
+    <section class="doc-section"><?= $sec('Over mij') ?>
         <?php if ($has('intro')) echo $block('Wie ik ben', $doc['intro']) ?>
-        <?php if ($has('waarde')) echo $block('Wat mijn leven waarde geeft', $doc['waarde'], '0') ?>
-    </div>
+        <?php if ($has('waarde')) echo $block('Wat mijn leven waarde geeft', $doc['waarde']) ?>
+    </section>
 <?php endif ?>
 
 <?php if ($has('grens') || $has('ervaring')): ?>
-    <div class="block-header">Mijn grens</div>
-    <div class="block-section">
+    <section class="doc-section"><?= $sec('Mijn grens') ?>
         <?php if ($has('grens')) echo $block('Grens', $doc['grens']) ?>
-        <?php if ($has('ervaring')) echo $block('Ervaringen', $doc['ervaring'], '0') ?>
-    </div>
+        <?php if ($has('ervaring')) echo $block('Ervaringen', $doc['ervaring']) ?>
+    </section>
 <?php endif ?>
 
-<div class="block-header">Behandelverbod</div>
-<div class="block-section">
+<section class="doc-section"><?= $sec('Behandelverbod') ?>
     <?php foreach (['reanimatie' => 'Reanimatie', 'beademing' => 'Beademing', 'ic' => 'Intensive care', 'antibiotica' => 'Antibiotica', 'sonde' => 'Sondevoeding'] as $k => $label): ?>
-        <?php if ($has($k)) echo $pillRow($label, $doc[$k]) ?>
+        <?php if ($has($k)) echo $row($label, $doc[$k]) ?>
     <?php endforeach ?>
     <?php foreach (['reanimatie_toelichting', 'beademing_toelichting', 'behandel_toelichting'] as $k): ?>
-        <?php if ($has($k)): ?><?= $quote ?><?= nl2br_e($doc[$k]) ?></div><?php endif ?>
+        <?php if ($has($k)) echo $quote($doc[$k]) ?>
     <?php endforeach ?>
-</div>
+</section>
 
 <?php if ($has('palliatief_wens')): ?>
-    <div class="block-header">Palliatieve sedatie</div>
-    <div class="block-section">
-        <?= $pillRow('Wens', $doc['palliatief_wens']) ?>
+    <section class="doc-section"><?= $sec('Palliatieve sedatie') ?>
+        <?= $row('Wens', $doc['palliatief_wens']) ?>
         <?php foreach (['palliatief_fysiek' => 'Fysiek lijden', 'palliatief_geestelijk' => 'Geestelijk lijden'] as $k => $label): ?>
-            <?php if ($has($k)) echo $block($label, $doc[$k], '0') . '<div style="height:10px"></div>' ?>
+            <?php if ($has($k)) echo $block($label, $doc[$k]) ?>
         <?php endforeach ?>
-        <?php if ($has('palliatief_diepte')) echo $pillRow('Diepte', $doc['palliatief_diepte']) ?>
-    </div>
+        <?php if ($has('palliatief_diepte')) echo $row('Diepte', $doc['palliatief_diepte']) ?>
+    </section>
 <?php endif ?>
 
 <?php if (\WV\Content::euthanasieIncluded($doc)): ?>
-    <div class="block-header">Euthanasieverzoek</div>
-    <div class="block-section">
+    <section class="doc-section"><?= $sec('Euthanasieverzoek') ?>
         <?php foreach (['euthanasie_lijden' => 'Wat ik ondraaglijk vind', 'euthanasie_situatie' => 'Situatie'] as $k => $label): ?>
             <?php if ($has($k)) echo $block($label, $doc[$k]) ?>
         <?php endforeach ?>
-        <?php if ($has('euthanasie_wilsonbekwaam')) echo $pillRow('Bij wilsonbekwaamheid', $doc['euthanasie_wilsonbekwaam'], '12px') ?>
-        <?php if ($has('euthanasie_wilsonbekwaam_toelichting')) echo $block('Toelichting', $doc['euthanasie_wilsonbekwaam_toelichting']) ?>
+        <?php if ($has('euthanasie_wilsonbekwaam')) echo $row('Bij wilsonbekwaamheid', $doc['euthanasie_wilsonbekwaam']) ?>
+        <?php if ($has('euthanasie_wilsonbekwaam_toelichting')) echo $quote($doc['euthanasie_wilsonbekwaam_toelichting']) ?>
         <?php if ($has('euthanasie_brief')): ?>
-            <div style="margin-top: 14px;">
-                <div class="summary-label">Brief aan de arts</div>
-                <div class="summary-value" style="font-style: italic; color: var(--wv-text-muted); border-left: 2px solid var(--wv-purple-light); padding-left: 10px; margin-top: 6px;">
-                    <?= nl2br_e($doc['euthanasie_brief']) ?>
-                </div>
-            </div>
+            <h3>Brief aan de arts</h3>
+            <?= $quote($doc['euthanasie_brief']) ?>
         <?php endif ?>
-    </div>
+    </section>
 <?php endif ?>
 
 <?php if ($has('orgaandonatie') || $has('uitvaart') || $has('overig')): ?>
-    <div class="block-header">Na het overlijden</div>
-    <div class="block-section">
-        <?php if ($has('orgaandonatie')) echo $pillRow('Orgaandonatie', $doc['orgaandonatie'], '10px') ?>
+    <section class="doc-section"><?= $sec('Na het overlijden') ?>
+        <?php if ($has('orgaandonatie')) echo $row('Orgaandonatie', $doc['orgaandonatie']) ?>
         <?php foreach (['uitvaart' => 'Uitvaart', 'overig' => 'Overig'] as $k => $label): ?>
-            <?php if ($has($k)) echo $block($label, $doc[$k], '10px') ?>
+            <?php if ($has($k)) echo $block($label, $doc[$k]) ?>
         <?php endforeach ?>
-    </div>
+    </section>
 <?php endif ?>
+</div>

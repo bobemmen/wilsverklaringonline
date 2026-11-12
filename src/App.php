@@ -73,6 +73,7 @@ final class App
         $auth = ['auth', 'twofa'];
 
         $r->get('/', [C\HomeController::class, 'index']);
+        $r->get('/weergave', [C\PreferencesController::class, 'show']);
         $r->get('/up', [C\HomeController::class, 'health']);
 
         $r->get('/inloggen', [C\AuthController::class, 'loginForm'], ['guest']);

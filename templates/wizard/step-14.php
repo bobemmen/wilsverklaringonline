@@ -1,9 +1,8 @@
-<div class="info-block">
-    Lees uw verklaring nog eens rustig door. Klopt alles? Dan kunt u hieronder publiceren. Uw arts zal altijd de meest recente versie te zien krijgen.
-</div>
+<div class="callout"><p>Lees uw verklaring nog eens rustig door. Klopt alles? Dan kunt u hieronder publiceren. Uw arts zal altijd de meest recente versie te zien krijgen.</p></div>
 
 <?php
 $d = \WV\Content::normalize($data);
+$c = fn(string $k): string => $d[$k] === '' ? '' : \WV\Content::choiceLabel((string) $d[$k]);
 $blocks = [
     'Introductie' => [
         'Wie ik ben' => $d['intro'],
@@ -14,54 +13,54 @@ $blocks = [
         'Vormende ervaringen' => $d['ervaring'],
     ],
     'Behandelverbod' => [
-        'Reanimatie' => $d['reanimatie'] . ($d['reanimatie_toelichting'] ? ' — ' . $d['reanimatie_toelichting'] : ''),
-        'Beademing' => $d['beademing'],
-        'Intensive care' => $d['ic'],
-        'Antibiotica' => $d['antibiotica'],
-        'Sondevoeding' => $d['sonde'],
+        'Reanimatie' => $c('reanimatie') . ($d['reanimatie_toelichting'] ? ' — ' . $d['reanimatie_toelichting'] : ''),
+        'Beademing' => $c('beademing'),
+        'Intensive care' => $c('ic'),
+        'Antibiotica' => $c('antibiotica'),
+        'Sondevoeding' => $c('sonde'),
         'Toelichting' => trim($d['beademing_toelichting'] . ' ' . $d['behandel_toelichting']),
     ],
     'Palliatieve sedatie' => [
-        'Wens' => $d['palliatief_wens'],
+        'Wens' => $c('palliatief_wens'),
         'Fysiek lijden' => $d['palliatief_fysiek'],
         'Geestelijk lijden' => $d['palliatief_geestelijk'],
-        'Diepte' => $d['palliatief_diepte'],
+        'Diepte' => $c('palliatief_diepte'),
     ],
 ];
 if (\WV\Content::euthanasieIncluded($d)) {
     $blocks['Euthanasieverzoek'] = [
         'Ondraaglijk lijden' => $d['euthanasie_lijden'],
         'Concrete situatie' => $d['euthanasie_situatie'],
-        'Bij wilsonbekwaamheid' => $d['euthanasie_wilsonbekwaam'],
+        'Bij wilsonbekwaamheid' => $c('euthanasie_wilsonbekwaam'),
         'Toelichting wilsonbekwaamheid' => $d['euthanasie_wilsonbekwaam_toelichting'],
         'Brief aan de arts' => $d['euthanasie_brief'],
     ];
 }
 $blocks['Na het overlijden'] = [
-    'Orgaandonatie' => $d['orgaandonatie'],
+    'Orgaandonatie' => $c('orgaandonatie'),
     'Uitvaart' => $d['uitvaart'],
     'Overig' => $d['overig'],
 ];
 $blocks['Afsluiting'] = [
     'Arts' => $d['arts'],
-    'Besproken met arts' => $d['besproken'],
+    'Besproken met arts' => $c('besproken'),
     'Datum' => fmt_iso_date($d['datum']),
 ];
 ?>
 <?php foreach ($blocks as $title => $items): ?>
-    <div style="margin-bottom: 18px;">
-        <div class="card-title" style="margin-bottom: 8px;"><?= e($title) ?></div>
-        <?php foreach ($items as $label => $value): ?>
-            <div class="summary-block">
-                <div class="summary-label"><?= e($label) ?></div>
-                <div class="summary-value">
+    <section class="summary" aria-labelledby="sam-<?= e(md5($title)) ?>">
+        <h2 id="sam-<?= e(md5($title)) ?>"><?= e($title) ?></h2>
+        <dl>
+            <?php foreach ($items as $label => $value): ?>
+                <dt><?= e($label) ?></dt>
+                <dd>
                     <?php if (trim((string) $value) === ''): ?>
                         <em>Niet ingevuld</em>
                     <?php else: ?>
                         <?= nl2br_e(trim((string) $value)) ?>
                     <?php endif ?>
-                </div>
-            </div>
-        <?php endforeach ?>
-    </div>
+                </dd>
+            <?php endforeach ?>
+        </dl>
+    </section>
 <?php endforeach ?>

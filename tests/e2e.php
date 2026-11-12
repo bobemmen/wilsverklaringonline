@@ -99,7 +99,7 @@ function register(string $base, string $name, string $email, string $pw): Client
     $c = new Client($base);
     $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'password' => $pw, 'password_confirmation' => $pw]);
     $page = $c->follow($r);
-    preg_match('/token-display">([A-Z2-7 ]+)</', $page['body'], $m);
+    preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
     $secret = str_replace(' ', '', $m[1] ?? '');
     $c->secret = $secret;
     $c->submit('/2fa/instellen', '/2fa/instellen', ['code' => Totp::generateCode($secret)]);
@@ -131,7 +131,7 @@ T::ok(strlen($cookie) === 43, 'sessie-cookie is een willekeurige 256-bit waarde'
 $r = $c->get('/dashboard');
 T::eq($r['status'], 200, 'dashboard bereikbaar na 2FA');
 T::ok(str_contains($r['body'], 'Concept'), 'nieuwe verklaring staat op Concept');
-T::ok(str_contains($r['body'], 'A</div>'), 'avatar met beginletter');
+T::ok(str_contains($r['body'], 'Welkom, '), 'persoonlijke begroeting');
 // tweede registratie met hetzelfde adres
 $c2 = new Client($base);
 $r = $c2->submit('/registreren', '/registreren', ['name' => 'X', 'email' => 'ANNA@voorbeeld.nl', 'password' => $pw, 'password_confirmation' => $pw]);
@@ -178,7 +178,7 @@ $r = $c->get('/verklaring/wizard?stap=1');
 T::ok(str_contains($r['body'], $intro), 'concept is bewaard en wordt teruggetoond');
 $r = $c->submit('/verklaring/wizard?stap=3', '/verklaring/wizard', ['stap' => '3', 'actie' => 'volgende', 'data' => ['reanimatie' => 'nee', 'reanimatie_toelichting' => '<script>alert(1)</script>']]);
 $r = $c->get('/verklaring/wizard?stap=3');
-T::ok(str_contains($r['body'], 'radio-option selected') && !str_contains($r['body'], '<script>alert'), 'keuze bewaard; invoer is ge-escaped');
+T::ok(str_contains($r['body'], 'choice selected') && !str_contains($r['body'], '<script>alert'), 'keuze bewaard; invoer is ge-escaped');
 $r = $c->submit('/verklaring/wizard?stap=3', '/verklaring/wizard', ['stap' => '3', 'actie' => 'concept', 'data' => ['reanimatie' => 'hackerwaarde']]);
 T::ok(str_contains($c->get('/verklaring/wizard?stap=3')['body'], 'value="nee" checked'), 'ongeldige keuzewaarde overschrijft niets');
 $r = $c->submit('/verklaring/wizard?stap=8', '/verklaring/wizard', ['stap' => '8', 'actie' => 'overslaan']);
@@ -191,12 +191,12 @@ T::ok(str_contains($r['body'], 'Overzicht en publicatie') && str_contains($r['bo
 $r = $c->submit('/verklaring/wizard?stap=14', '/verklaring/wizard', ['stap' => '14', 'actie' => 'publiceer']);
 T::eq($r['location'], '/dashboard', 'publiceren → dashboard');
 $r = $c->get('/dashboard');
-T::ok(str_contains($r['body'], 'Definitief') && str_contains($r['body'], 'Laatste wijziging ' . date('d-m-Y')), 'dashboard: Definitief');
+T::ok(str_contains($r['body'], 'Definitief') && str_contains($r['body'], 'Laatst gepubliceerd op ' . date('d-m-Y')), 'dashboard: Definitief');
 $r = $c->get('/verklaring/versies');
-T::ok(str_contains($r['body'], 'v1') && str_contains($r['body'], 'Huidig'), 'versieoverzicht');
+T::ok(str_contains($r['body'], 'Versie 1') && str_contains($r['body'], 'Huidig'), 'versieoverzicht');
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Gewijzigd concept']]);
 $c->submit('/verklaring/wizard?stap=14', '/verklaring/wizard', ['stap' => '14', 'actie' => 'publiceer']);
-T::ok(str_contains($c->get('/verklaring/versies')['body'], 'v2'), 'tweede publicatie wordt versie 2 (v1 blijft bewaard)');
+T::ok(str_contains($c->get('/verklaring/versies')['body'], 'Versie 2'), 'tweede publicatie wordt versie 2 (v1 blijft bewaard)');
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => $intro]]);
 $c->submit('/verklaring/wizard?stap=14', '/verklaring/wizard', ['stap' => '14', 'actie' => 'publiceer']);
 
@@ -205,10 +205,10 @@ $dbfile = "$tmp/db/e2e.sqlite";
 T::section('Arts-toegang');
 clearThrottle($dbfile);
 $r = $c->get('/token');
-T::ok(str_contains($r['body'], 'Nog geen code aangemaakt'), 'nog geen code');
+T::ok(str_contains($r['body'], 'Nog geen link'), 'nog geen code');
 $r = $c->submit('/token', '/token/genereer', []);
 $page = $c->follow($r);
-preg_match('#token-display">' . preg_quote($base, '#') . '/v/([a-f0-9]{64})<#', $page['body'], $m);
+preg_match('#token-box">' . preg_quote($base, '#') . '/v/([a-f0-9]{64})<#', $page['body'], $m);
 $token = $m[1] ?? '';
 T::ok($token !== '', 'toegangslink wordt eenmalig getoond');
 T::ok(!str_contains($c->get('/token')['body'], $token), 'de code wordt daarna niet meer getoond');
@@ -218,7 +218,7 @@ T::ok($r['status'] === 200 && str_contains($r['body'], 'Anna de Vries') && str_c
 T::ok(str_contains($r['body'], 'Dr. Jansen') === false || true, 'publieke weergave rendert');
 T::ok(!preg_match('/<script(?![^>]*\ssrc=)/', $r['body']), 'publieke pagina bevat geen inline scripts');
 T::eq($doc->get('/v/' . str_repeat('a', 64))['status'], 404, 'onbekende code → 404');
-T::ok(str_contains($c->get('/dashboard')['body'], '1 raadpleging'), 'raadpleging is gelogd');
+T::ok(str_contains($c->get('/dashboard')['body'], '1 keer bekeken'), 'raadpleging is gelogd');
 // bevestiging per e-mail
 $r = $c->submit('/token', '/token/instellingen', ['notification_email' => 'praktijk@huisarts.nl', 'access_token_expires_at' => date('Y-m-d', strtotime('+7 days'))]);
 $doc2 = new Client($base);
@@ -251,7 +251,7 @@ T::section('Naasten');
 clearThrottle($dbfile);
 $r = $c->submit('/naasten', '/naasten', ['name' => 'Piet', 'email' => 'piet@voorbeeld.nl', 'role' => 'gemachtigde']);
 $page = $c->follow($r);
-preg_match('#token-display">' . preg_quote($base, '#') . '/gedeeld/([a-f0-9]{64})<#', $page['body'], $m);
+preg_match('#token-box">' . preg_quote($base, '#') . '/gedeeld/([a-f0-9]{64})<#', $page['body'], $m);
 $shareToken = $m[1] ?? '';
 T::ok($shareToken !== '' && str_contains($page['body'], 'Uitgenodigd'), 'uitnodiging aangemaakt');
 $piet = new Client($base);
@@ -289,6 +289,30 @@ if (trim((string) shell_exec('command -v pdftotext'))) {
     echo "  (pdftotext niet geïnstalleerd: inhoudscontrole PDF overgeslagen)\n";
 }
 @copy("$tmp/out.pdf", '/tmp/wv_e2e_last.pdf');
+
+T::section('Toegankelijkheid en weergave-instellingen');
+$a = new Client($base);
+$r = $a->get('/');
+T::ok(str_contains($r['body'], '<html lang="nl">') && str_contains($r['body'], 'class="skip-link"'), 'beginpagina: taal en sla-over-link');
+T::ok(!str_contains($r['body'], ' style="'), 'geen inline stijlen op de beginpagina');
+$r = $a->get('/weergave?t=3&c=hoog&r=1&terug=/inloggen');
+T::eq($r['location'], '/inloggen', 'weergave opslaan keert terug naar de vorige pagina');
+T::ok(isset($a->cookies['wv_prefs']) && str_contains(urldecode($a->cookies['wv_prefs']), 't=3&c=hoog&r=1'), 'voorkeur staat in cookie');
+$r = $a->get('/inloggen');
+T::ok(str_contains($r['body'], '<html lang="nl" class="t3 ruim" data-contrast="hoog">'), 'tekstgrootte, ruimte en contrast toegepast op de pagina');
+$r = $a->get('/weergave?t=9&c=<script>&terug=//evil.example');
+T::ok(!str_contains($r['body'], 'evil.example') && !str_contains(urldecode($a->cookies['wv_prefs'] ?? ''), 'script'), 'ongeldige waarden en externe terugkeer-URL worden genegeerd');
+T::ok(str_contains(urldecode($a->cookies['wv_prefs']), 't=4&c=hoog'), 'te grote maat wordt begrensd, ongeldig contrast genegeerd');
+$a->get('/weergave?t=1&c=standaard&r=0');
+$r = $a->get('/weergave');
+T::ok(str_contains($r['body'], '<legend>Tekstgrootte</legend>') && str_contains($r['body'], '<legend>Kleuren en contrast</legend>'), 'weergavepagina met fieldsets');
+$r = $c->get('/verklaring/wizard?stap=3');
+T::ok(str_contains($r['body'], '<fieldset class="field">') && str_contains($r['body'], '<legend>') && str_contains($r['body'], 'aria-current="step"'), 'wizard: keuzes in fieldset/legend, voortgang met aria-current');
+T::ok(!preg_match('/<(?:div|span|p)[^>]*\sstyle=/', $r['body']), 'wizard zonder inline stijlen');
+$r = $c->get('/verklaring/pdf?groot=1');
+T::ok($r['status'] === 200 && str_starts_with($r['body'], '%PDF'), 'PDF met grote letters');
+$r2 = $c->get('/verklaring/pdf');
+T::ok(strlen($r['body']) !== strlen($r2['body']), 'grote letters geven een ander document');
 
 T::section('Export en account verwijderen');
 $r = $c->get('/account/export');

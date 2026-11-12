@@ -1,31 +1,30 @@
 <?php $this->layout('layouts/guest', ['title' => 'Account aanmaken · WilsVerklaring']) ?>
-<h1 style="font-size: 22px; margin-bottom: 4px;">Account aanmaken</h1>
-<p class="small muted" style="margin-bottom: 18px;">Uw verklaring blijft versleuteld opgeslagen. Wij vragen alleen om wat nodig is.</p>
+<h1>Account aanmaken</h1>
+<p class="muted">Uw verklaring wordt versleuteld opgeslagen. Wij vragen alleen om wat nodig is.</p>
 
 <form method="post" action="/registreren">
     <?= $this->csrf() ?>
     <div class="field">
-        <label class="label" for="name">Naam</label>
-        <input type="text" id="name" name="name" value="<?= e($this->old('name')) ?>" autocomplete="name" required autofocus>
-        <?php if ($err = $this->error('name')): ?><div class="error"><?= e($err) ?></div><?php endif ?>
+        <label for="name">Uw naam</label>
+        <input type="text" id="name" name="name" value="<?= e($this->old('name')) ?>" autocomplete="name" required autofocus<?= $this->invalid('name') ?>>
+        <?= $this->fieldError('name') ?>
     </div>
     <div class="field">
-        <label class="label" for="email">E-mailadres</label>
-        <input type="email" id="email" name="email" value="<?= e($this->old('email')) ?>" autocomplete="username" required>
-        <?php if ($err = $this->error('email')): ?><div class="error"><?= e($err) ?></div><?php endif ?>
+        <label for="email">E-mailadres</label>
+        <input type="email" id="email" name="email" value="<?= e($this->old('email')) ?>" autocomplete="username" required<?= $this->invalid('email') ?>>
+        <?= $this->fieldError('email') ?>
     </div>
     <div class="field">
-        <label class="label" for="password">Wachtwoord (minimaal 10 tekens)</label>
-        <input type="password" id="password" name="password" autocomplete="new-password" minlength="10" required>
-        <?php if ($err = $this->error('password')): ?><div class="error"><?= e($err) ?></div><?php endif ?>
+        <label for="password">Wachtwoord</label>
+        <p class="hint" id="password-hint">Minimaal 10 tekens. Een zin van een paar woorden werkt goed en is makkelijk te onthouden.</p>
+        <input type="password" id="password" name="password" autocomplete="new-password" minlength="10" required aria-describedby="password-hint<?= $this->error('password') ? ' password-error' : '' ?>"<?= $this->error('password') ? ' aria-invalid="true"' : '' ?>>
+        <?= $this->fieldError('password') ?>
     </div>
     <div class="field">
-        <label class="label" for="password_confirmation">Wachtwoord herhalen</label>
+        <label for="password_confirmation">Wachtwoord nog eens</label>
         <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password" required>
     </div>
-    <button type="submit" class="btn btn-primary" style="width: 100%;">Account aanmaken</button>
+    <button type="submit" class="btn btn-primary btn-block">Account aanmaken</button>
 </form>
 
-<div class="guest-links">
-    Al een account? <a href="/inloggen">Inloggen</a>
-</div>
+<p class="guest-links mb0">Al een account? <a href="/inloggen">Inloggen</a></p>

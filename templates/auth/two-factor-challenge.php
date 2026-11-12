@@ -1,18 +1,18 @@
-<?php $this->layout('layouts/guest', ['title' => 'Verificatie · WilsVerklaring']) ?>
-<h1 style="font-size: 22px;">Verificatie</h1>
-<p class="small muted" style="margin-bottom: 18px;">Voer de actuele code uit uw authenticator-app in.</p>
+<?php $this->layout('layouts/guest', ['title' => 'Verificatiecode · WilsVerklaring']) ?>
+<h1>Verificatiecode</h1>
+<p class="muted">Open uw authenticator-app en typ de code van 6 cijfers die daar nu staat.</p>
 
 <form method="post" action="/2fa/controle">
     <?= $this->csrf() ?>
     <div class="field">
-        <label class="label" for="code">Code</label>
-        <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required autofocus>
-        <?php if ($err = $this->error('code')): ?><div class="error"><?= e($err) ?></div><?php endif ?>
+        <label for="code">Code</label>
+        <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required autofocus<?= $this->invalid('code') ?>>
+        <?= $this->fieldError('code') ?>
     </div>
-    <button type="submit" class="btn btn-primary" style="width: 100%;">Bevestigen</button>
+    <button type="submit" class="btn btn-primary btn-block">Bevestigen</button>
 </form>
 
-<form method="post" action="/uitloggen" style="margin-top: 14px; text-align: center;">
+<form method="post" action="/uitloggen" class="guest-links">
     <?= $this->csrf() ?>
-    <button type="submit" class="btn btn-ghost">Uitloggen</button>
+    <button type="submit" class="btn btn-text">Uitloggen</button>
 </form>

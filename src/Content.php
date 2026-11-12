@@ -23,7 +23,7 @@ final class Content
         9 => ['Euthanasieverzoek', 4],
         10 => ['Euthanasieverzoek', 4],
         11 => ['Euthanasieverzoek', 4],
-        12 => ['Behandelverbod', 2],
+        12 => ['Afsluiting', 5],
         13 => ['Afsluiting', 5],
         14 => ['Afsluiting', 5],
     ];
@@ -77,6 +77,25 @@ final class Content
         'orgaandonatie' => ['ja', 'nee', 'register'],
         'besproken' => ['ja', 'binnenkort', 'nee'],
     ];
+
+    /** Leesbare tekst bij een gekozen waarde (voor overzicht en publieke weergave). */
+    public static function choiceLabel(string $value): string
+    {
+        return [
+            'ja' => 'Ja',
+            'nee' => 'Nee',
+            'voorwaarden' => 'Alleen onder voorwaarden',
+            'kort' => 'Alleen kortdurend',
+            'twijfel' => 'Alleen bij goede kans op herstel',
+            'afwegen' => 'Na afweging met arts en naasten',
+            'overleg' => 'Na overleg met naasten en arts',
+            'licht' => 'Lichte sedatie',
+            'diep' => 'Diepe sedatie',
+            'arts' => 'Laat ik aan de arts over',
+            'register' => 'Zie het Donorregister',
+            'binnenkort' => 'Nog niet; afspraak wordt gepland',
+        ][$value] ?? ucfirst_mb($value);
+    }
 
     public static function defaults(): array
     {

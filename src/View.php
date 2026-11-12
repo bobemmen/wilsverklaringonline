@@ -76,6 +76,24 @@ final class View
         return '/assets/' . $file . '?v=' . $v;
     }
 
+    private ?Prefs $prefs = null;
+
+    public function prefs(): Prefs
+    {
+        return $this->prefs ??= Prefs::fromRequest($this->app->request);
+    }
+
+    public function setPrefs(Prefs $prefs): void
+    {
+        $this->prefs = $prefs;
+    }
+
+    /** Attributen voor <html>: taal, tekstgrootte, contrast. */
+    public function htmlAttrs(): string
+    {
+        return $this->prefs()->htmlAttrs();
+    }
+
     private ?array $declaration = null;
 
     /** Verklaring van de ingelogde gebruiker (voor statusweergave in de kop). */
@@ -85,17 +103,18 @@ final class View
         return $this->declaration ??= $user ? $this->app->store->declarationForUser($user['id']) : null;
     }
 
-    public function textarea(string $name, string $value, string $placeholder = '', string $style = ''): string
+    public function textarea(string $name, string $value, string $placeholder = '', string $class = '', ?string $describedBy = null): string
     {
         // de eerste regeleinde direct na <textarea> wordt door browsers genegeerd, dus voeg er een toe
-        return '<textarea id="' . e($name) . '" name="data[' . e($name) . ']" placeholder="' . $placeholder . '"'
-            . ($style !== '' ? ' style="' . e($style) . '"' : '') . ' maxlength="' . Content::MAX_FIELD_LENGTH . '">' . "\n" . e($value) . '</textarea>';
+        return '<textarea id="' . e($name) . '" name="data[' . e($name) . ']"' . ($placeholder !== '' ? ' placeholder="' . e($placeholder) . '"' : '')
+            . ($class !== '' ? ' class="' . e($class) . '"' : '') . ($describedBy ? ' aria-describedby="' . e($describedBy) . '"' : '')
+            . ' maxlength="' . Content::MAX_FIELD_LENGTH . '">' . "\n" . e($value) . '</textarea>';
     }
 
     public function textInput(string $name, string $value, string $placeholder = '', string $type = 'text'): string
     {
         return '<input type="' . e($type) . '" id="' . e($name) . '" name="data[' . e($name) . ']" value="' . e($value)
-            . '" placeholder="' . $placeholder . '" maxlength="200">';
+            . '"' . ($placeholder !== '' ? ' placeholder="' . e($placeholder) . '"' : '') . ' maxlength="200">';
     }
 
     public function csrf(): string
@@ -127,21 +146,52 @@ final class View
         return is_string($v) ? $v : $default;
     }
 
+    /** Alle foutmeldingen van het vorige verzoek: veld => melding. */
+    public function errors(): array
+    {
+        $errors = $this->app->session->flashed('errors', []);
+        return is_array($errors) ? array_filter($errors, 'is_string') : [];
+    }
+
+    /** Foutmelding bij een veld (gekoppeld via aria-describedby, zie invalid()). */
+    public function fieldError(string $key): string
+    {
+        $msg = $this->error($key);
+        return $msg ? '<p class="field-error" id="' . e($key) . '-error">' . e($msg) . '</p>' : '';
+    }
+
+    /** Attributen voor een ongeldig veld. */
+    public function invalid(string $key): string
+    {
+        return $this->error($key) ? ' aria-invalid="true" aria-describedby="' . e($key) . '-error"' : '';
+    }
+
+    /** Link naar /weergave die de wijziging doorvoert en daarna terugkeert naar deze pagina. */
+    public function prefLink(array $change): string
+    {
+        $req = $this->app->request;
+        $back = $req->path;
+        $qs = http_build_query(array_filter($req->query, 'is_string'));
+        if ($qs !== '' && preg_match('/^[A-Za-z0-9=&_-]+$/', $qs)) {
+            $back .= '?' . $qs;
+        }
+        return '/weergave?' . http_build_query($change + ['terug' => $back]);
+    }
+
     public function error(string $key): ?string
     {
         $errors = $this->app->session->flashed('errors', []);
         return is_array($errors) ? ($errors[$key] ?? null) : null;
     }
 
-    /** Keuzerondje in de huisstijl; wordt als gewoon formulierveld ingediend. */
+    /** Keuzekaart met een echt keuzerondje (groot, goed te raken); zit binnen een <fieldset>. */
     public function radio(string $name, string $value, string $label, ?string $help, mixed $current): string
     {
         $checked = $current === $value;
-        return '<label class="radio-option' . ($checked ? ' selected' : '') . '">'
+        return '<label class="choice' . ($checked ? ' selected' : '') . '">'
             . '<input type="radio" name="data[' . e($name) . ']" value="' . e($value) . '"' . ($checked ? ' checked' : '') . '>'
-            . '<span class="radio-dot"></span>'
-            . '<span><span class="radio-label">' . $label . '</span>'
-            . ($help ? '<div class="radio-help">' . $help . '</div>' : '')
+            . '<span><span class="choice-label">' . $label . '</span>'
+            . ($help ? '<span class="choice-help">' . $help . '</span>' : '')
             . '</span></label>';
     }
 }

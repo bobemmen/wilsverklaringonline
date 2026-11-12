@@ -1,44 +1,45 @@
-<?php $this->layout('layouts/app', ['title' => 'Arts-toegang · WilsVerklaring']) ?>
-<h1>Arts-toegang</h1>
-<p class="muted small" style="margin-bottom: 18px;">Uw huisarts hoeft geen account aan te maken. U geeft hem of haar een unieke link en daarmee is de meest actuele versie van uw verklaring steeds beschikbaar.</p>
+<?php $this->layout('layouts/app', ['title' => 'Toegang voor uw arts · WilsVerklaring']) ?>
+<div class="page-head">
+    <h1>Toegang voor uw arts</h1>
+    <p>Uw huisarts hoeft geen account aan te maken. U geeft hem of haar een persoonlijke link, en daarmee is altijd de nieuwste versie van uw verklaring te lezen.</p>
+</div>
 
 <?php if ($plaintextToken): ?>
-    <div class="card" style="border-color: var(--wv-purple-light);">
-        <div class="card-title">Uw nieuwe toegangscode</div>
-        <p class="small muted">Kopieer deze link nu. Wij bewaren de code alleen versleuteld &mdash; na deze pagina kunt u hem niet meer inzien.</p>
-        <div class="token-display"><?= e($this->url('/v/' . $plaintextToken)) ?></div>
-    </div>
+    <section class="card card-accent" aria-labelledby="t-nieuw">
+        <h2 class="card-title" id="t-nieuw">Uw nieuwe link</h2>
+        <p>Kopieer deze link nu. Wij bewaren de code alleen versleuteld: na deze pagina kunt u hem niet meer terugzien.</p>
+        <div class="token-box"><?= e($this->url('/v/' . $plaintextToken)) ?></div>
+    </section>
 <?php endif ?>
 
-<div class="card">
-    <div class="card-title">Status</div>
-    <div class="status-row" style="margin: 10px 0 14px;">
+<section class="card" aria-labelledby="t-status">
+    <h2 class="card-title" id="t-status">Status</h2>
+    <div class="stat-row">
         <?php if ($tokenActive): ?>
-            <span class="pill pill-green">Actief</span>
+            <span class="badge badge-ok">Actief</span>
         <?php elseif ($declaration['token_idx']): ?>
-            <span class="pill pill-red">Verlopen</span>
+            <span class="badge badge-bad">Verlopen</span>
         <?php else: ?>
-            <span class="pill pill-muted">Nog geen code aangemaakt</span>
+            <span class="badge badge-muted">Nog geen link</span>
         <?php endif ?>
-        <span class="small muted"><?= (int) $viewCount ?> raadpleging<?= $viewCount === 1 ? '' : 'en' ?></span>
+        <span class="muted"><?= (int) $viewCount ?> keer bekeken</span>
     </div>
-
     <div class="btn-row">
         <form method="post" action="/token/genereer">
             <?= $this->csrf() ?>
-            <button type="submit" class="btn btn-primary"<?= $declaration['token_idx'] ? ' data-confirm="De huidige link werkt daarna niet meer. Doorgaan?"' : '' ?>><?= $declaration['token_idx'] ? 'Nieuwe code aanmaken' : 'Code aanmaken' ?></button>
+            <button type="submit" class="btn btn-primary"<?= $declaration['token_idx'] ? ' data-confirm="De huidige link werkt daarna niet meer. Doorgaan?"' : '' ?>><?= $declaration['token_idx'] ? 'Nieuwe link maken' : 'Link maken' ?></button>
         </form>
         <?php if ($declaration['token_idx']): ?>
             <form method="post" action="/token/intrekken">
                 <?= $this->csrf() ?>
-                <button type="submit" class="btn btn-danger" data-confirm="Weet u zeker dat u de toegang wilt intrekken?">Intrekken</button>
+                <button type="submit" class="btn btn-danger" data-confirm="Weet u zeker dat u de toegang wilt intrekken?">Toegang intrekken</button>
             </form>
         <?php endif ?>
     </div>
-</div>
+</section>
 
-<div class="card">
-    <div class="card-title">Instellingen</div>
+<section class="card" aria-labelledby="t-inst">
+    <h2 class="card-title" id="t-inst">Instellingen</h2>
     <form method="post" action="/token/instellingen">
         <?= $this->csrf() ?>
         <?php
@@ -46,16 +47,16 @@
         $expiresValue = $this->old('access_token_expires_at', $declaration['token_expires_at'] ? date('Y-m-d', $declaration['token_expires_at']) : '');
         ?>
         <div class="field">
-            <label class="label" for="notification_email">E-mailadres arts (optioneel)</label>
-            <input type="email" id="notification_email" name="notification_email" value="<?= e($emailValue) ?>" placeholder="praktijk@huisarts.nl">
-            <?php if ($err = $this->error('notification_email')): ?><div class="error"><?= e($err) ?></div><?php endif ?>
-            <div class="small muted" style="margin-top: 6px;">Wanneer ingevuld: bij raadpleging ontvangt uw arts een bevestigingslink per e-mail. Zonder dit adres is de toegang direct.</div>
+            <label for="notification_email">E-mailadres van uw arts (niet verplicht)</label>
+            <p class="hint" id="notification_email-hint">Als u dit invult, krijgt uw arts eerst een bevestigingslink per e-mail voordat de verklaring opent. Zonder dit adres is de toegang direct.</p>
+            <input type="email" id="notification_email" name="notification_email" value="<?= e($emailValue) ?>" placeholder="praktijk@huisarts.nl" aria-describedby="notification_email-hint<?= $this->error('notification_email') ? ' notification_email-error' : '' ?>"<?= $this->error('notification_email') ? ' aria-invalid="true"' : '' ?>>
+            <?= $this->fieldError('notification_email') ?>
         </div>
         <div class="field">
-            <label class="label" for="access_token_expires_at">Vervaldatum (optioneel)</label>
-            <input type="date" id="access_token_expires_at" name="access_token_expires_at" value="<?= e($expiresValue) ?>">
-            <?php if ($err = $this->error('access_token_expires_at')): ?><div class="error"><?= e($err) ?></div><?php endif ?>
+            <label for="access_token_expires_at">Vervaldatum (niet verplicht)</label>
+            <input type="date" id="access_token_expires_at" name="access_token_expires_at" value="<?= e($expiresValue) ?>"<?= $this->invalid('access_token_expires_at') ?>>
+            <?= $this->fieldError('access_token_expires_at') ?>
         </div>
         <button type="submit" class="btn btn-primary">Opslaan</button>
     </form>
-</div>
+</section>

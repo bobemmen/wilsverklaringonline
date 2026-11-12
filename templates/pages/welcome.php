@@ -1,29 +1,29 @@
-<?php $this->layout('layouts/plain', ['title' => 'WilsVerklaring']) ?>
-<div style="max-width: 640px; margin: 0 auto; padding: 90px 24px 40px;">
-    <?php if ($msg = $this->flash('status')): ?><div class="flash-banner"><?= e($msg) ?></div><?php endif ?>
-    <div style="font-family: 'EB Garamond', Georgia, serif; font-size: 36px; color: var(--wv-purple-dark); text-align: center; margin-bottom: 8px;">WilsVerklaring</div>
-    <div class="small muted" style="text-align: center; margin-bottom: 40px;">Uw stem, voor wanneer u zelf niet meer kunt spreken.</div>
+<?php $this->layout('layouts/plain', ['title' => 'WilsVerklaring · Uw stem, voor wanneer u zelf niet meer kunt spreken']) ?>
+<div class="page-head">
+    <p class="eyebrow">Wilsverklaring online</p>
+    <h1>Uw stem, voor wanneer u zelf niet meer kunt spreken</h1>
+    <p class="lead">WilsVerklaring helpt u stap voor stap uw wensen voor het einde van uw leven vast te leggen. U schrijft in uw eigen woorden, deelt met uw huisarts en naasten, en houdt zelf de regie.</p>
+</div>
 
-    <div class="card">
-        <h2>Een persoonlijke wilsverklaring, online en toegankelijk</h2>
-        <p class="muted">WilsVerklaring helpt u stap voor stap uw wensen voor het einde van uw leven vast te leggen. U schrijft in uw eigen woorden. U deelt met uw huisarts en naasten. U houdt de regie.</p>
+<div class="btn-row mb">
+    <?php if ($loggedIn): ?>
+        <a href="/dashboard" class="btn btn-primary">Naar mijn dashboard</a>
+    <?php else: ?>
+        <a href="/registreren" class="btn btn-primary">Begin nu</a>
+        <a href="/inloggen" class="btn">Inloggen</a>
+    <?php endif ?>
+</div>
 
-        <div style="margin-top: 24px; display: flex; gap: 8px;">
-            <?php if ($loggedIn): ?>
-                <a href="/dashboard" class="btn btn-primary">Naar mijn dashboard</a>
-            <?php else: ?>
-                <a href="/registreren" class="btn btn-primary">Begin nu</a>
-                <a href="/inloggen" class="btn btn-ghost">Inloggen</a>
-            <?php endif ?>
-        </div>
-    </div>
+<div class="card">
+    <h2 class="card-title">Hoe werkt het?</h2>
+    <ol class="steps">
+        <li><strong>Maak een account</strong> en stel tweestapsverificatie in, zodat alleen u erbij kunt.</li>
+        <li><strong>Doorloop de vragen</strong> in vijf hoofdstukken: wie u bent, wat u wel en niet wilt, en waar uw grens ligt. U kunt altijd stoppen en later verdergaan.</li>
+        <li><strong>Publiceer uw verklaring.</strong> Uw huisarts en naasten kunnen via een persoonlijke link altijd de nieuwste versie lezen.</li>
+    </ol>
+</div>
 
-    <div class="card">
-        <h3>Hoe werkt het</h3>
-        <ol style="color: var(--wv-text-muted); padding-left: 18px;">
-            <li>Maak een account aan en stel tweestapsverificatie in.</li>
-            <li>Doorloop de wizard. In vijf hoofdstukken vertelt u wie u bent, wat u wilt en waar uw grens ligt.</li>
-            <li>Publiceer uw verklaring. Uw huisarts kan via een persoonlijke link altijd de meest actuele versie raadplegen.</li>
-        </ol>
-    </div>
+<div class="card">
+    <h2 class="card-title">Prettig lezen</h2>
+    <p>Is de tekst te klein of te zwak van kleur? Met <strong>A+</strong> bovenaan maakt u alles groter. Bij <a href="<?= e($this->prefLink([])) ?>">Weergave</a> kiest u ook hoog contrast, een donker thema of ruimere regels. Met <strong>Lees voor</strong> laat u de pagina uitspreken.</p>
 </div>

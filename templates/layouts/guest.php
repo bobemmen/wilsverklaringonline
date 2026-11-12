@@ -1,17 +1,17 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html<?= $this->htmlAttrs() ?>>
 <head>
     <?php $this->include('partials/head', ['title' => $title ?? null]) ?>
 </head>
-<body class="guest-body">
-    <div class="guest-wrap">
-        <div class="guest-brand">WilsVerklaring</div>
-        <div class="guest-card">
-            <?php if ($msg = $this->flash('status')): ?>
-                <div class="flash-banner"><?= e($msg) ?></div>
-            <?php endif ?>
+<body>
+    <a class="skip-link" href="#inhoud">Direct naar de inhoud</a>
+    <?php $this->include('partials/header', ['nav' => false]) ?>
+    <main id="inhoud" class="page page-narrow" tabindex="-1">
+        <?php $this->include('partials/messages') ?>
+        <div class="card guest-card">
             <?= $content ?>
         </div>
-    </div>
+    </main>
+    <?php $this->include('partials/footer') ?>
 </body>
 </html>

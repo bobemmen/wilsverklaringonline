@@ -2,85 +2,83 @@
 $this->layout('layouts/app', ['title' => 'Naasten · WilsVerklaring']);
 $role = $this->old('role', 'naaste');
 ?>
-<h1>Naasten en gemachtigden</h1>
-<p class="muted small" style="margin-bottom: 18px;">Iemand in wie u vertrouwen heeft kan uw verklaring inzien via een persoonlijke link. Voor een gemachtigde kunt u later extra bevoegdheden instellen.</p>
+<div class="page-head">
+    <h1>Naasten en gemachtigden</h1>
+    <p>Iemand die u vertrouwt kan uw verklaring lezen via een persoonlijke link. Een gemachtigde mag namens u spreken als u dat zelf niet meer kunt.</p>
+</div>
 
 <?php if ($shareUrl): ?>
-    <div class="card" style="border-color: var(--wv-purple-light);">
-        <div class="card-title">Persoonlijke link aangemaakt</div>
-        <p class="small muted">Deel deze link alleen met de beoogde ontvanger. Wij bewaren de code alleen versleuteld.</p>
-        <div class="token-display"><?= e($shareUrl) ?></div>
-    </div>
+    <section class="card card-accent" aria-labelledby="s-link">
+        <h2 class="card-title" id="s-link">Persoonlijke link aangemaakt</h2>
+        <p>Deel deze link alleen met de bedoelde persoon. Wij bewaren de code alleen versleuteld.</p>
+        <div class="token-box"><?= e($shareUrl) ?></div>
+    </section>
 <?php endif ?>
 
-<div class="card">
-    <div class="card-title">Nieuwe uitnodiging</div>
+<section class="card" aria-labelledby="s-nieuw">
+    <h2 class="card-title" id="s-nieuw">Nieuwe uitnodiging</h2>
     <form method="post" action="/naasten">
         <?= $this->csrf() ?>
         <div class="field">
-            <label class="label" for="name">Naam</label>
-            <input type="text" id="name" name="name" value="<?= e($this->old('name')) ?>" maxlength="120">
-            <?php if ($err = $this->error('name')): ?><div class="error"><?= e($err) ?></div><?php endif ?>
+            <label for="name">Naam</label>
+            <input type="text" id="name" name="name" value="<?= e($this->old('name')) ?>" maxlength="120"<?= $this->invalid('name') ?>>
+            <?= $this->fieldError('name') ?>
         </div>
         <div class="field">
-            <label class="label" for="email">E-mailadres</label>
-            <input type="email" id="email" name="email" value="<?= e($this->old('email')) ?>" required>
-            <?php if ($err = $this->error('email')): ?><div class="error"><?= e($err) ?></div><?php endif ?>
+            <label for="email">E-mailadres</label>
+            <input type="email" id="email" name="email" value="<?= e($this->old('email')) ?>" required<?= $this->invalid('email') ?>>
+            <?= $this->fieldError('email') ?>
         </div>
-        <div class="field">
-            <label class="label">Rol</label>
-            <div class="radio-group">
-                <label class="radio-option<?= $role === 'naaste' ? ' selected' : '' ?>">
-                    <input type="radio" name="role" value="naaste"<?= $role === 'naaste' ? ' checked' : '' ?>>
-                    <span class="radio-dot"></span>
-                    <span><span class="radio-label">Naaste</span><div class="radio-help">Mag meelezen.</div></span>
-                </label>
-                <label class="radio-option<?= $role === 'gemachtigde' ? ' selected' : '' ?>">
-                    <input type="radio" name="role" value="gemachtigde"<?= $role === 'gemachtigde' ? ' checked' : '' ?>>
-                    <span class="radio-dot"></span>
-                    <span><span class="radio-label">Gemachtigde</span><div class="radio-help">Mag namens u spreken als u dat zelf niet meer kunt.</div></span>
-                </label>
-            </div>
-        </div>
+        <fieldset class="field">
+            <legend>Rol</legend>
+            <label class="choice<?= $role === 'naaste' ? ' selected' : '' ?>">
+                <input type="radio" name="role" value="naaste"<?= $role === 'naaste' ? ' checked' : '' ?>>
+                <span><span class="choice-label">Naaste</span><span class="choice-help">Mag meelezen.</span></span>
+            </label>
+            <label class="choice<?= $role === 'gemachtigde' ? ' selected' : '' ?>">
+                <input type="radio" name="role" value="gemachtigde"<?= $role === 'gemachtigde' ? ' checked' : '' ?>>
+                <span><span class="choice-label">Gemachtigde</span><span class="choice-help">Mag namens u spreken als u dat zelf niet meer kunt.</span></span>
+            </label>
+        </fieldset>
         <button type="submit" class="btn btn-primary">Uitnodiging aanmaken</button>
     </form>
-</div>
+</section>
 
-<div class="card">
-    <div class="card-title">Overzicht</div>
+<section class="card" aria-labelledby="s-lijst">
+    <h2 class="card-title" id="s-lijst">Uitgenodigd</h2>
     <?php if (!$shares): ?>
-        <p class="muted small">Nog geen naasten of gemachtigden uitgenodigd.</p>
+        <p class="mb0">U heeft nog niemand uitgenodigd.</p>
     <?php else: ?>
-        <table>
-            <thead>
-                <tr><th>Naam</th><th>E-mail</th><th>Rol</th><th>Status</th><th></th></tr>
-            </thead>
-            <tbody>
-                <?php foreach ($shares as $share): ?>
-                    <tr>
-                        <td><?= e($share['name'] ?: '—') ?></td>
-                        <td><?= e($share['email']) ?></td>
-                        <td style="text-transform: capitalize;"><?= e($share['role']) ?></td>
-                        <td>
-                            <?php if ($share['revoked_at']): ?>
-                                <span class="pill pill-red">Ingetrokken</span>
-                            <?php elseif ($share['accepted_at']): ?>
-                                <span class="pill pill-green">Bekeken</span>
-                            <?php else: ?>
-                                <span class="pill pill-muted">Uitgenodigd</span>
-                            <?php endif ?>
-                        </td>
-                        <td style="text-align: right;">
-                            <?php if (!$share['revoked_at']): ?>
-                                <form method="post" action="/naasten/<?= e($share['id']) ?>/intrekken" class="inline-form">
-                                    <?= $this->csrf() ?>
-                                    <button type="submit" class="btn btn-ghost" data-confirm="Toegang intrekken?">Intrekken</button>
-                                </form>
-                            <?php endif ?>
-                        </td>
-                    </tr>
-                <?php endforeach ?>
-            </tbody>
-        </table>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th scope="col">Naam</th><th scope="col">E-mail</th><th scope="col">Rol</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actie</span></th></tr></thead>
+                <tbody>
+                    <?php foreach ($shares as $share): ?>
+                        <tr>
+                            <th scope="row"><?= e($share['name'] ?: '—') ?></th>
+                            <td><?= e($share['email']) ?></td>
+                            <td><?= e(ucfirst_mb($share['role'])) ?></td>
+                            <td>
+                                <?php if ($share['revoked_at']): ?>
+                                    <span class="badge badge-bad">Ingetrokken</span>
+                                <?php elseif ($share['accepted_at']): ?>
+                                    <span class="badge badge-ok">Bekeken</span>
+                                <?php else: ?>
+                                    <span class="badge badge-muted">Uitgenodigd</span>
+                                <?php endif ?>
+                            </td>
+                            <td>
+                                <?php if (!$share['revoked_at']): ?>
+                                    <form method="post" action="/naasten/<?= e($share['id']) ?>/intrekken" class="inline-form">
+                                        <?= $this->csrf() ?>
+                                        <button type="submit" class="btn btn-small btn-danger" data-confirm="Toegang intrekken?">Intrekken<span class="sr-only"> voor <?= e($share['name'] ?: $share['email']) ?></span></button>
+                                    </form>
+                                <?php endif ?>
+                            </td>
+                        </tr>
+                    <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
     <?php endif ?>
-</div>
+</section>

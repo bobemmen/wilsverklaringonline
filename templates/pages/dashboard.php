@@ -1,68 +1,65 @@
 <?php $this->layout('layouts/app', ['title' => 'Dashboard · WilsVerklaring']) ?>
-<h1>Dashboard</h1>
-<p class="muted small" style="margin-bottom: 20px;">Een overzicht van uw verklaring, arts-toegang en naasten.</p>
+<div class="page-head">
+    <h1>Welkom, <?= e(explode(' ', trim($this->user()['name']))[0]) ?></h1>
+    <p>Hier ziet u waar u staat met uw verklaring, wie er toegang toe heeft en wat u nog kunt doen.</p>
+</div>
 
-<div class="card-grid">
-    <div class="card">
-        <div class="card-title">Status wilsverklaring</div>
-        <div class="status-row" style="margin: 10px 0 14px;">
+<div class="grid">
+    <section class="card" aria-labelledby="d-status">
+        <h2 class="card-title" id="d-status">Uw verklaring</h2>
+        <div class="stat-row">
             <?php if ($declaration['is_published']): ?>
-                <span class="pill pill-green">Definitief</span>
+                <span class="badge badge-ok">Definitief</span>
             <?php else: ?>
-                <span class="pill pill-muted">Concept</span>
+                <span class="badge badge-muted">Concept</span>
             <?php endif ?>
-            <span class="small muted">v<?= (int) $versionCount ?></span>
+            <span class="muted">Versie <?= (int) $versionCount ?></span>
         </div>
-        <div class="small muted">
+        <p class="muted">
             <?php if ($currentVersion): ?>
-                Laatste wijziging <?= e(fmt_date($currentVersion['created_at'])) ?>
+                Laatst gepubliceerd op <?= e(fmt_date($currentVersion['created_at'])) ?>.
             <?php else: ?>
                 Nog niet gepubliceerd.
             <?php endif ?>
-        </div>
-        <div style="margin-top: 14px;">
-            <a href="/verklaring/wizard" class="btn btn-primary">Openen in wizard</a>
-        </div>
-    </div>
+        </p>
+        <div class="card-foot"><a href="/verklaring/wizard" class="btn btn-primary btn-block"><?= $declaration['is_published'] ? 'Verklaring aanpassen' : 'Verder met invullen' ?></a></div>
+    </section>
 
-    <div class="card">
-        <div class="card-title">Arts-toegang</div>
-        <div class="status-row" style="margin: 10px 0 14px;">
+    <section class="card" aria-labelledby="d-arts">
+        <h2 class="card-title" id="d-arts">Toegang voor uw arts</h2>
+        <div class="stat-row">
             <?php if ($tokenActive): ?>
-                <span class="pill pill-green">Actief</span>
+                <span class="badge badge-ok">Actief</span>
             <?php elseif ($declaration['token_idx']): ?>
-                <span class="pill pill-red">Verlopen</span>
+                <span class="badge badge-bad">Verlopen</span>
             <?php else: ?>
-                <span class="pill pill-muted">Geen code</span>
+                <span class="badge badge-muted">Geen code</span>
             <?php endif ?>
-            <span class="small muted"><?= (int) $viewCount ?> raadpleging<?= $viewCount === 1 ? '' : 'en' ?></span>
+            <span class="muted"><?= (int) $viewCount ?> keer bekeken</span>
         </div>
-        <div class="small muted">
+        <p class="muted">
             <?php if ($declaration['token_expires_at']): ?>
-                Vervalt <?= e(fmt_date($declaration['token_expires_at'])) ?>
+                Vervalt op <?= e(fmt_date($declaration['token_expires_at'])) ?>.
             <?php else: ?>
                 Geen vervaldatum ingesteld.
             <?php endif ?>
-        </div>
-        <div style="margin-top: 14px;">
-            <a href="/token" class="btn btn-ghost">Beheer toegang</a>
-        </div>
-    </div>
+        </p>
+        <div class="card-foot"><a href="/token" class="btn btn-block">Toegang beheren</a></div>
+    </section>
 
-    <div class="card">
-        <div class="card-title">Naasten</div>
-        <div class="status-row" style="margin: 10px 0 14px;">
-            <span class="pill pill-muted"><?= (int) $activeShares ?> actief</span>
-        </div>
-        <div class="small muted">Nodig een naaste of gemachtigde uit om uw verklaring in te zien.</div>
-        <div style="margin-top: 14px;">
-            <a href="/naasten" class="btn btn-ghost">Naasten beheren</a>
-        </div>
-    </div>
+    <section class="card" aria-labelledby="d-naasten">
+        <h2 class="card-title" id="d-naasten">Naasten</h2>
+        <div class="stat-row"><span class="badge badge-muted"><?= (int) $activeShares ?> actief</span></div>
+        <p class="muted">Nodig een naaste of gemachtigde uit om uw verklaring te lezen.</p>
+        <div class="card-foot"><a href="/naasten" class="btn btn-block">Naasten beheren</a></div>
+    </section>
 </div>
 
-<div class="card" style="margin-top: 18px;">
-    <div class="card-title">Downloaden en bewaren</div>
-    <p class="small muted">U kunt uw verklaring als PDF afdrukken en ondertekenen om op papier te bewaren. De online versie blijft altijd de leidende.</p>
-    <a href="/verklaring/pdf" class="btn btn-ghost">Download PDF</a>
-</div>
+<section class="card" aria-labelledby="d-pdf">
+    <h2 class="card-title" id="d-pdf">Op papier bewaren</h2>
+    <p>Print uw verklaring en onderteken hem om op papier te bewaren. De online versie blijft altijd de leidende.</p>
+    <div class="btn-row">
+        <a href="/verklaring/pdf" class="btn">Download als PDF</a>
+        <a href="/verklaring/pdf?groot=1" class="btn">Download als PDF (grote letters)</a>
+    </div>
+</section>
