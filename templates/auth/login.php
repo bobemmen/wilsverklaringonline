@@ -16,4 +16,5 @@
     <button type="submit" class="btn btn-primary btn-block">Inloggen</button>
 </form>
 
+<p class="guest-links"><a href="/wachtwoord-vergeten">Wachtwoord vergeten?</a></p>
 <p class="guest-links mb0">Nog geen account? <a href="/registreren">Account aanmaken</a></p>

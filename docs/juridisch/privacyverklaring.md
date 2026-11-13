@@ -35,6 +35,7 @@ Wij geven uw gegevens niet door aan landen buiten de Europese Economische Ruimte
 ## Hoe lang bewaren wij uw gegevens?
 
 - Uw account en verklaring: zolang u ze wilt bewaren. Verwijdert u uw account, dan verdwijnt alles definitief, ook uit de bewaarde gegevens van de website zelf. Back-ups (ook versleuteld) bewaren wij maximaal *[termijn vaststellen; advies 35 dagen]* dagen.
+- Een link om uw wachtwoord te herstellen: 60 minuten, of tot u hem gebruikt. Wij bewaren daarvan alleen een versleutelde vingerafdruk, niet de link zelf.
 - Uitnodigingen die niet tot een registratie leiden: verlopen na 14 dagen en worden 30 dagen daarna verwijderd.
 - Sessiegegevens: een sessie verloopt twee uur na uw laatste activiteit; verlopen sessies worden periodiek opgeruimd.
 

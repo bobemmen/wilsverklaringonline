@@ -86,6 +86,10 @@ final class App
         $r->post('/inloggen', [C\AuthController::class, 'login'], ['guest']);
         $r->get('/registreren', [C\AuthController::class, 'registerForm'], ['guest']);
         $r->post('/registreren', [C\AuthController::class, 'register'], ['guest']);
+        $r->get('/wachtwoord-vergeten', [C\PasswordResetController::class, 'forgotForm'], ['guest']);
+        $r->post('/wachtwoord-vergeten', [C\PasswordResetController::class, 'forgot'], ['guest', 'throttle:forgot,10,3600']);
+        $r->get('/wachtwoord-resetten/{token}', [C\PasswordResetController::class, 'resetForm'], ['guest']);
+        $r->post('/wachtwoord-resetten/{token}', [C\PasswordResetController::class, 'reset'], ['guest', 'throttle:reset,10,3600']);
         $r->post('/uitloggen', [C\AuthController::class, 'logout'], ['auth']);
 
         $r->get('/2fa/instellen', [C\TwoFactorController::class, 'setup'], ['auth']);

@@ -204,6 +204,37 @@ final class Store
         });
     }
 
+    // ------------------------------------------------------------ wachtwoord vergeten
+
+    private const RESET_LIFETIME = 3600;
+
+    /** Maakt een herstelcode voor het wachtwoord (vervangt eerdere). Alleen de HMAC wordt bewaard. */
+    public function createPasswordReset(string $userId): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->db->run('DELETE FROM password_resets WHERE user_id = ?', [$userId]);
+        $this->db->run(
+            'INSERT INTO password_resets (token_idx, user_id, expires_at) VALUES (?, ?, ?)',
+            [$this->crypto->index('pwreset', $token), $userId, time() + self::RESET_LIFETIME]
+        );
+        return $token;
+    }
+
+    /** De gebruiker bij een geldige, niet verlopen herstelcode; anders null. */
+    public function passwordResetUser(string $token): ?array
+    {
+        if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
+            return null;
+        }
+        $row = $this->db->one('SELECT user_id, expires_at FROM password_resets WHERE token_idx = ?', [$this->crypto->index('pwreset', $token)]);
+        return ($row && (int) $row['expires_at'] >= time()) ? $this->userById($row['user_id']) : null;
+    }
+
+    public function clearPasswordResets(string $userId): void
+    {
+        $this->db->run('DELETE FROM password_resets WHERE user_id = ?', [$userId]);
+    }
+
     public function endSessions(string $userId): void
     {
         $this->db->run('DELETE FROM sessions WHERE user_idx = ?', [$this->crypto->index('session-user', $userId)]);
@@ -546,6 +577,7 @@ final class Store
     public function purgeUnusedInvitations(int $graceSeconds = 30 * 86400): int
     {
         $n = 0;
+        $this->db->run('DELETE FROM password_resets WHERE expires_at < ?', [time()]);
         foreach ($this->db->all('SELECT id, practice_id, arts_id, patient_user_id, data FROM verifications WHERE patient_user_id IS NULL') as $row) {
             $v = $this->hydrateVerification($row);
             $end = $v['status'] === 'ingetrokken' ? (int) ($v['revoked_at'] ?? 0) : (int) $v['expires_at'];

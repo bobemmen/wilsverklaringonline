@@ -30,7 +30,7 @@ $proc = proc_open(
 );
 register_shutdown_function(function () use ($proc, $tmp) {
     proc_terminate($proc);
-    exec('rm -rf ' . escapeshellarg($tmp));
+    if (!getenv("KEEP")) exec('rm -rf ' . escapeshellarg($tmp));
 });
 for ($i = 0; $i < 50; $i++) {
     if (@file_get_contents("$base/up") === 'ok') { break; }
@@ -582,6 +582,93 @@ $fresh = $st->addVerification($j['id'], $j['practice_id'], 'vers@voorbeeld.nl', 
 $st->purgeUnusedInvitations();
 T::ok($st->verificationById($fresh['id']) !== null, 'een lopende uitnodiging blijft staan');
 $st->db->run('DELETE FROM verifications WHERE id = ?', [$fresh['id']]);
+
+T::section('Wachtwoord vergeten');
+clearThrottle($dbfile);
+$gPw = 'Gerda-oud-wachtwoord-1';
+$g = register($base, 'Gerda Reset', 'gerda@voorbeeld.nl', $gPw);
+$mailLog = "$root/storage/logs/mail.log";
+$lastLink = function (string $to) use ($mailLog): ?string {
+    $log = is_file($mailLog) ? (string) file_get_contents($mailLog) : '';
+    $found = null;
+    foreach (preg_split('/^--- /m', $log) as $blk) {
+        if (str_contains($blk, "naar $to") && preg_match('#/wachtwoord-resetten/([a-f0-9]{64})#', $blk, $m)) {
+            $found = $m[1];
+        }
+    }
+    return $found;
+};
+T::ok(str_contains((new Client($base))->get('/inloggen')['body'], 'href="/wachtwoord-vergeten"'), 'inlogpagina verwijst naar wachtwoord vergeten');
+$ask = function (string $email) use ($base): string { $cl = new Client($base); return $cl->follow($cl->submit('/wachtwoord-vergeten', '/wachtwoord-vergeten', ['email' => $email]))['body']; };
+$bodyKnown = $ask('gerda@voorbeeld.nl');
+clearThrottle($dbfile);
+$bodyUnknown = $ask('bestaat-niet@voorbeeld.nl');
+$strip = fn(string $b) => preg_replace('#<input[^>]*name="_token"[^>]*>#', '', preg_replace('#value="[^"]*"#', '', $b));
+T::ok(str_contains($bodyKnown, 'Als dit e-mailadres bij een account hoort') && $strip($bodyKnown) === $strip($bodyUnknown), 'het antwoord is hetzelfde voor bekende en onbekende e-mailadressen');
+T::ok($lastLink('bestaat-niet@voorbeeld.nl') === null, 'onbekend e-mailadres krijgt geen mail');
+$tok = $lastLink('gerda@voorbeeld.nl');
+T::ok($tok !== null, 'patiënt krijgt een mail met een herstellink');
+$rawq = function (string $sql) use ($dbfile) { $p = new PDO('sqlite:' . $dbfile); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec('PRAGMA busy_timeout=5000'); return $p->query($sql); };
+T::eq((int) $rawq('SELECT COUNT(*) FROM password_resets')->fetchColumn() >= 1, true, 'herstelcode staat in de database');
+T::eq((int) $rawq("SELECT COUNT(*) FROM password_resets WHERE token_idx = '" . $tok . "'")->fetchColumn(), 0, 'de herstelcode zelf staat niet in de database (alleen een HMAC)');
+$page = (new Client($base))->get('/wachtwoord-resetten/' . $tok)['body'];
+T::ok(str_contains($page, 'Nieuw wachtwoord kiezen'), 'geldige link toont het formulier');
+T::ok(str_contains((new Client($base))->get('/wachtwoord-resetten/' . str_repeat('a', 64))['body'], 'werkt niet meer'), 'onbekende link toont een foutmelding');
+$cl = new Client($base);
+$cl->get('/wachtwoord-resetten/' . $tok);
+$r = $cl->submit('/wachtwoord-resetten/' . $tok, '/wachtwoord-resetten/' . $tok, ['password' => 'kort', 'password_confirmation' => 'kort']);
+T::ok(str_contains($cl->follow($r)['body'], 'minimaal 10 tekens'), 'te kort wachtwoord wordt geweigerd');
+$r = $cl->submit('/wachtwoord-resetten/' . $tok, '/wachtwoord-resetten/' . $tok, ['password' => 'Gerda-nieuw-wachtwoord-2', 'password_confirmation' => 'anders-anders-1']);
+T::ok(str_contains($cl->follow($r)['body'], 'komen niet overeen'), 'ongelijke wachtwoorden worden geweigerd');
+T::eq($g->get('/dashboard')['status'], 200, 'bestaande sessie werkt nog vóór het wijzigen');
+$r = $cl->submit('/wachtwoord-resetten/' . $tok, '/wachtwoord-resetten/' . $tok, ['password' => 'Gerda-nieuw-wachtwoord-2', 'password_confirmation' => 'Gerda-nieuw-wachtwoord-2']);
+T::eq($r['location'], '/inloggen', 'wachtwoord wijzigen lukt');
+T::ok(str_contains($cl->follow($r)['body'], 'Uw wachtwoord is gewijzigd'), 'bevestiging na wijzigen');
+T::eq($g->get('/dashboard')['location'], '/inloggen', 'alle bestaande sessies zijn beëindigd');
+T::ok(str_contains((string) file_get_contents($mailLog), 'Uw wachtwoord is gewijzigd'), 'bevestigingsmail na wijziging');
+clearThrottle($dbfile);
+$old = new Client($base);
+T::ok(str_contains($old->follow($old->submit('/inloggen', '/inloggen', ['email' => 'gerda@voorbeeld.nl', 'password' => $gPw]))['body'], 'komen niet overeen'), 'oud wachtwoord werkt niet meer');
+$new = new Client($base);
+$r = $new->submit('/inloggen', '/inloggen', ['email' => 'gerda@voorbeeld.nl', 'password' => 'Gerda-nieuw-wachtwoord-2']);
+T::eq($r['location'], '/2fa/controle', 'nieuw wachtwoord werkt, maar tweestapsverificatie blijft vereist');
+T::eq($new->get('/dashboard')['location'], '/2fa/controle', 'zonder tweede factor geen toegang');
+$new->submit('/2fa/controle', '/2fa/controle', ['code' => Totp::codeForStep($g->secret, intdiv(time(), 30) + 1)]);
+T::eq($new->get('/dashboard')['status'], 200, 'met tweede factor wel toegang');
+$r = (new Client($base))->get('/wachtwoord-resetten/' . $tok);
+T::ok(str_contains($r['body'], 'werkt niet meer'), 'de link werkt maar één keer');
+// verlopen link
+clearThrottle($dbfile);
+$ask('gerda@voorbeeld.nl');
+$tok2 = $lastLink('gerda@voorbeeld.nl');
+T::ok($tok2 !== null && $tok2 !== $tok, 'nieuw verzoek geeft een nieuwe link');
+$rawq('UPDATE password_resets SET expires_at = ' . (time() - 10));
+T::ok(str_contains((new Client($base))->get('/wachtwoord-resetten/' . $tok2)['body'], 'werkt niet meer'), 'een verlopen link werkt niet');
+// nieuwe link maakt de vorige ongeldig
+clearThrottle($dbfile);
+$ask('gerda@voorbeeld.nl'); $tokA = $lastLink('gerda@voorbeeld.nl');
+clearThrottle($dbfile);
+$ask('gerda@voorbeeld.nl'); $tokB = $lastLink('gerda@voorbeeld.nl');
+T::ok(str_contains((new Client($base))->get('/wachtwoord-resetten/' . $tokA)['body'], 'werkt niet meer') && str_contains((new Client($base))->get('/wachtwoord-resetten/' . $tokB)['body'], 'Nieuw wachtwoord kiezen'), 'een nieuwe link maakt de vorige ongeldig');
+// limiet per e-mailadres
+clearThrottle($dbfile);
+foreach ([1, 2, 3, 4] as $i) { $ask('limiet@voorbeeld.nl'); }
+T::ok($lastLink('limiet@voorbeeld.nl') === null, 'bij onbekend adres nooit een mail');
+$before = substr_count((string) file_get_contents($mailLog), 'naar gerda@voorbeeld.nl');
+clearThrottle($dbfile);
+foreach ([1, 2, 3, 4, 5] as $i) { $ask('gerda@voorbeeld.nl'); }
+T::eq(substr_count((string) file_get_contents($mailLog), 'naar gerda@voorbeeld.nl') - $before, 3, 'maximaal 3 herstelmails per uur per e-mailadres');
+// artsen gebruiken deze route niet
+clearThrottle($dbfile);
+$ask('jansen@praktijk.nl');
+T::ok($lastLink('jansen@praktijk.nl') === null, 'artsen krijgen geen herstellink (beheerder stelt een nieuw wachtwoord in)');
+T::ok(str_contains((new Client($base))->get('/wachtwoord-vergeten')['body'], 'praktijkbeheerder'), 'pagina verwijst artsen naar de praktijkbeheerder');
+// accounts verwijderen verwijdert ook de herstelcodes
+$ask('gerda@voorbeeld.nl');
+$gc = $new;
+$r = $gc->submit('/account', '/account/verwijderen', ['password' => 'Gerda-nieuw-wachtwoord-2']);
+T::eq((int) $rawq('SELECT COUNT(*) FROM password_resets')->fetchColumn(), 0, 'herstelcodes verdwijnen mee met het account');
+clearThrottle($dbfile);
 
 T::section('Juridische teksten en toestemming');
 foreach (['/pilot' => 'Pilotinformatie', '/privacy' => 'Privacyverklaring', '/voorwaarden' => 'Gebruiksvoorwaarden'] as $path => $title) {

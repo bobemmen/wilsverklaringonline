@@ -30,7 +30,8 @@ De drie patiëntteksten worden in de app getoond. Naam en adres van de exploitan
 
 - Algemene verordening gegevensbescherming (AVG): art. 6, 9, 13, 28, 30, 32–35.
 - Uitvoeringswet AVG (UAVG): art. 46 (nationaal identificatienummer, zoals het BSN, alleen gebruiken als de wet dat voorschrijft).
-- Wet aanvullende bepalingen verwerking persoonsgegevens in de zorg (Wabvpz): art. 4 (zorgaanbieders gebruiken het BSN om te waarborgen dat gegevens bij de juiste cliënt horen).
+- Wet gebruik burgerservicenummer in de zorg (Wbsn-z): art. 4 (zorgaanbieders gebruiken het BSN om te waarborgen dat gegevens bij de juiste cliënt horen) en art. 5 (zorgaanbieder stelt identiteit en BSN van de cliënt vast).
+- Rijksoverheid, “Identificatieplicht zorg”: identificatie met paspoort, identiteitskaart, rijbewijs of vreemdelingendocument.
 - Autoriteit Persoonsgegevens: lijst van verwerkingen waarvoor een DPIA verplicht is (Staatscourant 2019, 64418; onder meer grootschalige verwerking van gezondheidsgegevens); Meldloket Datalekken.
 - KNMG: *Handreiking meldplicht datalekken in de eerstelijnszorg*.
 - NEN 7510 (informatiebeveiliging in de zorg), NEN 7512 (vertrouwen bij gegevensuitwisseling), NEN 7513 (logging van toegang tot patiëntgegevens): richtsnoer voor een eventuele certificering later.

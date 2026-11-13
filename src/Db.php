@@ -13,7 +13,7 @@ use PDO;
  */
 final class Db
 {
-    private const SCHEMA_VERSION = 4;
+    private const SCHEMA_VERSION = 5;
 
     public PDO $pdo;
 
@@ -176,6 +176,17 @@ final class Db
                 CREATE INDEX verifications_arts ON verifications(arts_id);
                 CREATE INDEX verifications_patient ON verifications(patient_user_id);
                 CREATE INDEX verifications_key ON verifications(key_idx);
+                SQL);
+            }
+            if ($version < 5) {
+                // Wachtwoord vergeten: alleen een HMAC van de herstelcode wordt bewaard, eenmalig bruikbaar en kort geldig.
+                $this->pdo->exec(<<<'SQL'
+                CREATE TABLE password_resets (
+                    token_idx  TEXT PRIMARY KEY,
+                    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    expires_at INTEGER NOT NULL
+                ) WITHOUT ROWID;
+                CREATE INDEX password_resets_user ON password_resets(user_id);
                 SQL);
             }
             $this->pdo->exec('PRAGMA user_version = ' . self::SCHEMA_VERSION);

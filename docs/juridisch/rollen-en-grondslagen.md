@@ -33,7 +33,7 @@ Artsen hebben beroepsgeheim. De exploitant legt iedereen met toegang tot de prod
 
 **Besluit (optie B): de applicatie vraagt, verwerkt en bewaart geen BSN.** Uitnodigen gebeurt met naam, e-mailadres en HIS-patiënt-ID. De registratie van de patiënt wordt gekoppeld aan de uitnodiging via het e-mailadres en de code op papier. De huisarts controleert de identiteit in persoon, en dat is het bewijs bij de verklaring.
 
-**Waarom.** Art. 46 UAVG staat het gebruik van een nummer ter identificatie, zoals het BSN, alleen toe als de wet dat voorschrijft. Voor zorgaanbieders bepaalt art. 4 Wabvpz dat zij het BSN gebruiken om te waarborgen dat gegevens bij de juiste cliënt horen. Of de exploitant dat als verwerker namens de praktijk ook mag, en of het opstellen van een wilsverklaring daaronder valt, is niet vastgesteld. Door het BSN niet te verwerken vervalt die vraag.
+**Waarom.** Art. 46 UAVG staat het gebruik van een nummer ter identificatie, zoals het BSN, alleen toe als de wet dat voorschrijft. Voor zorgaanbieders bepaalt art. 4 van de Wet gebruik burgerservicenummer in de zorg (Wbsn-z) dat zij het BSN gebruiken om te waarborgen dat gegevens bij de juiste cliënt horen. Of de exploitant dat als verwerker namens de praktijk ook mag, en of het opstellen van een wilsverklaring daaronder valt, is niet vastgesteld. Door het BSN niet te verwerken vervalt die vraag.
 
 **Gevolgen.**
 
@@ -41,7 +41,7 @@ Artsen hebben beroepsgeheim. De exploitant legt iedereen met toegang tot de prod
 - Een onbevoegde kan met 5 foute pogingen een uitnodiging blokkeren (hinder, geen toegang); de arts maakt dan een nieuwe code.
 - Zoeken door de arts kan op naam, e-mailadres en HIS-ID (niet op BSN).
 
-**Later terugbrengen?** Dat kan alleen na een schriftelijke juridische toetsing (verwerking namens de zorgaanbieder onder art. 4 Wabvpz, vastgelegd in de DPIA) of via DigiD (aansluiting via Logius). Het hoort dan bij een aparte wijziging van de verwerkersovereenkomst, DPIA en privacyverklaring.
+**Later terugbrengen?** Dat kan alleen na een schriftelijke juridische toetsing (verwerking namens de zorgaanbieder onder art. 4 Wbsn-z, vastgelegd in de DPIA) of via DigiD (aansluiting via Logius). Het hoort dan bij een aparte wijziging van de verwerkersovereenkomst, DPIA en privacyverklaring.
 
 ## 5. Verhouding patiënt – praktijk – exploitant in de praktijk
 
