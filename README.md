@@ -35,6 +35,8 @@ Aanbevolen in `php.ini`: `expose_php=Off`, OPcache aan.
 
 **Zonder terminal (gewone webhosting):** `deploy/installeer.php` doet stap 2 en het aanmaken van de eerste huisarts via de browser. Zet er een eigen `SETUP_CODE` in, upload het naast `index.php`, open het via https en vul het formulier in. Het toont de `APP_KEY` en het tijdelijke wachtwoord één keer en verwijdert zichzelf. Het werkt alleen zolang er nog geen `.env` is. Standaard verwacht het de app-map `../wilsverklaring-app` (pas `APP_DIR` aan als die anders heet; pas dan ook de regel `$root` in `index.php` aan).
 
+**Automatisch uitrollen vanaf GitHub:** `.github/workflows/deploy.yml` draait bij elke push de tests en zet bij een push naar `main` de app via FTPS op de server (de app naar `FTP_APP_DIR`, `public/` naar `FTP_WEB_DIR`). `.env` en `storage/database` blijven staan; de database wordt bij het opstarten zelf bijgewerkt. Instellen: secrets `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` en variabelen `FTP_APP_DIR`, `FTP_WEB_DIR` (zie de kop van het bestand). `public/index.php` vindt de buurmap `wilsverklaring-app/` zelf, zodat daar niets handmatig aangepast hoeft te worden.
+
 ### Configuratie (`.env`)
 
 | Variabele | Betekenis |

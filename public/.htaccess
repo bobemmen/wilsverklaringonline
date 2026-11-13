@@ -6,6 +6,6 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 Options -Indexes
-<FilesMatch "\.(sqlite|env|log)$">
+<FilesMatch "\.(sqlite|env|log)$|^\.ftp-deploy-state">
     Require all denied
 </FilesMatch>

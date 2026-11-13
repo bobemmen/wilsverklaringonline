@@ -11,7 +11,12 @@ if (PHP_SAPI === 'cli-server') {
     }
 }
 
-$root = dirname(__DIR__);
+// App-map: normaal één niveau boven public/. Op hosting waar de documentroot en de app naast elkaar staan
+// (bijv. wilsverklaring.example.nl/ en wilsverklaring-app/) wordt die buurmap gebruikt; of zet WV_ROOT.
+$root = getenv('WV_ROOT') ?: dirname(__DIR__);
+if (!is_file($root . '/src/bootstrap.php') && is_file(dirname(__DIR__) . '/wilsverklaring-app/src/bootstrap.php')) {
+    $root = dirname(__DIR__) . '/wilsverklaring-app';
+}
 require $root . '/src/bootstrap.php';
 
 header_remove('X-Powered-By');

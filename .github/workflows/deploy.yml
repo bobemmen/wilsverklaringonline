@@ -1,0 +1,87 @@
+# Test bij elke push en pull request; zet bij een push naar main de nieuwe versie op de server (FTP/FTPS).
+#
+# Instellen: GitHub → Settings → Secrets and variables → Actions
+#   Secrets:    FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+#   Variables:  FTP_APP_DIR  (map van de app op de server, eindigt op /, bijv. ./wilsverklaring-app/)
+#               FTP_WEB_DIR  (documentroot van het subdomein, eindigt op /, bijv. ./wilsverklaring.dokterbob.nl/)
+#               FTP_PROTOCOL (optioneel: ftps (standaard), ftp of ftps-legacy)
+# Wat nooit wordt overschreven of verwijderd: .env, storage/database, storage/logs (die staan niet in de upload).
+name: Test en deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sodium, pdo_sqlite, mbstring
+      - name: Tests
+        run: sh tests/run.sh
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Controleer instellingen
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_APP_DIR: ${{ vars.FTP_APP_DIR }}
+          FTP_WEB_DIR: ${{ vars.FTP_WEB_DIR }}
+        run: |
+          for v in FTP_SERVER FTP_APP_DIR FTP_WEB_DIR; do
+            [ -n "${!v}" ] || { echo "::error::$v is niet ingesteld (zie commentaar bovenin dit bestand)"; exit 1; }
+          done
+
+      # 1. De app zelf (buiten de documentroot). .env en de inhoud van storage/ blijven ongemoeid.
+      - name: Deploy app
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          local-dir: ./
+          server-dir: ${{ vars.FTP_APP_DIR }}
+          state-name: .ftp-deploy-state-app.json
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            .env
+            .env.example.bak
+            tests/**
+            deploy/**
+            public/**
+            README.md
+            storage/database/**
+            storage/logs/**
+            **/.DS_Store
+
+      # 2. De openbare bestanden (documentroot van het subdomein).
+      - name: Deploy public
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftps' }}
+          local-dir: ./public/
+          server-dir: ${{ vars.FTP_WEB_DIR }}
+          state-name: .ftp-deploy-state-public.json
+          exclude: |
+            **/.DS_Store
