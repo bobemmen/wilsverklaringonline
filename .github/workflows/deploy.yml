@@ -27,6 +27,7 @@ jobs:
         with:
           php-version: '8.3'
           extensions: sodium, pdo_sqlite, mbstring
+          coverage: none   # geen Xdebug: die geeft een JIT-waarschuwing in de serverlog
       - name: Tests
         run: sh tests/run.sh
 
