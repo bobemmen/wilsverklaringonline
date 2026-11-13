@@ -134,14 +134,14 @@ tests/           unit- en end-to-end tests
 Een patiënt kan zich **alleen** registreren nadat zijn huisarts hem heeft uitgenodigd. Zo is de identiteit van elke patiënt meteen door een arts bevestigd.
 
 - Huisartsaccounts worden alleen door de beheerder aangemaakt: `php bin/console arts:aanmaken "Dr. Jansen" jansen@praktijk.nl "Praktijknaam"`. Het tijdelijke wachtwoord wordt eenmalig getoond; tweestapsverificatie is verplicht.
-- In `/arts` vult de arts naam, e-mailadres en het HIS-patiënt-ID in en vinkt aan dat hij de patiënt in persoon heeft gezien en de identiteit heeft gecontroleerd. Hij krijgt een code van 6 cijfers (eenmalig getoond, alleen als HMAC bewaard) en geeft die de patiënt op papier mee. De patiënt krijgt ook een e-mail met de registratiepagina (zonder code).
-- De patiënt registreert zich op `/registreren` met naam, hetzelfde e-mailadres, wachtwoord en de code. E-mailadres en code moeten bij dezelfde uitnodiging horen (14 dagen geldig); een ander e-mailadres werkt niet. Na 5 foute codes vervalt de uitnodiging. Er wordt bewust **geen BSN** gevraagd of bewaard (zie `docs/juridisch/rollen-en-grondslagen.md` §4).
+- In `/arts` vult de arts naam, e-mailadres, geboortedatum en het HIS-patiënt-ID in en vinkt aan dat hij de patiënt in persoon heeft gezien en de identiteit heeft gecontroleerd. Hij krijgt een code van 6 cijfers (eenmalig getoond, alleen als HMAC bewaard) en geeft die de patiënt op papier mee. De patiënt krijgt ook een e-mail met de registratiepagina (zonder code).
+- De patiënt registreert zich op `/registreren` met naam, hetzelfde e-mailadres, dezelfde geboortedatum als de arts invoerde, wachtwoord en de code. E-mailadres en code moeten bij dezelfde uitnodiging horen (14 dagen geldig); een ander e-mailadres werkt niet. Na 5 foute codes vervalt de uitnodiging. Er wordt bewust **geen BSN** gevraagd of bewaard (zie `docs/juridisch/rollen-en-grondslagen.md` §4).
 - Met de registratie is de identiteit bevestigd. Lezers zien arts, praktijk, datum en de laatste 6 tekens van het HIS-ID (ook in de PDF). De bevestiging geldt voor het account en hoeft niet te worden herhaald na wijzigingen. De arts kan een nieuwe code maken of de uitnodiging intrekken; de patiënt kan de koppeling met de huisarts intrekken.
 - De arts kan de gepubliceerde verklaring van zijn geregistreerde patiënten lezen (dat wordt gelogd).
 
 ### Patiënten terugzoeken (huisarts)
 
-Op `/arts` ziet de huisarts uitsluitend de eigen uitgenodigde patiënten. Zoeken kan op naam, e-mailadres of HIS-patiënt-ID (deelmatch), (geen BSN). Het zoekformulier gebruikt POST (`/arts/zoeken`) zodat zoektermen niet in URL, serverlog of browsergeschiedenis terechtkomen. Verder: statusfilter (geregistreerd / wacht op registratie / ingetrokken / verlopen) en paginering (20 per pagina).
+Op `/arts` ziet de huisarts uitsluitend de eigen uitgenodigde patiënten. Zoeken kan op naam, geboortedatum (dd-mm-jjjj, jjjj-mm-dd, dd/mm/jjjj, ook deels of alleen het jaar), e-mailadres of HIS-patiënt-ID (deelmatch), (geen BSN). Het zoekformulier gebruikt POST (`/arts/zoeken`) zodat zoektermen niet in URL, serverlog of browsergeschiedenis terechtkomen. Verder: statusfilter (geregistreerd / wacht op registratie / ingetrokken / verlopen) en paginering (20 per pagina).
 
 ## Praktijk, team en herstelcodes
 

@@ -1,6 +1,6 @@
 <?php $this->layout('layouts/guest', ['title' => 'Registreren · WilsVerklaring']) ?>
 <h1>Registreren</h1>
-<p class="muted">U kunt zich alleen registreren nadat uw huisarts u heeft uitgenodigd. Uw huisarts geeft u daarvoor een code van 6 cijfers op papier. Daarmee is meteen uw identiteit bevestigd.</p>
+<p class="muted">U kunt zich alleen registreren nadat uw huisarts u heeft uitgenodigd. Uw huisarts geeft u daarvoor een code van 6 cijfers op papier. Samen met uw geboortedatum is daarmee uw identiteit bevestigd.</p>
 
 <form method="post" action="/registreren" autocomplete="off">
     <?= $this->csrf() ?>
@@ -14,6 +14,12 @@
         <p class="hint" id="email-hint">Gebruik het e-mailadres dat uw huisarts van u heeft.</p>
         <input type="email" id="email" name="email" value="<?= e($this->old('email')) ?>" autocomplete="username" required aria-describedby="email-hint"<?= $this->invalid('email') ?>>
         <?= $this->fieldError('email') ?>
+    </div>
+    <div class="field">
+        <label for="birthdate">Geboortedatum</label>
+        <p class="hint" id="birthdate-hint">Bijvoorbeeld 07-03-1985. Uw huisarts vergelijkt dit met uw dossier.</p>
+        <input type="text" id="birthdate" name="birthdate" value="<?= e($this->old('birthdate')) ?>" inputmode="numeric" maxlength="10" placeholder="dd-mm-jjjj" autocomplete="off" required aria-describedby="birthdate-hint"<?= $this->invalid('birthdate') ?>>
+        <?= $this->fieldError('birthdate') ?>
     </div>
     <div class="field">
         <label for="password">Wachtwoord</label>

@@ -80,8 +80,8 @@ Plaats en datum: ________  Handtekeningen: ________
 | | |
 |---|---|
 | Doel | Uitnodigen en identiteit bevestigen van patiënten door huisartsen; artsaccounts beheren; gepubliceerde verklaringen tonen aan artsen van de praktijk |
-| Aard | Opslaan (versleuteld), tonen, zoeken (op naam, e-mailadres en HIS-ID binnen de praktijk), loggen |
-| Gegevens | Naam, e-mailadres, HIS-patiënt-ID, naam en praktijk van de bevestigende arts, datum, status; artsgegevens (naam, e-mail, rol, 2FA-gegevens, herstelcode-hashes); inzagelog; inhoud van gepubliceerde verklaringen (alleen tonen) |
+| Aard | Opslaan (versleuteld), tonen, zoeken (op naam, geboortedatum, e-mailadres en HIS-ID binnen de praktijk), loggen |
+| Gegevens | Naam, e-mailadres, geboortedatum, HIS-patiënt-ID, naam en praktijk van de bevestigende arts, datum, status; artsgegevens (naam, e-mail, rol, 2FA-gegevens, herstelcode-hashes); inzagelog; inhoud van gepubliceerde verklaringen (alleen tonen) |
 | Bijzondere gegevens | Ja (gezondheid, wensen levenseinde) |
 | Betrokkenen | Patiënten, artsen van de praktijk |
 | Bewaartermijn | Zie privacyverklaring; uitnodigingen zonder registratie: 14 dagen + 30 dagen |

@@ -2,7 +2,7 @@
 <div class="page-head">
     <p class="eyebrow"><a href="/arts">← Alle patiënten</a></p>
     <h1><?= e($v['patient_name']) ?></h1>
-    <p class="muted">Patiënt-ID in het HIS: <strong><?= e($v['his_id']) ?></strong></p>
+    <p class="muted">Geboortedatum: <strong><?= e(isset($v['birthdate']) ? fmt_iso_date($v['birthdate']) : 'niet vastgelegd') ?></strong> · Patiënt-ID in het HIS: <strong><?= e($v['his_id']) ?></strong></p>
     <p class="muted">Begeleidend arts: <strong><?= $owner ? e($owner) . ($v['arts_id'] === $me ? ' (u)' : '') : 'geen (staat bij ' . e($practice['name']) . ')' ?></strong>
         · Identiteit bevestigd door: <strong><?= e($v['arts_name']) ?></strong> op <?= e(fmt_date($v['attested_at'])) ?></p>
     <?php if ($v['status'] !== 'ingetrokken' && $v['arts_id'] !== $me): ?>

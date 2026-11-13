@@ -42,6 +42,7 @@ final class Client
     public array $cookies = [];
     public array $recovery = [];
     public string $secret = '';
+    public int $step = 0;
     public function __construct(private string $base) {}
 
     /** @return array{status:int,body:string,headers:array<string,string>,location:?string} */
@@ -104,7 +105,7 @@ $his = 'C333CBA-F0C0-4521-8A75-33C6911C1E2C';
 function invitePatient(Client $arts, string $name, string $email, array $over = []): ?string
 {
     global $his;
-    $r = $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => $name, 'email' => $email, 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
+    $r = $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => $name, 'email' => $email, 'his_id' => $his, 'birthdate' => '07-03-1985', 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
     $page = $arts->follow($r);
     return preg_match('#class="paper-code"[^>]*>(\d{3}) (\d{3})<#', $page['body'], $m) ? $m[1] . $m[2] : null;
 }
@@ -115,12 +116,13 @@ function register(string $base, string $name, string $email, string $pw): Client
     (new PDO('sqlite:' . $dbfile))->exec('DELETE FROM throttle');
     $code = invitePatient($arts, $name, $email) ?? '';
     $c = new Client($base);
-    $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'code' => $code, 'password' => $pw, 'password_confirmation' => $pw, 'akkoord' => '1']);
+    $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'code' => $code, 'birthdate' => '7-3-1985', 'password' => $pw, 'password_confirmation' => $pw, 'akkoord' => '1']);
     $page = $c->follow($r);
     preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
     $secret = str_replace(' ', '', $m[1] ?? '');
     $c->secret = $secret;
-    $c->submit('/2fa/instellen', '/2fa/instellen', ['code' => Totp::generateCode($secret)]);
+    $c->step = intdiv(time(), 30);
+    $c->submit('/2fa/instellen', '/2fa/instellen', ['code' => Totp::codeForStep($secret, $c->step)]);
     return $c;
 }
 
@@ -180,7 +182,7 @@ T::ok(str_contains($r['body'], 'Identiteit bevestigd door uw huisarts') && str_c
 
 T::section('Registreren alleen met uitnodiging, code en e-mailadres');
 clearThrottle($dbfile);
-$regBody = function (array $f) use ($base) { $cl = new Client($base); $r = $cl->submit('/registreren', '/registreren', $f + ['name' => 'Carla Smit', 'email' => 'carla@voorbeeld.nl', 'code' => '000000', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']); return $cl->follow($r)['body']; };
+$regBody = function (array $f) use ($base) { $cl = new Client($base); $r = $cl->submit('/registreren', '/registreren', $f + ['name' => 'Carla Smit', 'email' => 'carla@voorbeeld.nl', 'code' => '000000', 'birthdate' => '07-03-1985', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']); return $cl->follow($r)['body']; };
 $pw2 = 'Een-lang-wachtwoord-123';
 T::ok(str_contains((new Client($base))->get('/registreren')['body'], 'Code van uw huisarts'), 'registratieformulier vraagt om de code van de huisarts');
 T::ok(str_contains($regBody(['password' => $pw2]), 'klopt niet'), 'zonder uitnodiging is registreren niet mogelijk');
@@ -189,11 +191,11 @@ T::ok($carla !== null && strlen($carla) === 6, 'huisarts nodigt uit en krijgt ee
 T::ok(str_contains($regBody(['email' => 'mallory@voorbeeld.nl', 'code' => $carla]), 'klopt niet'), 'ander e-mailadres met de juiste code werkt niet');
 T::ok(str_contains($regBody(['code' => $carla, 'password' => 'kort']), 'minimaal 10'), 'te kort wachtwoord wordt geweigerd');
 T::ok(str_contains($regBody(['code' => $carla === '123456' ? '654321' : '123456']), 'klopt niet'), 'foute code wordt geweigerd');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Anna', 'email' => 'anna@voorbeeld.nl', 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Anna', 'email' => 'anna@voorbeeld.nl', 'his_id' => $his, 'birthdate' => '07-03-1985', 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
 T::ok(str_contains($arts->follow($r)['body'], 'bestaat al een account'), 'arts kan niet uitnodigen met een bestaand e-mailadres');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'his_id' => $his, 'seen' => '1', 'toestemming' => '1']);
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'his_id' => $his, 'birthdate' => '07-03-1985', 'seen' => '1', 'toestemming' => '1']);
 T::ok(str_contains($arts->follow($r)['body'], 'alle drie de verklaringen'), 'arts moet alle bevestigingsvinkjes aanvinken');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'his_id' => 'x', 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'his_id' => 'x', 'birthdate' => '07-03-1985', 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
 $b = $arts->follow($r)['body'];
 T::ok(str_contains($b, 'patiënt-ID'), 'arts: ongeldig patiënt-ID wordt geweigerd');
 T::eq($c->get('/arts')['status'], 403, 'patiënt heeft geen toegang tot /arts');
@@ -225,7 +227,7 @@ $r = $l->get('/2fa/instellen');
 T::ok($r['status'] === 303 && $r['location'] === '/2fa/controle', 'geheim wordt niet getoond aan iemand die alleen het wachtwoord heeft');
 $r = $l->submit('/2fa/controle', '/2fa/controle', ['code' => '000000']);
 T::ok(str_contains($l->follow($r)['body'], 'Onjuiste code'), 'foute 2FA-code wordt geweigerd');
-$oldStep = intdiv(time(), 30);
+$oldStep = $c->step;   // de stap waarmee 2FA is ingesteld (vast, onafhankelijk van de klok)
 $r = $l->submit('/2fa/controle', '/2fa/controle', ['code' => Totp::codeForStep($c->secret, $oldStep)]);
 // dezelfde stap is al gebruikt tijdens het instellen → hergebruik moet geweigerd worden
 T::ok(str_contains($l->follow($r)['body'], 'Onjuiste code'), 'een al gebruikte 2FA-code kan niet opnieuw worden gebruikt');
@@ -449,7 +451,7 @@ $r = $c->submit('/token', '/token/genereer', []);
 preg_match('#token-box">' . preg_quote($base, '#') . '/v/([a-f0-9]{64})<#', $c->follow($r)['body'], $m);
 $token = $m[1] ?? '';
 $art = $arts->get('/arts')['body'];
-preg_match('#Anna de Vries</th>.*?/arts/patienten/([a-f0-9]{32})">Openen#s', $art, $m);
+preg_match('#Anna de Vries.*?/arts/patienten/([a-f0-9]{32})">Openen#s', $art, $m);
 $vid = $m[1] ?? '';
 T::ok($vid !== '' && str_contains($art, 'Geregistreerd'), 'arts ziet geregistreerde patiënt');
 $p = $arts->get("/arts/patienten/$vid");
@@ -583,6 +585,36 @@ $st->purgeUnusedInvitations();
 T::ok($st->verificationById($fresh['id']) !== null, 'een lopende uitnodiging blijft staan');
 $st->db->run('DELETE FROM verifications WHERE id = ?', [$fresh['id']]);
 
+T::section('Geboortedatum');
+clearThrottle($dbfile);
+$bd = fn(array $f) => $arts->submit('/arts', '/arts/uitnodigen', $f + ['name' => 'Eva Test', 'email' => 'eva@voorbeeld.nl', 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
+foreach (['', '31-02-1990', '1990-13-01', '07-03-2999', '01-01-1850', 'gisteren'] as $bad) {
+    T::ok(str_contains($arts->follow($bd(['birthdate' => $bad]))['body'], 'geboortedatum van de patiënt in'), "arts: ongeldige geboortedatum “$bad” wordt geweigerd");
+}
+$code = invitePatient($arts, 'Eva Test', 'eva@voorbeeld.nl', ['birthdate' => '12-11-1962']) ?? '';
+T::ok(strlen($code) === 6, 'uitnodiging met geboortedatum lukt');
+$regEva = function (array $f) use ($base, $dbfile, $code) { clearThrottle($dbfile); $cl = new Client($base); $r = $cl->submit('/registreren', '/registreren', $f + ['name' => 'Eva Test', 'email' => 'eva@voorbeeld.nl', 'code' => $code, 'birthdate' => '12-11-1962', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']); return $cl->follow($r)['body']; };
+T::ok(str_contains($regEva(['birthdate' => '']), 'geboortedatum in'), 'patiënt: geboortedatum is verplicht');
+T::ok(str_contains($regEva(['birthdate' => '13-11-1962']), 'klopt niet'), 'juiste code maar verkeerde geboortedatum werkt niet');
+T::ok(str_contains($regEva(['birthdate' => '12-11-1963']), 'klopt niet'), 'ook een verkeerd jaar werkt niet');
+$zoekEva = fn(string $q) => $arts->submit('/arts', '/arts/zoeken', ['q' => $q, 'status' => '', 'arts' => ''])['body'];
+T::ok(str_contains($zoekEva('12-11-1962'), 'Eva Test') && str_contains($zoekEva('1962-11-12'), 'Eva Test') && str_contains($zoekEva('12/11/1962'), 'Eva Test') && str_contains($zoekEva('12-11-62') . $zoekEva('12-11'), 'Eva Test'), 'arts zoekt op geboortedatum (dd-mm-jjjj, jjjj-mm-dd, dd/mm/jjjj, ook deels)');
+T::ok(!str_contains($zoekEva('13-11-1962'), 'Eva Test'), 'zoeken op een andere datum vindt haar niet');
+T::ok(str_contains($zoekEva('1962'), 'Eva Test'), 'zoeken op alleen het jaar werkt');
+$okBody = $regEva([]);
+T::ok(str_contains($okBody, 'Tweestapsverificatie') || str_contains($okBody, 'authenticator') || str_contains($okBody, 'token-box'), 'juiste code en geboortedatum: registratie lukt');
+$vEva = $arts->get('/arts')['body'];
+preg_match('#Eva Test.*?/arts/patienten/([a-f0-9]{32})">Openen#s', $vEva, $mm);
+T::ok(str_contains($vEva, '12-11-1962') && str_contains($arts->get('/arts/patienten/' . ($mm[1] ?? 'x'))['body'], 'Geboortedatum: <strong>12-11-1962'), 'geboortedatum staat in het overzicht en bij de patiënt');
+clearThrottle($dbfile);
+// oudere uitnodiging zonder geboortedatum blijft bruikbaar
+$st2 = new WV\Store(new WV\Db($dbfile), new WV\Crypto(WV\Crypto::parseKey($key)));
+$j = $st2->userByEmail('jansen@praktijk.nl');
+$legacy = $st2->addVerification($j['id'], $j['practice_id'], 'legacy@voorbeeld.nl', ['patient_name' => 'Leo Legacy', 'his_id' => 'X1234567', 'arts_name' => 'Dr. Jansen', 'practice' => 'x']);
+$cl = new Client($base);
+$r = $cl->submit('/registreren', '/registreren', ['name' => 'Leo Legacy', 'email' => 'legacy@voorbeeld.nl', 'code' => $legacy['code'], 'birthdate' => '01-01-1970', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']);
+T::eq($r['location'], '/2fa/instellen', 'uitnodiging van vóór deze controle (zonder geboortedatum) blijft bruikbaar');
+
 T::section('Wachtwoord vergeten');
 clearThrottle($dbfile);
 $gPw = 'Gerda-oud-wachtwoord-1';
@@ -702,7 +734,7 @@ T::section('Versleuteling in het databasebestand');
 $pdo = new PDO('sqlite:' . $dbfile);
 $pdo->exec('PRAGMA wal_checkpoint(TRUNCATE)');
 $raw = file_get_contents($dbfile) . (is_file("$dbfile-wal") ? file_get_contents("$dbfile-wal") : '');
-foreach (['Anna', 'anna@voorbeeld', 'Vries', 'Ik houd van mijn tuin', 'Bram', 'Dr. Jansen', 'praktijk@huisarts', 'piet@voorbeeld', 'Piet de Vries, zoon', '06 12345678', 'regel 1', 'Gewijzigd concept', '127.0.0.1', 'curl/', $token, $shareToken, $c->secret] as $needle) {
+foreach (['1962-11-12', '12-11-1962', 'Anna', 'anna@voorbeeld', 'Vries', 'Ik houd van mijn tuin', 'Bram', 'Dr. Jansen', 'praktijk@huisarts', 'piet@voorbeeld', 'Piet de Vries, zoon', '06 12345678', 'regel 1', 'Gewijzigd concept', '127.0.0.1', 'curl/', $token, $shareToken, $c->secret] as $needle) {
     T::ok(!str_contains($raw, $needle), "'" . substr($needle, 0, 18) . "' niet leesbaar in database");
 }
 $cols = [];
@@ -726,8 +758,8 @@ T::eq((new Client($base))->get('/v/' . $token)['status'], 404, 'toegangscodes zi
 $left = (int) $pdo->query('SELECT (SELECT COUNT(*) FROM versions) + (SELECT COUNT(*) FROM shares) + (SELECT COUNT(*) FROM access_logs) + (SELECT COUNT(*) FROM declarations WHERE user_id NOT IN (SELECT id FROM users))')->fetchColumn();
 T::eq($left, 0, 'geen verweesde versies, uitnodigingen of logs na verwijderen');
 $bas = (int) $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-T::eq($bas, 3, 'alleen Bas, Dr. Jansen en Dr. Elders (andere praktijk) bestaan nog');
-T::eq((int) $pdo->query('SELECT COUNT(*) FROM verifications WHERE patient_user_id IS NOT NULL')->fetchColumn(), 1, 'alleen de verificatie van Bas (nog actief) bestaat; die van de verwijderde patiënt is weg');
+T::eq($bas, 5, 'alleen Bas, Eva, Leo, Dr. Jansen en Dr. Elders (andere praktijk) bestaan nog');
+T::eq((int) $pdo->query('SELECT COUNT(*) FROM verifications WHERE patient_user_id IS NOT NULL')->fetchColumn(), 3, 'alleen de verificaties van Bas, Eva en Leo (nog actief) bestaan; die van de verwijderde patiënt is weg');
 
 $log = @file_get_contents("$tmp/server.log") ?: '';
 T::ok(!preg_match('/Fatal|Warning|Notice|Deprecated/', $log), 'geen PHP-waarschuwingen in serverlog' . (preg_match('/(Fatal|Warning|Notice|Deprecated)[^\n]*/', $log, $mm) ? ': ' . $mm[0] : ''));

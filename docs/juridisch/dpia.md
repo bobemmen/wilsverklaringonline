@@ -12,14 +12,14 @@ De verwerking betreft gezondheidsgegevens, wensen rond levenseinde en levensover
 
 **Stromen.**
 
-1. De huisarts ziet de patiënt in een consult, controleert de identiteit, en voert naam, e-mailadres en HIS-patiënt-ID in. De applicatie maakt een code van 6 cijfers; de arts geeft die op papier mee. De patiënt krijgt een e-mail met de registratielink (zonder code).
-2. De patiënt registreert met naam, e-mailadres, wachtwoord en code, en geeft toestemming (pilotinformatie en privacyverklaring). De identiteit is daarmee bevestigd.
+1. De huisarts ziet de patiënt in een consult, controleert de identiteit, en voert naam, e-mailadres, geboortedatum en HIS-patiënt-ID in. De applicatie maakt een code van 6 cijfers; de arts geeft die op papier mee. De patiënt krijgt een e-mail met de registratielink (zonder code).
+2. De patiënt registreert met naam, e-mailadres, geboortedatum, wachtwoord en code (code én geboortedatum moeten bij de uitnodiging passen), en geeft toestemming (pilotinformatie en privacyverklaring). De identiteit is daarmee bevestigd.
 3. De patiënt stelt de verklaring op en publiceert die. De artsen van de praktijk kunnen de gepubliceerde verklaring inzien; elke inzage wordt gelogd en is zichtbaar voor de patiënt.
 4. De patiënt kan de verklaring delen via een geheime link (arts) of uitnodiging (naaste), de huisartsbevestiging intrekken, een PDF downloaden en het account verwijderen.
 
 **Categorieën betrokkenen.** Patiënten (volwassenen); huisartsen van de pilotpraktijk; naasten die een patiënt uitnodigt.
 
-**Categorieën gegevens.** Zie `rollen-en-grondslagen.md` §2. Bijzonder: inhoud van de wilsverklaring. Identificerend: HIS-ID. Er wordt geen BSN verwerkt.
+**Categorieën gegevens.** Zie `rollen-en-grondslagen.md` §2. Bijzonder: inhoud van de wilsverklaring. Identificerend: geboortedatum (versleuteld bewaard, alleen zichtbaar voor artsen van de praktijk) en HIS-ID. De geboortedatum is een extra controlefactor, geen sterke: hij is makkelijk te raden. De kracht van de identificatie zit in de persoonlijke controle door de arts en de papieren code. Er wordt geen BSN verwerkt.
 
 **Ontvangers.** Artsen van de praktijk; door de patiënt gekozen personen; hoster en mailprovider (versleutelde gegevens, resp. e-mails zonder verklaring-inhoud).
 

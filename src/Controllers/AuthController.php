@@ -56,7 +56,8 @@ final class AuthController extends Controller
         $email = mb_strtolower(trim($this->input('email')));
         $code = preg_replace('/\D/', '', $this->input('code')) ?? '';
         $password = $this->input('password');
-        $old = ['name' => $name, 'email' => $email];
+        $birth = parse_dob($this->input('birthdate'));
+        $old = ['name' => $name, 'email' => $email, 'birthdate' => trim($this->input('birthdate'))];
 
         $errors = [];
         if ($name === '' || mb_strlen($name) > 120) {
@@ -64,6 +65,9 @@ final class AuthController extends Controller
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
             $errors['email'] = 'Vul een geldig e-mailadres in.';
+        }
+        if ($birth === null) {
+            $errors['birthdate'] = 'Vul uw geboortedatum in (bijvoorbeeld 07-03-1985).';
         }
         if (strlen($code) !== 6) {
             $errors['code'] = 'Vul de code van 6 cijfers in die uw huisarts u op papier heeft gegeven.';
@@ -85,20 +89,22 @@ final class AuthController extends Controller
         // Pogingen tellen per adres én per e-mailadres, ook als het adres niet is uitgenodigd (geen detectie van uitgenodigde adressen).
         $ipOk = $this->app->limiter->attempt('register|' . $this->app->request->ip(), 10, 3600);
         $mailOk = $this->app->limiter->attempt('register-mail|' . $this->app->crypto->index('email', $email), 8, 3600);
-        $mismatch = 'Deze combinatie van e-mailadres en code klopt niet, of de uitnodiging is verlopen. Vraag uw huisarts om hulp.';
+        $mismatch = 'Deze combinatie van e-mailadres, geboortedatum en code klopt niet, of de uitnodiging is verlopen. Vraag uw huisarts om hulp.';
         if (!$ipOk || !$mailOk) {
             return $this->fail('/registreren', ['code' => 'Te veel pogingen. Probeer het later opnieuw.'], $old);
         }
 
         $match = null;
         foreach ($store->openVerifications($email) as $v) {
-            if (hash_equals($v['code_mac'], $store->codeMac($v['id'], $code))) {
+            // code én geboortedatum moeten kloppen (uitnodigingen van vóór deze controle hebben geen geboortedatum)
+            $birthOk = !isset($v['birthdate']) || $v['birthdate'] === $birth;
+            if (hash_equals($v['code_mac'], $store->codeMac($v['id'], $code)) && $birthOk) {
                 $match = $v;
                 break;
             }
         }
         if ($match === null) {
-            // foute code bij een bestaande uitnodiging telt mee; na 5 pogingen vervalt hij
+            // foute code of geboortedatum bij een bestaande uitnodiging telt mee; na 5 pogingen vervalt hij
             foreach ($store->openVerifications($email) as $v) {
                 $v['attempts'] = (int) $v['attempts'] + 1;
                 if ($v['attempts'] >= 5) {

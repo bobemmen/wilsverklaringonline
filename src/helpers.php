@@ -31,6 +31,27 @@ function fmt_datetime(?int $ts): string
     return $ts ? date('d-m-Y H:i', $ts) : '';
 }
 
+/**
+ * Geboortedatum uit een formulier of zoekveld: accepteert 1985-03-07, 07-03-1985, 7-3-1985, 7/3/1985, 7.3.1985.
+ * Geeft de ISO-vorm (1985-03-07) terug, of null bij een ongeldige datum of een jaartal buiten 1900 tot vandaag.
+ */
+function parse_dob(string $value): ?string
+{
+    $value = trim($value);
+    if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $value, $m)) {
+        [$y, $mo, $d] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+    } elseif (preg_match('/^(\d{1,2})[-\/. ](\d{1,2})[-\/. ](\d{4})$/', $value, $m)) {
+        [$d, $mo, $y] = [(int) $m[1], (int) $m[2], (int) $m[3]];
+    } else {
+        return null;
+    }
+    if (!checkdate($mo, $d, $y) || $y < 1900) {
+        return null;
+    }
+    $iso = sprintf('%04d-%02d-%02d', $y, $mo, $d);
+    return $iso > date('Y-m-d') ? null : $iso;
+}
+
 /** "2026-11-01" (veld van een datumkiezer) → "01-11-2026"; andere waarden blijven ongewijzigd. */
 function fmt_iso_date(string $value): string
 {

@@ -49,6 +49,7 @@ final class ArtsController extends Controller
             $artsFilter = '';
         }
         $q = $searching ? mb_strtolower(trim($this->input('q'))) : '';
+        $qDate = $q !== '' ? parse_dob($q) : null;   // 7-3-1985 en 1985-03-07 vinden dezelfde patiënt
         $status = $searching ? $this->input('status') : '';
         $statuses = ['geverifieerd', 'uitgenodigd', 'ingetrokken', 'verlopen'];
 
@@ -70,7 +71,8 @@ final class ArtsController extends Controller
             if ($status !== '' && in_array($status, $statuses, true) && $v['effective'] !== $status) {
                 continue;
             }
-            if ($q !== '' && !str_contains(mb_strtolower($v['patient_name'] . ' ' . $v['patient_email'] . ' ' . $v['his_id'] . ' ' . ($v['owner_name'] ?? '')), $q)) {
+            if ($q !== '' && !str_contains(mb_strtolower($v['patient_name'] . ' ' . $v['patient_email'] . ' ' . $v['his_id'] . ' ' . ($v['owner_name'] ?? '') . ' ' . fmt_iso_date((string) ($v['birthdate'] ?? ''))), $q)
+                && !($qDate !== null && ($v['birthdate'] ?? null) === $qDate)) {
                 continue;
             }
             $items[] = $v;
@@ -103,7 +105,8 @@ final class ArtsController extends Controller
         $name = trim($this->input('name'));
         $email = mb_strtolower(trim($this->input('email')));
         $his = strtoupper(trim($this->input('his_id')));
-        $old = ['name' => $name, 'email' => $email, 'his_id' => $his];
+        $birth = parse_dob($this->input('birthdate'));
+        $old = ['name' => $name, 'email' => $email, 'his_id' => $his, 'birthdate' => trim($this->input('birthdate'))];
 
         $errors = [];
         if ($name === '' || mb_strlen($name) > 120) {
@@ -111,6 +114,9 @@ final class ArtsController extends Controller
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
             $errors['email'] = 'Vul een geldig e-mailadres in.';
+        }
+        if ($birth === null) {
+            $errors['birthdate'] = 'Vul de geboortedatum van de patiënt in (bijvoorbeeld 07-03-1985).';
         }
         if (!preg_match('/^[A-Z0-9-]{8,64}$/', $his)) {
             $errors['his_id'] = 'Vul het patiënt-ID uit het HIS in (8–64 tekens: letters, cijfers en streepjes).';
@@ -143,6 +149,7 @@ final class ArtsController extends Controller
         $result = $store->addVerification($arts['id'], $practiceRow['id'], $email, [
             'patient_name' => $name,
             'his_id' => $his,
+            'birthdate' => $birth,
             'arts_name' => $arts['name'],   // de arts die de patiënt heeft gezien en geïdentificeerd (blijft zo staan)
             'practice' => $practiceRow['name'],
         ]);
@@ -154,7 +161,7 @@ final class ArtsController extends Controller
             "Beste $name,\n\n"
             . "Uw huisarts, {$arts['name']}$practice, nodigt u uit om uw wilsverklaring online te maken.\n\n"
             . "U registreert u op deze pagina (veertien dagen geldig):\n" . $this->app->url('/registreren') . "\n\n"
-            . "Vul daar uw naam, dit e-mailadres en een wachtwoord in, samen met de code van 6 cijfers die uw huisarts u op papier heeft gegeven. "
+            . "Vul daar uw naam, dit e-mailadres, uw geboortedatum en een wachtwoord in, samen met de code van 6 cijfers die uw huisarts u op papier heeft gegeven. "
             . "Daarmee is meteen uw identiteit bevestigd.\n\n"
             . "Deel de code met niemand. Verwachtte u deze e-mail niet? Dan kunt u hem negeren."
         );

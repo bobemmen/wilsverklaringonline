@@ -13,7 +13,7 @@
 |---|---|---|
 | Naam, e-mailadres, wachtwoord (versleuteld), instellingen | Account, inloggen, beveiligen | Uw toestemming; de overeenkomst voor het gebruik van de website |
 | Uw wilsverklaring en eerdere versies (gezondheidsgegevens en uw wensen) | Uw verklaring opstellen, bewaren en laten lezen door wie u kiest | Uw uitdrukkelijke toestemming (art. 6 lid 1 sub a en art. 9 lid 2 sub a AVG) |
-| Door de huisarts ingevoerd: naam, e-mailadres, patiëntnummer in het HIS, welke arts u zag, datum | Bevestigen dat u het echt bent en dat bewijzen bij uw verklaring | Uw toestemming, gegeven aan uw huisarts en bij registratie |
+| Door de huisarts ingevoerd: naam, e-mailadres, geboortedatum, patiëntnummer in het HIS, welke arts u zag, datum | Bevestigen dat u het echt bent en dat bewijzen bij uw verklaring | Uw toestemming, gegeven aan uw huisarts en bij registratie |
 | Inzage- en toegangslog (wie, wanneer, IP-adres, apparaattype) | U laten zien wie uw verklaring las; misbruik opsporen; beveiliging | Gerechtvaardigd belang (art. 6 lid 1 sub f AVG) en de beveiligingsplicht (art. 32 AVG) |
 | Tijdelijke technische gegevens (sessie, aantal pogingen) | Beveiliging tegen misbruik | Gerechtvaardigd belang |
 

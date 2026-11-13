@@ -28,6 +28,12 @@
             <?= $this->fieldError('email') ?>
         </div>
         <div class="field">
+            <label for="birthdate">Geboortedatum patiënt</label>
+            <p class="hint" id="birthdate-hint">Uit het dossier of van het identiteitsbewijs, bijvoorbeeld 07-03-1985. De patiënt moet deze datum bij registratie ook invullen.</p>
+            <input type="text" id="birthdate" name="birthdate" value="<?= e($this->old('birthdate')) ?>" inputmode="numeric" maxlength="10" placeholder="dd-mm-jjjj" autocomplete="off" required aria-describedby="birthdate-hint"<?= $this->invalid('birthdate') ?>>
+            <?= $this->fieldError('birthdate') ?>
+        </div>
+        <div class="field">
             <label for="his_id">Patiënt-ID uit het HIS</label>
             <p class="hint" id="his-hint">Kopieer het ID uit het patiëntdossier. De patiënt kent dit ID niet; het wordt als bewijs bij de verklaring bewaard.</p>
             <input type="text" id="his_id" name="his_id" value="<?= e($this->old('his_id')) ?>" maxlength="64" spellcheck="false" required aria-describedby="his-hint"<?= $this->invalid('his_id') ?>>
@@ -46,7 +52,7 @@
             </label>
             <label class="choice">
                 <input type="checkbox" name="toestemming" value="1" required>
-                <span><span class="choice-label">De patiënt weet dat ik naam, e-mailadres en HIS-ID invoer in dit platform en gaat hiermee mondeling akkoord.</span></span>
+                <span><span class="choice-label">De patiënt weet dat ik naam, e-mailadres, geboortedatum en HIS-ID invoer in dit platform en gaat hiermee mondeling akkoord.</span></span>
             </label>
             <p class="muted">Uw naam, praktijk, de datum en een deel van het patiënt-ID worden bij de verklaring getoond. U bevestigt de identiteit, niet de inhoud van de verklaring.</p>
         </fieldset>
@@ -61,7 +67,7 @@
     <form method="post" action="/arts/zoeken" class="search" role="search" aria-label="Zoek in uw patiënten" autocomplete="off">
         <?= $this->csrf() ?>
         <div class="field">
-            <label for="q">Zoek op naam, e-mailadres of HIS-ID</label>
+            <label for="q">Zoek op naam, geboortedatum, e-mailadres of HIS-ID</label>
             <input type="search" id="q" name="q" value="<?= e($filter['q']) ?>" autocomplete="off">
         </div>
         <div class="field">
@@ -101,7 +107,7 @@
                 <tbody>
                 <?php foreach ($items as $v): ?>
                     <tr>
-                        <th scope="row"><?= e($v['patient_name']) ?></th>
+                        <th scope="row"><?= e($v['patient_name']) ?><?php if (!empty($v['birthdate'])): ?><br><span class="muted"><?= e(fmt_iso_date($v['birthdate'])) ?></span><?php endif ?></th>
                         <td><?php if ($v['owner_name']): ?><?= e($v['owner_name']) ?><?= $v['arts_id'] === $me ? ' <span class="muted">(u)</span>' : '' ?><?php else: ?><span class="badge badge-muted">Praktijk</span><?php endif ?></td>
                         <td><?= e(fmt_date($v['created_at'])) ?></td>
                         <td>
