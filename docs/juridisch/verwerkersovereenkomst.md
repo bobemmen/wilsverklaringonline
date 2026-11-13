@@ -19,9 +19,9 @@
 2.2 De Verwerker meldt het als hij vindt dat een instructie in strijd is met de AVG.
 2.3 De Verwerker gebruikt de gegevens niet voor eigen doeleinden en voert geen analyse, profilering of verkoop uit.
 
-## 3. BSN
+## 3. Geen BSN
 
-De Verwerker gebruikt het BSN uitsluitend als controlewaarde (HMAC) en slaat het niet leesbaar op. De partijen leggen vast dat dit gebruik plaatsvindt namens de zorgaanbieder en alleen zolang daarvoor een wettelijke grondslag bestaat. *[Pas aan op basis van het besluit in `rollen-en-grondslagen.md` §4. Bij optie B vervalt dit artikel en worden BSN-gegevens niet verwerkt.]*
+De Verwerker vraagt, verwerkt en bewaart geen BSN. Wil de Verwerkingsverantwoordelijke dit in de toekomst wel, dan is daarvoor eerst een schriftelijk besluit na juridische toetsing nodig (zie `rollen-en-grondslagen.md` §4) en een aanpassing van deze overeenkomst.
 
 ## 4. Vertrouwelijkheid
 
@@ -80,8 +80,8 @@ Plaats en datum: ________  Handtekeningen: ________
 | | |
 |---|---|
 | Doel | Uitnodigen en identiteit bevestigen van patiënten door huisartsen; artsaccounts beheren; gepubliceerde verklaringen tonen aan artsen van de praktijk |
-| Aard | Opslaan (versleuteld), tonen, zoeken (exact op HMAC van BSN en op naam/e-mail/HIS-ID binnen de praktijk), loggen |
-| Gegevens | Naam, e-mailadres, HIS-patiënt-ID, BSN-controlewaarde, naam en praktijk van de bevestigende arts, datum, status; artsgegevens (naam, e-mail, rol, 2FA-gegevens, herstelcode-hashes); inzagelog; inhoud van gepubliceerde verklaringen (alleen tonen) |
+| Aard | Opslaan (versleuteld), tonen, zoeken (op naam, e-mailadres en HIS-ID binnen de praktijk), loggen |
+| Gegevens | Naam, e-mailadres, HIS-patiënt-ID, naam en praktijk van de bevestigende arts, datum, status; artsgegevens (naam, e-mail, rol, 2FA-gegevens, herstelcode-hashes); inzagelog; inhoud van gepubliceerde verklaringen (alleen tonen) |
 | Bijzondere gegevens | Ja (gezondheid, wensen levenseinde) |
 | Betrokkenen | Patiënten, artsen van de praktijk |
 | Bewaartermijn | Zie privacyverklaring; uitnodigingen zonder registratie: 14 dagen + 30 dagen |
@@ -89,7 +89,7 @@ Plaats en datum: ________  Handtekeningen: ________
 ## Bijlage 2 – Beveiligingsmaatregelen (stand pilot)
 
 - Versleuteling van alle gegevens in rust: XChaCha20-Poly1305 per record met binding aan tabel en record-id; sleutel buiten de database; zoekindexen met HMAC.
-- BSN alleen als HMAC.
+- Geen BSN-verwerking.
 - Verplichte tweestapsverificatie (TOTP) voor artsen en patiënten; herstelcodes (eenmalig, alleen hash bewaard).
 - Wachtwoorden met Argon2id; minimaal 12 tekens voor artsen en 10 voor patiënten; verplichte wijziging van tijdelijke wachtwoorden.
 - Beveiligingsheaders (CSP zonder inline scripts, HSTS, no-store), CSRF-beveiliging, rate limiting op inloggen, registratie, uitnodigen en codes.

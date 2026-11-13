@@ -10,11 +10,6 @@
         <?= $this->fieldError('name') ?>
     </div>
     <div class="field">
-        <label for="bsn">Uw BSN</label>
-        <input type="text" id="bsn" name="bsn" inputmode="numeric" pattern="[0-9 ]{8,11}" maxlength="11" required<?= $this->invalid('bsn') ?>>
-        <?= $this->fieldError('bsn') ?>
-    </div>
-    <div class="field">
         <label for="email">E-mailadres</label>
         <p class="hint" id="email-hint">Gebruik het e-mailadres dat uw huisarts van u heeft.</p>
         <input type="email" id="email" name="email" value="<?= e($this->old('email')) ?>" autocomplete="username" required aria-describedby="email-hint"<?= $this->invalid('email') ?>>

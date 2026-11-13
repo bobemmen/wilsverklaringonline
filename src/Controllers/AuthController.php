@@ -54,7 +54,6 @@ final class AuthController extends Controller
         $store = $this->app->store;
         $name = trim($this->input('name'));
         $email = mb_strtolower(trim($this->input('email')));
-        $bsn = trim($this->input('bsn'));
         $code = preg_replace('/\D/', '', $this->input('code')) ?? '';
         $password = $this->input('password');
         $old = ['name' => $name, 'email' => $email];
@@ -65,9 +64,6 @@ final class AuthController extends Controller
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
             $errors['email'] = 'Vul een geldig e-mailadres in.';
-        }
-        if (!valid_bsn($bsn)) {
-            $errors['bsn'] = 'Dit is geen geldig BSN.';
         }
         if (strlen($code) !== 6) {
             $errors['code'] = 'Vul de code van 6 cijfers in die uw huisarts u op papier heeft gegeven.';
@@ -89,13 +85,13 @@ final class AuthController extends Controller
         // Pogingen tellen per adres én per e-mailadres, ook als het adres niet is uitgenodigd (geen detectie van uitgenodigde adressen).
         $ipOk = $this->app->limiter->attempt('register|' . $this->app->request->ip(), 10, 3600);
         $mailOk = $this->app->limiter->attempt('register-mail|' . $this->app->crypto->index('email', $email), 8, 3600);
-        $mismatch = 'Deze combinatie van e-mailadres, BSN en code klopt niet, of de uitnodiging is verlopen. Vraag uw huisarts om hulp.';
+        $mismatch = 'Deze combinatie van e-mailadres en code klopt niet, of de uitnodiging is verlopen. Vraag uw huisarts om hulp.';
         if (!$ipOk || !$mailOk) {
             return $this->fail('/registreren', ['code' => 'Te veel pogingen. Probeer het later opnieuw.'], $old);
         }
 
         $match = null;
-        foreach ($store->openVerifications($email, $bsn) as $v) {
+        foreach ($store->openVerifications($email) as $v) {
             if (hash_equals($v['code_mac'], $store->codeMac($v['id'], $code))) {
                 $match = $v;
                 break;
@@ -103,7 +99,7 @@ final class AuthController extends Controller
         }
         if ($match === null) {
             // foute code bij een bestaande uitnodiging telt mee; na 5 pogingen vervalt hij
-            foreach ($store->openVerifications($email, $bsn) as $v) {
+            foreach ($store->openVerifications($email) as $v) {
                 $v['attempts'] = (int) $v['attempts'] + 1;
                 if ($v['attempts'] >= 5) {
                     $v['status'] = 'ingetrokken';

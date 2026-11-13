@@ -11,7 +11,7 @@ namespace WV;
 final class Legal
 {
     /** Verhogen als de pilotinformatie of privacyverklaring inhoudelijk wijzigt; wordt bij de toestemming vastgelegd. */
-    public const VERSION = '2026-11-pilot-1';
+    public const VERSION = '2026-11-pilot-2';
 
     public const PAGES = [
         'pilot' => ['pilotinformatie.md', 'Pilotinformatie'],

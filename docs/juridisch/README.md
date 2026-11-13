@@ -4,7 +4,7 @@
 
 | Bestand | Inhoud | Voor wie |
 |---|---|---|
-| `rollen-en-grondslagen.md` | Wie is verantwoordelijke/verwerker, grondslagen, **BSN-rechtsgrond**, wie is waarvoor verantwoordelijk | Besluit vooraf |
+| `rollen-en-grondslagen.md` | Wie is verantwoordelijke/verwerker, grondslagen, **besluit: geen BSN**, wie is waarvoor verantwoordelijk | Besluit vooraf |
 | `dpia.md` | Gegevensbeschermingseffectbeoordeling (DPIA) | Exploitant + praktijk |
 | `verwerkersovereenkomst.md` | Overeenkomst tussen praktijk en exploitant (art. 28 AVG) | Ondertekenen |
 | `datalekprocedure.md` | Wie meldt wat, binnen 72 uur, aan wie | Intern + praktijk |
@@ -17,7 +17,7 @@ De drie patiëntteksten worden in de app getoond. Naam en adres van de exploitan
 ## Besluiten en acties vóór de pilot
 
 1. **Wie is de exploitant?** (rechtspersoon of eenmanszaak, KvK, adres, contactpersoon privacy). Alle documenten gaan daarvan uit.
-2. **BSN: grondslag.** Zie `rollen-en-grondslagen.md` §4. Kies optie A (toetsing: verwerking namens de zorgaanbieder) of optie B (BSN uit de registratie halen). Dit is het belangrijkste open punt.
+2. **BSN: besloten (optie B).** De applicatie vraagt, verwerkt en bewaart geen BSN meer; er is dus geen BSN-rechtsgrond nodig. Zie `rollen-en-grondslagen.md` §4.
 3. **FG of privacyadviseur:** laat DPIA en documenten toetsen; de huisartsenpraktijk heeft vaak al een FG-dienst (via ketenpartner of huisartsenorganisatie).
 4. **Hostingkeuze** (nog open) en verwerkersovereenkomsten met hoster en mailprovider; vul bijlage 3 van de verwerkersovereenkomst in.
 5. **Sleutelbeheer en back-upbeleid** vastleggen: wie heeft toegang tot `APP_KEY`, waar liggen kopieën, back-upfrequentie en -bewaartermijn (de privacyverklaring noemt een termijn).

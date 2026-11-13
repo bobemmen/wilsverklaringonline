@@ -19,7 +19,7 @@ Dit is een **pilot**: een proef bij de praktijk {{praktijk}}. De website kan nog
 - Uw naam en e-mailadres, en uw wachtwoord (niet leesbaar opgeslagen).
 - Uw wilsverklaring met alle eerdere versies.
 - Wie uw verklaring heeft ingezien, en wanneer.
-- Van de uitnodiging door uw huisarts: het patiëntnummer in het huisartsensysteem en welke arts u heeft gezien. Uw **BSN** slaan wij niet leesbaar op. Wij gebruiken het alleen om te controleren dat de uitnodiging bij u hoort.
+- Van de uitnodiging door uw huisarts: het patiëntnummer in het huisartsensysteem en welke arts u heeft gezien. Wij vragen en bewaren uw **BSN** niet.
 
 Alles wordt versleuteld opgeslagen, in Nederland of de Europese Unie.
 

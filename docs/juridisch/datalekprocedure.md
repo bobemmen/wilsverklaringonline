@@ -65,7 +65,7 @@ De **72 uur** gelden voor de verwerkingsverantwoordelijke en beginnen op het mom
 - Datum/tijd ontdekking (T0) en wie ontdekte het:
 - Aard van het incident (wat, hoe, hoe lang al):
 - Categorieën betrokkenen en geschat aantal:
-- Categorieën gegevens (bijzonder? BSN?) en geschat aantal records:
+- Categorieën gegevens (bijzonder? — er worden geen BSN's verwerkt) en geschat aantal records:
 - Waren de gegevens versleuteld? Is de sleutel mogelijk bekend?
 - Waarschijnlijke gevolgen voor betrokkenen:
 - Genomen en voorgenomen maatregelen:

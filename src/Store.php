@@ -440,29 +440,22 @@ final class Store
         return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     }
 
-    /** Het BSN wordt nooit bewaard, alleen als HMAC om later te kunnen vergelijken. */
-    public function bsnProof(string $bsn): string
+    /** Zoeksleutel: een uitnodiging hoort bij een e-mailadres. Er wordt geen BSN verwerkt of bewaard. */
+    public function verificationKey(string $email): string
     {
-        return $this->crypto->mac('bsn', preg_replace('/\D/', '', $bsn));
-    }
-
-    /** Zoeksleutel: een uitnodiging hoort bij precies één combinatie van e-mailadres en BSN. */
-    public function verificationKey(string $email, string $bsn): string
-    {
-        return $this->crypto->index('invite', mb_strtolower(trim($email)) . '|' . preg_replace('/\D/', '', $bsn));
+        return $this->crypto->index('invite', mb_strtolower(trim($email)));
     }
 
     /**
      * Legt de uitnodiging van de arts vast; de arts heeft de patiënt daarbij in persoon gezien en geïdentificeerd.
      * @return array{verification: array, code: string} de code staat alleen hier in platte tekst
      */
-    public function addVerification(string $artsId, string $practiceId, string $email, string $bsn, array $fields): array
+    public function addVerification(string $artsId, string $practiceId, string $email, array $fields): array
     {
         $id = $this->newId();
         $code = $this->newCode();
         $data = $fields + [
             'patient_email' => mb_strtolower(trim($email)),
-            'bsn_proof' => $this->bsnProof($bsn),
             'code_mac' => $this->codeMac($id, $code),
             'status' => 'uitgenodigd', // uitgenodigd | geverifieerd | ingetrokken
             'attempts' => 0,
@@ -476,17 +469,17 @@ final class Store
         ];
         $this->db->run(
             'INSERT INTO verifications (id, practice_id, arts_id, patient_user_id, key_idx, data) VALUES (?, ?, ?, NULL, ?, ?)',
-            [$id, $practiceId, $artsId, $this->verificationKey($email, $bsn), $this->seal('verifications', $id, $data)]
+            [$id, $practiceId, $artsId, $this->verificationKey($email), $this->seal('verifications', $id, $data)]
         );
         return ['verification' => ['id' => $id, 'practice_id' => $practiceId, 'arts_id' => $artsId, 'patient_user_id' => null] + $data, 'code' => $code];
     }
 
-    /** Openstaande uitnodigingen voor dit e-mailadres + BSN (nieuwste eerst). @return list<array> */
-    public function openVerifications(string $email, string $bsn): array
+    /** Openstaande uitnodigingen voor dit e-mailadres (nieuwste eerst). @return list<array> */
+    public function openVerifications(string $email): array
     {
         $rows = $this->db->all(
             'SELECT id, practice_id, arts_id, patient_user_id, data FROM verifications WHERE key_idx = ? ORDER BY seq DESC',
-            [$this->verificationKey($email, $bsn)]
+            [$this->verificationKey($email)]
         );
         $open = [];
         foreach ($rows as $r) {

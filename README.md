@@ -134,14 +134,14 @@ tests/           unit- en end-to-end tests
 Een patiënt kan zich **alleen** registreren nadat zijn huisarts hem heeft uitgenodigd. Zo is de identiteit van elke patiënt meteen door een arts bevestigd.
 
 - Huisartsaccounts worden alleen door de beheerder aangemaakt: `php bin/console arts:aanmaken "Dr. Jansen" jansen@praktijk.nl "Praktijknaam"`. Het tijdelijke wachtwoord wordt eenmalig getoond; tweestapsverificatie is verplicht.
-- In `/arts` vult de arts naam, e-mailadres, BSN (elfproef) en het HIS-patiënt-ID in en vinkt aan dat hij de patiënt in persoon heeft gezien en de identiteit heeft gecontroleerd. Hij krijgt een code van 6 cijfers (eenmalig getoond, alleen als HMAC bewaard) en geeft die de patiënt op papier mee. De patiënt krijgt ook een e-mail met de registratiepagina (zonder code).
-- De patiënt registreert zich op `/registreren` met naam, BSN, hetzelfde e-mailadres, wachtwoord en de code. E-mailadres, BSN en code moeten bij dezelfde uitnodiging horen (14 dagen geldig); een ander e-mailadres werkt niet. Na 5 foute codes vervalt de uitnodiging. Het BSN wordt nooit leesbaar opgeslagen.
+- In `/arts` vult de arts naam, e-mailadres en het HIS-patiënt-ID in en vinkt aan dat hij de patiënt in persoon heeft gezien en de identiteit heeft gecontroleerd. Hij krijgt een code van 6 cijfers (eenmalig getoond, alleen als HMAC bewaard) en geeft die de patiënt op papier mee. De patiënt krijgt ook een e-mail met de registratiepagina (zonder code).
+- De patiënt registreert zich op `/registreren` met naam, hetzelfde e-mailadres, wachtwoord en de code. E-mailadres en code moeten bij dezelfde uitnodiging horen (14 dagen geldig); een ander e-mailadres werkt niet. Na 5 foute codes vervalt de uitnodiging. Er wordt bewust **geen BSN** gevraagd of bewaard (zie `docs/juridisch/rollen-en-grondslagen.md` §4).
 - Met de registratie is de identiteit bevestigd. Lezers zien arts, praktijk, datum en de laatste 6 tekens van het HIS-ID (ook in de PDF). De bevestiging geldt voor het account en hoeft niet te worden herhaald na wijzigingen. De arts kan een nieuwe code maken of de uitnodiging intrekken; de patiënt kan de koppeling met de huisarts intrekken.
 - De arts kan de gepubliceerde verklaring van zijn geregistreerde patiënten lezen (dat wordt gelogd).
 
 ### Patiënten terugzoeken (huisarts)
 
-Op `/arts` ziet de huisarts uitsluitend de eigen uitgenodigde patiënten. Zoeken kan op naam, e-mailadres of HIS-patiënt-ID (deelmatch), en apart op BSN (alleen exact, vergelijking via de HMAC-proof; het BSN staat nergens leesbaar). Het zoekformulier gebruikt POST (`/arts/zoeken`) zodat het BSN niet in URL, serverlog of browsergeschiedenis terechtkomt. Verder: statusfilter (geregistreerd / wacht op registratie / ingetrokken / verlopen) en paginering (20 per pagina).
+Op `/arts` ziet de huisarts uitsluitend de eigen uitgenodigde patiënten. Zoeken kan op naam, e-mailadres of HIS-patiënt-ID (deelmatch), (geen BSN). Het zoekformulier gebruikt POST (`/arts/zoeken`) zodat zoektermen niet in URL, serverlog of browsergeschiedenis terechtkomen. Verder: statusfilter (geregistreerd / wacht op registratie / ingetrokken / verlopen) en paginering (20 per pagina).
 
 ## Praktijk, team en herstelcodes
 
@@ -156,7 +156,7 @@ Op `/arts` ziet de huisarts uitsluitend de eigen uitgenodigde patiënten. Zoeken
 
 ## Juridische stukken
 
-Zie `docs/juridisch/README.md`: rollen en BSN-grondslag, DPIA, verwerkersovereenkomst, datalekprocedure, pilotinformatie, privacyverklaring en gebruiksvoorwaarden (de laatste drie worden op `/pilot`, `/privacy` en `/voorwaarden` getoond; vul `OPERATOR_NAME`, `OPERATOR_ADDRESS`, `PRIVACY_CONTACT_EMAIL` en `PILOT_PRACTICE_NAME` in `.env` in). Alles is concept en moet door een jurist/FG worden getoetst.
+Zie `docs/juridisch/README.md`: rollen en grondslagen (besluit: geen BSN), DPIA, verwerkersovereenkomst, datalekprocedure, pilotinformatie, privacyverklaring en gebruiksvoorwaarden (de laatste drie worden op `/pilot`, `/privacy` en `/voorwaarden` getoond; vul `OPERATOR_NAME`, `OPERATOR_ADDRESS`, `PRIVACY_CONTACT_EMAIL` en `PILOT_PRACTICE_NAME` in `.env` in). Alles is concept en moet door een jurist/FG worden getoetst.
 
 ## Identificatie en ondertekening
 

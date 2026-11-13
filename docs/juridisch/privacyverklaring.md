@@ -13,15 +13,15 @@
 |---|---|---|
 | Naam, e-mailadres, wachtwoord (versleuteld), instellingen | Account, inloggen, beveiligen | Uw toestemming; de overeenkomst voor het gebruik van de website |
 | Uw wilsverklaring en eerdere versies (gezondheidsgegevens en uw wensen) | Uw verklaring opstellen, bewaren en laten lezen door wie u kiest | Uw uitdrukkelijke toestemming (art. 6 lid 1 sub a en art. 9 lid 2 sub a AVG) |
-| Door de huisarts ingevoerd: naam, e-mailadres, patiëntnummer in het HIS, welke arts u zag, datum; van het BSN alleen een niet-herleidbare controlewaarde | Bevestigen dat u het echt bent en dat bewijzen bij uw verklaring | Uw toestemming, gegeven aan uw huisarts en bij registratie |
+| Door de huisarts ingevoerd: naam, e-mailadres, patiëntnummer in het HIS, welke arts u zag, datum | Bevestigen dat u het echt bent en dat bewijzen bij uw verklaring | Uw toestemming, gegeven aan uw huisarts en bij registratie |
 | Inzage- en toegangslog (wie, wanneer, IP-adres, apparaattype) | U laten zien wie uw verklaring las; misbruik opsporen; beveiliging | Gerechtvaardigd belang (art. 6 lid 1 sub f AVG) en de beveiligingsplicht (art. 32 AVG) |
 | Tijdelijke technische gegevens (sessie, aantal pogingen) | Beveiliging tegen misbruik | Gerechtvaardigd belang |
 
 Wij gebruiken geen tracking, geen advertenties en geen analysediensten. De website plaatst alleen functionele cookies (inloggen en uw weergave-instellingen); daarvoor is geen toestemming nodig.
 
-## BSN
+## Geen BSN
 
-Uw BSN gebruiken wij alleen om te controleren dat de uitnodiging van uw huisarts bij u hoort. Wij bewaren het niet leesbaar: alleen een controlewaarde waaruit het BSN niet is terug te halen. Wij gebruiken het niet voor andere doelen.
+Wij vragen en bewaren uw burgerservicenummer (BSN) niet. Uw huisarts controleert uw identiteit in persoon; daarna koppelen het e-mailadres waarop u bent uitgenodigd en de code op papier de uitnodiging aan u.
 
 ## Wie ontvangt uw gegevens?
 

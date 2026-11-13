@@ -14,7 +14,7 @@
 
 <section class="card" aria-labelledby="i-nieuw">
     <h2 class="card-title" id="i-nieuw">Patiënt uitnodigen</h2>
-    <p class="muted">Nodig alleen een patiënt uit die u in persoon heeft gezien. U krijgt een code van 6 cijfers die u de patiënt op papier meegeeft. Daarmee registreert de patiënt zich, samen met e-mailadres en BSN; zijn identiteit is dan meteen bevestigd. Een patiënt kan zich niet op een andere manier registreren.</p>
+    <p class="muted">Nodig alleen een patiënt uit die u in persoon heeft gezien. U krijgt een code van 6 cijfers die u de patiënt op papier meegeeft. Daarmee registreert de patiënt zich, samen met zijn e-mailadres; zijn identiteit is dan meteen bevestigd. Een patiënt kan zich niet op een andere manier registreren.</p>
     <form method="post" action="/arts/uitnodigen" autocomplete="off">
         <?= $this->csrf() ?>
         <div class="field">
@@ -26,11 +26,6 @@
             <label for="email">E-mailadres patiënt</label>
             <input type="email" id="email" name="email" value="<?= e($this->old('email')) ?>" required<?= $this->invalid('email') ?>>
             <?= $this->fieldError('email') ?>
-        </div>
-        <div class="field">
-            <label for="bsn">BSN</label>
-            <input type="text" id="bsn" name="bsn" inputmode="numeric" pattern="[0-9 ]{8,11}" maxlength="11" required<?= $this->invalid('bsn') ?>>
-            <?= $this->fieldError('bsn') ?>
         </div>
         <div class="field">
             <label for="his_id">Patiënt-ID uit het HIS</label>
@@ -51,7 +46,7 @@
             </label>
             <label class="choice">
                 <input type="checkbox" name="toestemming" value="1" required>
-                <span><span class="choice-label">De patiënt weet dat ik naam, e-mailadres, BSN en HIS-ID invoer in dit platform en gaat hiermee mondeling akkoord.</span></span>
+                <span><span class="choice-label">De patiënt weet dat ik naam, e-mailadres en HIS-ID invoer in dit platform en gaat hiermee mondeling akkoord.</span></span>
             </label>
             <p class="muted">Uw naam, praktijk, de datum en een deel van het patiënt-ID worden bij de verklaring getoond. U bevestigt de identiteit, niet de inhoud van de verklaring.</p>
         </fieldset>
@@ -61,17 +56,13 @@
 
 <section class="card" aria-labelledby="i-lijst">
     <h2 class="card-title" id="i-lijst">Uitnodigingen en verificaties</h2>
-    <?php $filtered = $filter['q'] !== '' || $filter['bsn'] !== '' || $filter['status'] !== '' || $filter['arts'] !== '' ?>
+    <?php $filtered = $filter['q'] !== '' || $filter['status'] !== '' || $filter['arts'] !== '' ?>
     <?php if ($total > 0): ?>
     <form method="post" action="/arts/zoeken" class="search" role="search" aria-label="Zoek in uw patiënten" autocomplete="off">
         <?= $this->csrf() ?>
         <div class="field">
             <label for="q">Zoek op naam, e-mailadres of HIS-ID</label>
             <input type="search" id="q" name="q" value="<?= e($filter['q']) ?>" autocomplete="off">
-        </div>
-        <div class="field">
-            <label for="zbsn">Zoek op BSN (exact)</label>
-            <input type="text" id="zbsn" name="bsn" value="<?= e($filter['bsn']) ?>" inputmode="numeric" maxlength="11" autocomplete="off">
         </div>
         <div class="field">
             <label for="zarts">Arts</label>

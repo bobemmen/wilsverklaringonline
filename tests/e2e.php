@@ -101,10 +101,10 @@ $arts = null;
 $his = 'C333CBA-F0C0-4521-8A75-33C6911C1E2C';
 
 /** De huisarts nodigt een patiënt uit; geeft de code op papier of null. */
-function invitePatient(Client $arts, string $name, string $email, string $bsn = '111222333', array $over = []): ?string
+function invitePatient(Client $arts, string $name, string $email, array $over = []): ?string
 {
     global $his;
-    $r = $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => $name, 'email' => $email, 'bsn' => $bsn, 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
+    $r = $arts->submit('/arts', '/arts/uitnodigen', $over + ['name' => $name, 'email' => $email, 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
     $page = $arts->follow($r);
     return preg_match('#class="paper-code"[^>]*>(\d{3}) (\d{3})<#', $page['body'], $m) ? $m[1] . $m[2] : null;
 }
@@ -115,7 +115,7 @@ function register(string $base, string $name, string $email, string $pw): Client
     (new PDO('sqlite:' . $dbfile))->exec('DELETE FROM throttle');
     $code = invitePatient($arts, $name, $email) ?? '';
     $c = new Client($base);
-    $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'bsn' => '111222333', 'code' => $code, 'password' => $pw, 'password_confirmation' => $pw, 'akkoord' => '1']);
+    $r = $c->submit('/registreren', '/registreren', ['name' => $name, 'email' => $email, 'code' => $code, 'password' => $pw, 'password_confirmation' => $pw, 'akkoord' => '1']);
     $page = $c->follow($r);
     preg_match('/token-box" aria-labelledby="sleutel-label">([A-Z2-7 ]+)</', $page['body'], $m);
     $secret = str_replace(' ', '', $m[1] ?? '');
@@ -178,26 +178,24 @@ T::ok(str_contains($r['body'], 'Concept'), 'nieuwe verklaring staat op Concept')
 T::ok(str_contains($r['body'], 'Welkom, '), 'persoonlijke begroeting');
 T::ok(str_contains($r['body'], 'Identiteit bevestigd door uw huisarts') && str_contains($r['body'], 'Dr. Jansen') && str_contains($r['body'], 'Bevestigd op ' . date('d-m-Y')), 'na registratie is de identiteit meteen bevestigd door de huisarts');
 
-T::section('Registreren alleen met uitnodiging, code, e-mailadres en BSN');
+T::section('Registreren alleen met uitnodiging, code en e-mailadres');
 clearThrottle($dbfile);
-$regBody = function (array $f) use ($base) { $cl = new Client($base); $r = $cl->submit('/registreren', '/registreren', $f + ['name' => 'Carla Smit', 'email' => 'carla@voorbeeld.nl', 'bsn' => '111222333', 'code' => '000000', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']); return $cl->follow($r)['body']; };
+$regBody = function (array $f) use ($base) { $cl = new Client($base); $r = $cl->submit('/registreren', '/registreren', $f + ['name' => 'Carla Smit', 'email' => 'carla@voorbeeld.nl', 'code' => '000000', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']); return $cl->follow($r)['body']; };
 $pw2 = 'Een-lang-wachtwoord-123';
 T::ok(str_contains((new Client($base))->get('/registreren')['body'], 'Code van uw huisarts'), 'registratieformulier vraagt om de code van de huisarts');
 T::ok(str_contains($regBody(['password' => $pw2]), 'klopt niet'), 'zonder uitnodiging is registreren niet mogelijk');
 $carla = invitePatient($arts, 'Carla Smit', 'carla@voorbeeld.nl');
 T::ok($carla !== null && strlen($carla) === 6, 'huisarts nodigt uit en krijgt een code van 6 cijfers');
-T::ok(str_contains($regBody(['email' => 'mallory@voorbeeld.nl', 'code' => $carla]), 'klopt niet'), 'andere e-mailadres met de juiste code en BSN werkt niet');
-T::ok(str_contains($regBody(['bsn' => '123456782', 'code' => $carla]), 'klopt niet'), 'ander BSN met de juiste code werkt niet');
-T::ok(str_contains($regBody(['bsn' => '123456789', 'code' => $carla]), 'geen geldig BSN'), 'ongeldig BSN (elfproef) wordt geweigerd');
+T::ok(str_contains($regBody(['email' => 'mallory@voorbeeld.nl', 'code' => $carla]), 'klopt niet'), 'ander e-mailadres met de juiste code werkt niet');
 T::ok(str_contains($regBody(['code' => $carla, 'password' => 'kort']), 'minimaal 10'), 'te kort wachtwoord wordt geweigerd');
 T::ok(str_contains($regBody(['code' => $carla === '123456' ? '654321' : '123456']), 'klopt niet'), 'foute code wordt geweigerd');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Anna', 'email' => 'anna@voorbeeld.nl', 'bsn' => '111222333', 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Anna', 'email' => 'anna@voorbeeld.nl', 'his_id' => $his, 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
 T::ok(str_contains($arts->follow($r)['body'], 'bestaat al een account'), 'arts kan niet uitnodigen met een bestaand e-mailadres');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'bsn' => '111222333', 'his_id' => $his, 'seen' => '1', 'toestemming' => '1']);
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'his_id' => $his, 'seen' => '1', 'toestemming' => '1']);
 T::ok(str_contains($arts->follow($r)['body'], 'alle drie de verklaringen'), 'arts moet alle bevestigingsvinkjes aanvinken');
-$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'bsn' => '123456789', 'his_id' => 'x', 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
+$r = $arts->submit('/arts', '/arts/uitnodigen', ['name' => 'Dirk', 'email' => 'dirk@voorbeeld.nl', 'his_id' => 'x', 'seen' => '1', 'identity' => '1', 'toestemming' => '1']);
 $b = $arts->follow($r)['body'];
-T::ok(str_contains($b, 'elfproef') && str_contains($b, 'patiënt-ID'), 'arts: ongeldig BSN en patiënt-ID worden geweigerd');
+T::ok(str_contains($b, 'patiënt-ID'), 'arts: ongeldig patiënt-ID wordt geweigerd');
 T::eq($c->get('/arts')['status'], 403, 'patiënt heeft geen toegang tot /arts');
 // blokkade na 5 foute codes
 clearThrottle($dbfile);
@@ -427,22 +425,21 @@ T::ok(str_contains($c->follow($r)['body'], 'klopt niet'), 'verwijderen vraagt he
 
 T::section('Huisarts: patiënten zoeken');
 clearThrottle($dbfile);
-invitePatient($arts, 'Eva Zoeker', 'eva@voorbeeld.nl', '123456782');
-$zoek = fn(array $f) => $arts->submit('/arts', '/arts/zoeken', $f + ['q' => '', 'bsn' => '', 'status' => ''])['body'];
+invitePatient($arts, 'Eva Zoeker', 'eva@voorbeeld.nl');
+$zoek = fn(array $f) => $arts->submit('/arts', '/arts/zoeken', $f + ['q' => '', 'status' => ''])['body'];
 $b = $zoek(['q' => 'zoeker']);
 T::ok(str_contains($b, 'Eva Zoeker') && !str_contains($b, 'Anna de Vries') && str_contains($b, '1 van'), 'zoeken op (een deel van de) naam, hoofdletterongevoelig');
 $b = $zoek(['q' => 'eva@voorbeeld']);
 T::ok(str_contains($b, 'Eva Zoeker'), 'zoeken op e-mailadres');
-$b = $zoek(['bsn' => '123 456 782']);
-T::ok(str_contains($b, 'Eva Zoeker') && !str_contains($b, 'Anna de Vries'), 'zoeken op BSN vindt exact één patiënt');
-T::ok(!str_contains(preg_replace('#<input[^>]*name="bsn"[^>]*>#', '', $b), '123456782'), 'het BSN wordt nergens in de lijst getoond');
-$b = $zoek(['bsn' => '123456783']);
-T::ok(str_contains($b, 'Geen patiënten gevonden'), 'ander BSN → niets gevonden');
+$b = $zoek(['q' => strtolower(substr($his, 0, 12))]);
+T::ok(str_contains($b, 'Eva Zoeker'), 'zoeken op (een deel van het) HIS-ID werkt');
+$b = $zoek(['q' => 'bestaat-niet']);
+T::ok(str_contains($b, 'Geen patiënten gevonden'), 'zoekterm zonder treffers → niets gevonden');
 $b = $zoek(['status' => 'geverifieerd']);
 T::ok(str_contains($b, 'Anna de Vries') && !str_contains($b, 'Eva Zoeker'), 'filter op status: alleen geregistreerde patiënten');
 $b = $zoek(['status' => 'uitgenodigd']);
 T::ok(str_contains($b, 'Eva Zoeker') && !str_contains($b, 'Anna de Vries'), 'filter op status: wacht op registratie');
-T::ok(str_contains($arts->get('/arts')['body'], 'method="post" action="/arts/zoeken"'), 'zoekformulier gebruikt POST (BSN komt niet in de URL)');
+T::ok(str_contains($arts->get('/arts')['body'], 'method="post" action="/arts/zoeken"'), 'zoekformulier gebruikt POST (zoektermen komen niet in de URL)');
 T::eq($c->req('POST', '/arts/zoeken', ['q' => 'x', '_token' => 'x'])['status'], 419, 'zoeken vereist CSRF-token');
 T::eq($c->submit('/dashboard', '/arts/zoeken', ['q' => 'Anna'])['status'], 403, 'een patiënt kan niet zoeken in artspatiënten');
 
@@ -522,7 +519,7 @@ $page = $bakker->follow($bakker->submit("/arts/patienten/$vid", "/arts/patienten
 T::ok(str_contains($page, 'staat nu bij u') && str_contains($page, 'overgenomen door Dr. Bakker') && str_contains($page, 'was: Dr. Jansen'), 'collega neemt de patiënt over; dit staat in de historie');
 T::ok(str_contains($page, 'Identiteit bevestigd door: <strong>Dr. Jansen'), 'na overnemen blijft de bevestigende arts Dr. Jansen');
 T::ok(str_contains($pubBody = (new Client($base))->get('/v/' . $token)['body'], 'Dr. Jansen'), 'leesweergave toont nog steeds de arts die de identiteit bevestigde');
-$zoek2 = fn(Client $cl, array $f) => $cl->submit('/arts', '/arts/zoeken', $f + ['q' => '', 'bsn' => '', 'status' => '', 'arts' => ''])['body'];
+$zoek2 = fn(Client $cl, array $f) => $cl->submit('/arts', '/arts/zoeken', $f + ['q' => '', 'status' => '', 'arts' => ''])['body'];
 T::ok(str_contains($zoek2($bakker, ['arts' => 'mine']), 'Anna de Vries') && !str_contains($zoek2($arts, ['arts' => 'mine']), 'Anna de Vries'), 'filter “mijn patiënten” klopt voor beide artsen');
 
 // herstelcodes
@@ -577,11 +574,11 @@ T::ok(!str_contains($tm, '/verwijderen'), 'beheerder kan zichzelf niet verwijder
 // niet-gebruikte uitnodigingen worden opgeruimd
 $st = new WV\Store(new WV\Db($dbfile), new WV\Crypto(WV\Crypto::parseKey($key)));
 $j = $st->userByEmail('jansen@praktijk.nl');
-$old = $st->addVerification($j['id'], $j['practice_id'], 'oud@voorbeeld.nl', '111222333', ['patient_name' => 'Oud Persoon', 'his_id' => 'X1234567', 'arts_name' => 'Dr. Jansen', 'practice' => 'x'])['verification'];
+$old = $st->addVerification($j['id'], $j['practice_id'], 'oud@voorbeeld.nl', ['patient_name' => 'Oud Persoon', 'his_id' => 'X1234567', 'arts_name' => 'Dr. Jansen', 'practice' => 'x'])['verification'];
 $old['expires_at'] = time() - 40 * 86400;
 $st->saveVerification($old);
 T::ok($st->purgeUnusedInvitations() >= 1 && $st->verificationById($old['id']) === null, 'verlopen uitnodiging wordt 30 dagen na verlopen opgeruimd');
-$fresh = $st->addVerification($j['id'], $j['practice_id'], 'vers@voorbeeld.nl', '111222333', ['patient_name' => 'Vers Persoon', 'his_id' => 'X1234567', 'arts_name' => 'Dr. Jansen', 'practice' => 'x'])['verification'];
+$fresh = $st->addVerification($j['id'], $j['practice_id'], 'vers@voorbeeld.nl', ['patient_name' => 'Vers Persoon', 'his_id' => 'X1234567', 'arts_name' => 'Dr. Jansen', 'practice' => 'x'])['verification'];
 $st->purgeUnusedInvitations();
 T::ok($st->verificationById($fresh['id']) !== null, 'een lopende uitnodiging blijft staan');
 $st->db->run('DELETE FROM verifications WHERE id = ?', [$fresh['id']]);
@@ -591,6 +588,7 @@ foreach (['/pilot' => 'Pilotinformatie', '/privacy' => 'Privacyverklaring', '/vo
     $r = (new Client($base))->get($path);
     T::ok($r['status'] === 200 && str_contains($r['body'], "<h1>$title") && str_contains($r['body'], 'invullen in .env'), "$path is openbaar en toont de (nog in te vullen) gegevens van de exploitant");
 }
+T::ok(!preg_match('/BSN/i', (new Client($base))->get('/registreren')['body']) && !preg_match('/BSN/i', $arts->get('/arts')['body']), 'er wordt nergens meer naar een BSN gevraagd (registratie en uitnodiging)');
 T::ok(str_contains($regBody(['akkoord' => '']), 'toestemming geven'), 'registreren vereist toestemming (pilotinformatie en privacyverklaring)');
 T::ok(str_contains((new Client($base))->get('/registreren')['body'], 'href="/pilot"') && str_contains((new Client($base))->get('/')['body'], 'href="/privacy"'), 'links naar de teksten staan op het registratieformulier en in de voettekst');
 
@@ -606,7 +604,7 @@ T::ok(str_contains($p['body'], 'ingetrokken') && !str_contains($p['body'], 'Nieu
 $rawArts = new PDO('sqlite:' . $dbfile);
 $rawArts->exec('PRAGMA wal_checkpoint(TRUNCATE)');
 $rawDb = file_get_contents($dbfile) . (is_file("$dbfile-wal") ? file_get_contents("$dbfile-wal") : '');
-foreach (['111222333', '111 222 333', 'C333CBA', 'jansen@praktijk', 'Wanroij', 'carla@voorbeeld', $carla, $carla4] as $needle) {
+foreach (['C333CBA', 'jansen@praktijk', 'Wanroij', 'carla@voorbeeld', $carla, $carla4] as $needle) {
     T::ok(!str_contains($rawDb, $needle), "'" . substr($needle, 0, 14) . "' niet leesbaar in database (verificaties)");
 }
 $cols2 = [];

@@ -37,24 +37,6 @@ function fmt_iso_date(string $value): string
     return preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m) ? "$m[3]-$m[2]-$m[1]" : $value;
 }
 
-/** Elfproef voor een BSN (9 cijfers; 8 cijfers krijgen een voorloopnul). */
-function valid_bsn(string $value): bool
-{
-    $digits = preg_replace('/\D/', '', $value) ?? '';
-    if (strlen($digits) === 8) {
-        $digits = '0' . $digits;
-    }
-    if (!preg_match('/^\d{9}$/', $digits) || $digits === '000000000') {
-        return false;
-    }
-    $sum = 0;
-    for ($i = 0; $i < 9; $i++) {
-        $weight = $i === 8 ? -1 : 9 - $i;
-        $sum += $weight * (int) $digits[$i];
-    }
-    return $sum % 11 === 0;
-}
-
 /** "1950-03-07" → DateTimeImmutable, of null als het geen echte datum in het verleden is. */
 function parse_birthdate(string $value): ?DateTimeImmutable
 {

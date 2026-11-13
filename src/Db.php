@@ -135,7 +135,7 @@ final class Db
                 SQL);
             }
             if ($version < 3) {
-                // Registratie alleen op uitnodiging: opzoeken gaat via een HMAC van e-mail + BSN (geen token meer).
+                // Registratie alleen op uitnodiging: opzoeken gaat via een HMAC van het e-mailadres (geen token meer, geen BSN).
                 $this->pdo->exec(<<<'SQL'
                 DROP TABLE IF EXISTS verifications;
                 CREATE TABLE verifications (

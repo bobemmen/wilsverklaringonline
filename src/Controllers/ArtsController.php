@@ -10,7 +10,7 @@ use WV\Response;
 
 /**
  * Omgeving voor de huisarts. De arts nodigt een patiënt uit na persoonlijk contact en geeft hem een code op papier.
- * Met die code (plus e-mailadres en BSN) registreert de patiënt zich; daarmee is zijn identiteit meteen bevestigd.
+ * Met die code (plus e-mailadres) registreert de patiënt zich; daarmee is zijn identiteit meteen bevestigd.
  *
  * Patiënten horen bij de praktijk: alle artsen van de praktijk zien elkaars patiënten en gepubliceerde verklaringen.
  * Per patiënt staat vast welke arts hem begeleidt (of dat hij op dit moment alleen bij de praktijk staat).
@@ -22,7 +22,7 @@ final class ArtsController extends Controller
         return $this->overview(false);
     }
 
-    /** Zoeken gaat via POST, zodat een BSN nooit in een URL, browsergeschiedenis of serverlog terechtkomt. */
+    /** Zoeken gaat via POST, zodat zoektermen (namen, e-mailadressen) niet in een URL, browsergeschiedenis of serverlog terechtkomen. */
     public function search(): Response
     {
         return $this->overview(true);
@@ -49,10 +49,8 @@ final class ArtsController extends Controller
             $artsFilter = '';
         }
         $q = $searching ? mb_strtolower(trim($this->input('q'))) : '';
-        $bsn = $searching ? (preg_replace('/\D/', '', $this->input('bsn')) ?? '') : '';
         $status = $searching ? $this->input('status') : '';
         $statuses = ['geverifieerd', 'uitgenodigd', 'ingetrokken', 'verlopen'];
-        $bsnProof = $bsn !== '' ? $store->bsnProof($bsn) : null;
 
         $total = 0;
         $items = [];
@@ -75,10 +73,6 @@ final class ArtsController extends Controller
             if ($q !== '' && !str_contains(mb_strtolower($v['patient_name'] . ' ' . $v['patient_email'] . ' ' . $v['his_id'] . ' ' . ($v['owner_name'] ?? '')), $q)) {
                 continue;
             }
-            // BSN: alleen exacte treffers, vergeleken met de bewaarde HMAC; het BSN zelf staat nergens
-            if ($bsnProof !== null && !hash_equals($v['bsn_proof'], $bsnProof)) {
-                continue;
-            }
             $items[] = $v;
         }
 
@@ -94,7 +88,7 @@ final class ArtsController extends Controller
             'matched' => $matched,
             'page' => $page,
             'pages' => $pages,
-            'filter' => ['q' => $searching ? trim($this->input('q')) : '', 'bsn' => $searching ? $this->input('bsn') : '', 'status' => in_array($status, $statuses, true) ? $status : '', 'arts' => $artsFilter],
+            'filter' => ['q' => $searching ? trim($this->input('q')) : '', 'status' => in_array($status, $statuses, true) ? $status : '', 'arts' => $artsFilter],
             'team' => $team,
             'me' => $me,
             'practice' => $practice,
@@ -108,7 +102,6 @@ final class ArtsController extends Controller
         $store = $this->app->store;
         $name = trim($this->input('name'));
         $email = mb_strtolower(trim($this->input('email')));
-        $bsn = trim($this->input('bsn'));
         $his = strtoupper(trim($this->input('his_id')));
         $old = ['name' => $name, 'email' => $email, 'his_id' => $his];
 
@@ -118,9 +111,6 @@ final class ArtsController extends Controller
         }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254) {
             $errors['email'] = 'Vul een geldig e-mailadres in.';
-        }
-        if (!valid_bsn($bsn)) {
-            $errors['bsn'] = 'Dit is geen geldig BSN (de elfproef klopt niet).';
         }
         if (!preg_match('/^[A-Z0-9-]{8,64}$/', $his)) {
             $errors['his_id'] = 'Vul het patiënt-ID uit het HIS in (8–64 tekens: letters, cijfers en streepjes).';
@@ -139,7 +129,10 @@ final class ArtsController extends Controller
         }
 
         // een nieuwe uitnodiging voor dezelfde patiënt vervangt openstaande eerdere (met een andere code)
-        foreach ($store->openVerifications($email, $bsn) as $prev) {
+        foreach ($store->openVerifications($email) as $prev) {
+            if ($prev['practice_id'] !== $this->practice()['id']) {
+                continue; // een uitnodiging van een andere praktijk blijft staan
+            }
             $prev['status'] = 'ingetrokken';
             $prev['revoked_at'] = time();
             $prev['revoked_by'] = 'vervangen';
@@ -147,7 +140,7 @@ final class ArtsController extends Controller
         }
 
         $practiceRow = $this->practice();
-        $result = $store->addVerification($arts['id'], $practiceRow['id'], $email, $bsn, [
+        $result = $store->addVerification($arts['id'], $practiceRow['id'], $email, [
             'patient_name' => $name,
             'his_id' => $his,
             'arts_name' => $arts['name'],   // de arts die de patiënt heeft gezien en geïdentificeerd (blijft zo staan)
@@ -161,7 +154,7 @@ final class ArtsController extends Controller
             "Beste $name,\n\n"
             . "Uw huisarts, {$arts['name']}$practice, nodigt u uit om uw wilsverklaring online te maken.\n\n"
             . "U registreert u op deze pagina (veertien dagen geldig):\n" . $this->app->url('/registreren') . "\n\n"
-            . "Vul daar uw naam, dit e-mailadres, uw BSN en een wachtwoord in, samen met de code van 6 cijfers die uw huisarts u op papier heeft gegeven. "
+            . "Vul daar uw naam, dit e-mailadres en een wachtwoord in, samen met de code van 6 cijfers die uw huisarts u op papier heeft gegeven. "
             . "Daarmee is meteen uw identiteit bevestigd.\n\n"
             . "Deel de code met niemand. Verwachtte u deze e-mail niet? Dan kunt u hem negeren."
         );
