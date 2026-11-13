@@ -1,0 +1,12 @@
+#!/bin/sh
+# Dagelijkse back-up (cron: 15 3 * * * /var/www/wilsverklaring/deploy/backup.sh)
+# De back-up is een consistente kopie van het SQLite-bestand; alle gegevens daarin zijn al versleuteld.
+# Bewaar APP_KEY NIET in dezelfde back-uplocatie.
+set -e
+APP=/var/www/wilsverklaring
+DEST=/var/backups/wilsverklaring
+mkdir -p "$DEST"; chmod 700 "$DEST"
+FILE="$DEST/wilsverklaring-$(date +%F).sqlite"
+rm -f "$FILE"
+php "$APP/bin/console" backup "$FILE"
+find "$DEST" -name 'wilsverklaring-*.sqlite' -mtime +30 -delete
