@@ -9,3 +9,10 @@ Options -Indexes
 <FilesMatch "\.(sqlite|env|log)$|^\.ftp-deploy-state">
     Require all denied
 </FilesMatch>
+
+# CSS/JS/afbeeldingen hebben een versienummer in de URL (?v=...), dus lang cachen is veilig
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|woff2|jpg|svg)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>

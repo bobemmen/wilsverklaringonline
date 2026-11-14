@@ -625,6 +625,13 @@ $cl = new Client($base);
 $r = $cl->submit('/registreren', '/registreren', ['name' => 'Leo Legacy', 'email' => 'legacy@voorbeeld.nl', 'code' => $legacy['code'], 'birthdate' => '01-01-1970', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']);
 T::eq($r['location'], '/2fa/instellen', 'uitnodiging van vóór deze controle (zonder geboortedatum) blijft bruikbaar');
 
+T::section('Versienummer op CSS en JS');
+$home = (new Client($base))->get('/')['body'];
+T::ok((bool) preg_match('#/assets/app\.css\?v=[a-f0-9]{10}"#', $home), 'CSS heeft een versienummer op basis van de inhoud');
+T::ok((bool) preg_match('#/assets/app\.js\?v=[a-f0-9]{10}"#', $home), 'JS heeft een versienummer op basis van de inhoud');
+preg_match('#/assets/app\.css\?v=([a-f0-9]{10})#', $home, $cv);
+T::eq($cv[1] ?? '', substr(md5_file($root . '/public/assets/app.css'), 0, 10), 'het versienummer is de hash van app.css');
+
 T::section('Wachtwoord vergeten');
 clearThrottle($dbfile);
 $gPw = 'Gerda-oud-wachtwoord-1';
