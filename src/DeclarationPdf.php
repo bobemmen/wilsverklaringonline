@@ -7,7 +7,7 @@ namespace WV;
 /** Zet een verklaring om in een afdrukbare PDF: zelfde kleuren, letter, teksten en volgorde als de online weergave (templates/public/_body.php). */
 final class DeclarationPdf
 {
-    public static function build(string $name, ?string $versionDate, array $c, bool $tokenActive, float $scale = 1.0, ?array $verification = null, ?int $versionNumber = null): string
+    public static function build(string $name, ?string $versionDate, array $c, bool $tokenActive, float $scale = 1.0, ?array $verification = null, ?int $versionNumber = null, ?string $link = null): string
     {
         $pdf = new Pdf('Wilsverklaring ' . $name);
         $pdf->scale = $scale;
@@ -62,9 +62,7 @@ final class DeclarationPdf
 
         $pdf->heading('Behandelverbod');
         foreach (['reanimatie' => 'Reanimatie', 'beademing' => 'Beademing', 'ic' => 'Intensive care', 'antibiotica' => 'Antibiotica', 'sonde' => 'Sondevoeding'] as $k => $l) {
-            if ($filled($k)) {
-                $pdf->choice($l, $c[$k]);
-            }
+            $pdf->choice($l, (string) ($c[$k] ?? ''));
         }
         foreach (['reanimatie_toelichting', 'beademing_toelichting', 'behandel_toelichting'] as $k) {
             if ($filled($k)) {
@@ -72,18 +70,16 @@ final class DeclarationPdf
             }
         }
 
-        if ($filled('palliatief_wens')) {
-            $pdf->heading('Palliatieve sedatie');
-            $pdf->choice('Wens', $c['palliatief_wens']);
-            if ($filled('palliatief_fysiek')) {
-                $pdf->field('Fysiek lijden', $c['palliatief_fysiek']);
-            }
-            if ($filled('palliatief_geestelijk')) {
-                $pdf->field('Geestelijk lijden', $c['palliatief_geestelijk']);
-            }
-            if ($filled('palliatief_diepte')) {
-                $pdf->choice('Diepte', $c['palliatief_diepte']);
-            }
+        $pdf->heading('Palliatieve sedatie');
+        $pdf->choice('Wens', (string) ($c['palliatief_wens'] ?? ''));
+        if ($filled('palliatief_fysiek')) {
+            $pdf->field('Fysiek lijden', $c['palliatief_fysiek']);
+        }
+        if ($filled('palliatief_geestelijk')) {
+            $pdf->field('Geestelijk lijden', $c['palliatief_geestelijk']);
+        }
+        if ($filled('palliatief_diepte')) {
+            $pdf->choice('Diepte', $c['palliatief_diepte']);
         }
 
         if (Content::euthanasieIncluded($c)) {
@@ -128,17 +124,13 @@ final class DeclarationPdf
             $pdf->text($c['volmacht'] . ($filled('volmacht_contact') ? "\n" . $c['volmacht_contact'] : ''), 'LB', 10, Pdf::TEXT, 0, 'L', 0.0, 1.5);
         }
 
-        if ($filled('orgaandonatie', 'uitvaart', 'overig')) {
-            $pdf->heading('Na het overlijden');
-            if ($filled('orgaandonatie')) {
-                $pdf->choice('Orgaandonatie', $c['orgaandonatie']);
-            }
-            if ($filled('uitvaart')) {
-                $pdf->field('Uitvaart', $c['uitvaart']);
-            }
-            if ($filled('overig')) {
-                $pdf->field('Overig', $c['overig']);
-            }
+        $pdf->heading('Na het overlijden');
+        $pdf->choice('Orgaandonatie', (string) ($c['orgaandonatie'] ?? ''));
+        if ($filled('uitvaart')) {
+            $pdf->field('Uitvaart', $c['uitvaart']);
+        }
+        if ($filled('overig')) {
+            $pdf->field('Overig', $c['overig']);
         }
 
         $pdf->noteBox(
@@ -150,7 +142,11 @@ final class DeclarationPdf
         if ($tokenActive) {
             $pdf->noteBox(
                 'Online raadplegen door arts',
-                'Vraag de patiënt om de persoonlijke link. De actuele versie is altijd online beschikbaar.'
+                $link !== null
+                    ? 'Uw arts kan de actuele versie van deze verklaring altijd online lezen via deze persoonlijke link. Geef de link alleen aan uw arts of een naaste die u vertrouwt.'
+                    : 'Vraag de patiënt om de persoonlijke link. De actuele versie is altijd online beschikbaar.',
+                false,
+                $link
             );
         }
 

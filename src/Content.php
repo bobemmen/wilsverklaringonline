@@ -425,30 +425,63 @@ final class Content
     }
 
     /**
-     * Wat er nog ontbreekt om te mogen publiceren. Bevat de verklaring een euthanasiehoofdstuk, dan zijn
-     * naam, geboortedatum, geboorteplaats, datum en plaats van ondertekening verplicht (identificatie en dagtekening).
+     * Wat er minimaal ingevuld moet zijn om te kunnen publiceren.
+     * Altijd: naam, geboortedatum en datum + plaats van ondertekening (anders is de verklaring niet aan iemand toe te schrijven).
+     * Per aangezet onderwerp: de kern van het verzoek (een verzoek zonder inhoud is erger dan geen verzoek).
      * @return list<string>
      */
     public static function missingForPublish(array $doc): array
     {
-        if (!self::euthanasieIncluded($doc) && !self::dementieIncluded($doc)) {
-            return [];
-        }
         $need = [
-            'voornamen' => 'uw voornamen (stap 1)',
-            'achternaam' => 'uw achternaam (stap 1)',
-            'geboortedatum' => 'uw geboortedatum (stap 1)',
-            'geboorteplaats' => 'uw geboorteplaats (stap 1)',
-            'datum' => 'de datum van ondertekening (stap 16)',
-            'plaats' => 'de plaats van ondertekening (stap 16)',
+            'voornamen' => ['uw voornamen (stap 1)', false],
+            'achternaam' => ['uw achternaam (stap 1)', false],
+            'geboortedatum' => ['uw geboortedatum (stap 1)', false],
+            'datum' => ['de datum van ondertekening (stap 16)', false],
+            'plaats' => ['de plaats van ondertekening (stap 16)', false],
         ];
+        if (self::euthanasieIncluded($doc) || self::dementieIncluded($doc)) {
+            $need['geboorteplaats'] = ['uw geboorteplaats (stap 1)', true];
+        }
+        if (self::euthanasieIncluded($doc)) {
+            $need['euthanasie_lijden'] = ['wat u ondraaglijk vindt (stap 9)', true];
+            $need['euthanasie_wilsonbekwaam'] = ['uw keuze voor als u zelf niet meer kunt vragen (stap 10)', true];
+        }
+        if (self::dementieIncluded($doc)) {
+            $need['dementie_lijden'] = ['de situatie waarin u uw leven niet meer wilt verlengen (stap 13)', true];
+            $need['dementie_moment'] = ['vanaf welk moment bij dementie (stap 13)', true];
+        }
         $missing = [];
-        foreach ($need as $key => $label) {
+        foreach ($need as $key => [$label, $forRequest]) {
             if (trim((string) ($doc[$key] ?? '')) === '') {
-                $missing[] = 'Vul ' . $label . ' in. Dat is nodig voor een euthanasieverzoek.';
+                $missing[] = 'Vul ' . $label . ' in.' . ($forRequest ? ' Dat is nodig voor een verzoek.' : '');
             }
         }
         return $missing;
+    }
+
+    /**
+     * Keuzes die nog niet zijn ingevuld. Publiceren mag, maar de verklaring toont dan "Niet ingevuld",
+     * zodat een arts leeg niet leest als "geen bezwaar".
+     * @return list<string>
+     */
+    public static function notFilled(array $doc): array
+    {
+        $labels = [
+            'reanimatie' => 'Reanimatie (stap 3)',
+            'beademing' => 'Beademing (stap 4)',
+            'ic' => 'Intensive care (stap 4)',
+            'antibiotica' => 'Antibiotica (stap 5)',
+            'sonde' => 'Sondevoeding (stap 5)',
+            'palliatief_wens' => 'Palliatieve sedatie (stap 6)',
+            'orgaandonatie' => 'Orgaandonatie (stap 15)',
+        ];
+        $out = [];
+        foreach ($labels as $k => $label) {
+            if (trim((string) ($doc[$k] ?? '')) === '') {
+                $out[] = $label;
+            }
+        }
+        return $out;
     }
 
     public static function euthanasieIncluded(array $data): bool

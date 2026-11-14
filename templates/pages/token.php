@@ -7,8 +7,19 @@
 <?php if ($plaintextToken): ?>
     <section class="card card-accent" aria-labelledby="t-nieuw">
         <h2 class="card-title" id="t-nieuw">Uw nieuwe link</h2>
-        <p>Kopieer deze link nu. Wij bewaren de code alleen versleuteld: na deze pagina kunt u hem niet meer terugzien.</p>
+        <p>Kopieer deze link en geef hem aan uw arts. U vindt hem hier later terug en hij staat ook in de pdf van uw verklaring.</p>
         <div class="token-box"><?= e($this->url('/v/' . $plaintextToken)) ?></div>
+    </section>
+<?php elseif ($link): ?>
+    <section class="card" aria-labelledby="t-link">
+        <h2 class="card-title" id="t-link">Uw link voor de arts</h2>
+        <p>Geef deze link alleen aan uw arts of een naaste die u vertrouwt. Hij staat ook in de pdf van uw verklaring.</p>
+        <div class="token-box"><?= e($link) ?></div>
+    </section>
+<?php elseif ($tokenActive): ?>
+    <section class="card" aria-labelledby="t-oud">
+        <h2 class="card-title" id="t-oud">Uw link</h2>
+        <p class="mb0">Deze link is gemaakt voordat wij hem konden bewaren, en is daarom hier niet meer te zien. Maak een nieuwe link als u hem opnieuw wilt tonen of in de pdf wilt zetten. De huidige link werkt dan niet meer.</p>
     </section>
 <?php endif ?>
 

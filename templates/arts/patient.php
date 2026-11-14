@@ -43,6 +43,9 @@
         <p class="eyebrow">Gepubliceerde wilsverklaring van</p>
         <h2 class="h1like"><?= e($v['patient_name']) ?></h2>
         <p class="muted mb0">Versie van <?= e(fmt_date($version['created_at'])) ?> · alleen ter inzage</p>
+<?php $cmp = \WV\Content::completion($doc, true); if ($cmp['done'] < $cmp['total']): ?>
+    <p class="mt mb0"><span class="badge badge-warn">Gedeeltelijk ingevuld · <?= (int) $cmp['done'] ?> van <?= (int) $cmp['total'] ?> stappen</span></p>
+<?php endif ?>
     </div>
     <?php $this->include('public/_body', ['doc' => $doc]) ?>
 <?php else: ?>
