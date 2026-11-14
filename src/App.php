@@ -112,6 +112,8 @@ final class App
         $r->get('/verklaring/wizard', [C\WizardController::class, 'show'], $patient);
         $r->post('/verklaring/wizard', [C\WizardController::class, 'save'], $patient);
         $r->get('/verklaring/versies', [C\WizardController::class, 'versions'], $patient);
+        $r->get('/verklaring/versies/{n}', [C\WizardController::class, 'versionShow'], $patient);
+        $r->get('/verklaring/versies/{n}/pdf', [C\PdfController::class, 'version'], $patient);
         $r->get('/verklaring/pdf', [C\PdfController::class, 'export'], $patient);
 
         $r->get('/token', [C\TokenController::class, 'index'], $patient);

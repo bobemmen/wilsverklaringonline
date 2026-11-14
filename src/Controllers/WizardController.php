@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WV\Controllers;
 
 use WV\Content;
+use WV\HttpException;
 use WV\Response;
 
 final class WizardController extends Controller
@@ -119,6 +120,25 @@ final class WizardController extends Controller
             $this->flash('Concept opgeslagen.');
         }
         return $this->redirect('/verklaring/wizard?stap=' . $target . ($intro ? '&uitleg=1' : ''));
+    }
+
+    /** Een oudere (of de huidige) gepubliceerde versie bekijken, alleen-lezen. */
+    public function versionShow(string $n): Response
+    {
+        $declaration = $this->declaration();
+        $versions = $this->app->store->versions($declaration['id']);
+        $number = (int) $n;
+        if ($number < 1 || $number > count($versions)) {
+            throw new HttpException(404);
+        }
+        $version = $versions[$number - 1];
+        return $this->view('pages/version', [
+            'declaration' => $declaration,
+            'version' => $version,
+            'number' => $number,
+            'isCurrent' => $version['id'] === $declaration['current_version_id'],
+            'doc' => Content::normalize($version['content'] ?? []),
+        ]);
     }
 
     public function versions(): Response

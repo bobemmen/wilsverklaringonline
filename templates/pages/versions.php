@@ -11,11 +11,12 @@
         <div class="table-wrap">
             <table>
                 <caption class="sr-only">Gepubliceerde versies, nieuwste eerst</caption>
-                <thead><tr><th scope="col">Versie</th><th scope="col">Gepubliceerd op</th><th scope="col">Status</th></tr></thead>
+                <thead><tr><th scope="col">Versie</th><th scope="col">Gepubliceerd op</th><th scope="col">Status</th><th scope="col">Bekijken</th></tr></thead>
                 <tbody>
                     <?php foreach ($versions as $i => $version): ?>
                         <tr>
-                            <th scope="row">Versie <?= count($versions) - $i ?></th>
+                            <?php $nr = count($versions) - $i ?>
+                            <th scope="row"><a href="/verklaring/versies/<?= $nr ?>">Versie <?= $nr ?></a></th>
                             <td><?= e(fmt_datetime($version['created_at'])) ?></td>
                             <td>
                                 <?php if ($version['id'] === $declaration['current_version_id']): ?>
@@ -23,6 +24,10 @@
                                 <?php else: ?>
                                     <span class="badge badge-muted">Archief</span>
                                 <?php endif ?>
+                            </td>
+                            <td>
+                                <a href="/verklaring/versies/<?= $nr ?>">Lezen<span class="sr-only"> versie <?= $nr ?></span></a> ·
+                                <a href="/verklaring/versies/<?= $nr ?>/pdf">PDF<span class="sr-only"> van versie <?= $nr ?></span></a>
                             </td>
                         </tr>
                     <?php endforeach ?>
