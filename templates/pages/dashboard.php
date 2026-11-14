@@ -23,23 +23,23 @@ $statusText = [
         <section class="card" aria-labelledby="d-status">
             <h2 class="card-title" id="d-status">Uw verklaring</h2>
             <div class="stat-row">
-                <?php if ($declaration['is_published']): ?>
-                    <span class="badge badge-ok">Definitief</span>
-                <?php else: ?>
+                <?php if (!$declaration['is_published']): ?>
                     <span class="badge badge-muted">Concept</span>
-                <?php endif ?>
-                <?php if ($hasDraft && $declaration['is_published']): ?>
-                    <span class="badge badge-muted">Wijzigingen nog niet gepubliceerd</span>
-                <?php endif ?>
-                <span class="muted">Versie <?= (int) $versionCount ?></span>
-            </div>
-            <p class="muted">
-                <?php if ($currentVersion): ?>
-                    Laatst gepubliceerd op <?= e(fmt_date($currentVersion['created_at'])) ?>.
+                <?php elseif ($hasDraft): ?>
+                    <span class="badge badge-warn">Wijzigingen nog niet gepubliceerd</span>
                 <?php else: ?>
-                    Nog niet gepubliceerd.
+                    <span class="badge badge-ok">Gepubliceerd</span>
                 <?php endif ?>
-            </p>
+                <?php if ($declaration['is_published']): ?><span class="muted">Versie <?= (int) $versionCount ?></span><?php endif ?>
+            </div>
+            <?php if (!$declaration['is_published']): ?>
+                <p class="muted">Nog niet gepubliceerd. Uw arts ziet uw verklaring pas als u hem publiceert (laatste stap).</p>
+            <?php elseif ($hasDraft): ?>
+                <p class="muted">Uw arts ziet nog de gepubliceerde versie van <?= e(fmt_date($currentVersion['created_at'])) ?>. Uw wijzigingen gelden pas als u opnieuw publiceert.</p>
+                <p><a href="/verklaring/wizard?stap=17" class="btn btn-primary">Verder naar publiceren</a></p>
+            <?php else: ?>
+                <p class="muted">Laatst gepubliceerd op <?= e(fmt_date($currentVersion['created_at'])) ?>. U kunt alles altijd aanpassen. Een aanpassing geldt pas als u opnieuw publiceert.</p>
+            <?php endif ?>
 
             <h3 class="mt">Uw pad</h3>
             <div class="wz-progress">

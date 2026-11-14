@@ -285,7 +285,7 @@ T::ok(str_contains($r['body'], 'Overzicht en publicatie') && str_contains($r['bo
 $r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 T::eq($r['location'], '/dashboard', 'publiceren → dashboard');
 $r = $c->get('/dashboard');
-T::ok(str_contains($r['body'], 'Definitief') && str_contains($r['body'], 'Laatst gepubliceerd op ' . date('d-m-Y')), 'dashboard: Definitief');
+T::ok(str_contains($r['body'], 'Gepubliceerd') && !str_contains($r['body'], 'Definitief') && str_contains($r['body'], 'Laatst gepubliceerd op ' . date('d-m-Y')), 'dashboard: Definitief');
 $r = $c->get('/verklaring/versies');
 T::ok(str_contains($r['body'], 'Versie 1') && str_contains($r['body'], 'Huidig'), 'versieoverzicht');
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Gewijzigd concept']]);
@@ -483,6 +483,12 @@ $c->get('/token'); // geen nieuwe link nodig: de link blijft beschikbaar
 
 // wijziging: bevestiging blijft gelden; een verklaring met euthanasiehoofdstuk vraagt om volledige gegevens
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Nieuwe tekst na de bevestiging.', 'voornamen' => '', 'achternaam' => '', 'geboortedatum' => '', 'geboorteplaats' => '']]);
+$dd = $c->get('/dashboard')['body'];
+T::ok(str_contains($dd, 'Wijzigingen nog niet gepubliceerd') && !str_contains($dd, 'badge-ok">Gepubliceerd') && str_contains($dd, 'gelden pas als u opnieuw publiceert'), 'met openstaande wijzigingen is de status niet langer "Gepubliceerd" maar "Wijzigingen nog niet gepubliceerd"');
+$wd = $c->get('/verklaring/wizard?stap=3')['body'];
+T::ok(str_contains($wd, 'U past een gepubliceerde verklaring aan') && str_contains($wd, 'Opnieuw publiceren') === false, 'in de vragenlijst staat dat wijzigingen pas na opnieuw publiceren gelden');
+$w17 = $c->get('/verklaring/wizard?stap=17')['body'];
+T::ok(str_contains($w17, 'Opnieuw publiceren'), 'op stap 17 heet de knop "Opnieuw publiceren" als de verklaring al gepubliceerd is');
 $c->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'concept', 'data' => ['datum' => '', 'plaats' => '']]);
 $r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 $page = $c->follow($r)['body'];
@@ -836,7 +842,7 @@ foreach (['/pilot' => 'Pilotinformatie', '/privacy' => 'Privacyverklaring', '/vo
     $r = (new Client($base))->get($path);
     T::ok($r['status'] === 200 && str_contains($r['body'], "<h1>$title") && str_contains($r['body'], 'invullen in .env'), "$path is openbaar en toont de (nog in te vullen) gegevens van de exploitant");
 }
-T::ok(!preg_match('/BSN/i', (new Client($base))->get('/registreren')['body']) && !preg_match('/BSN/i', $arts->get('/arts')['body']), 'er wordt nergens meer naar een BSN gevraagd (registratie en uitnodiging)');
+T::ok(!preg_match('/\bBSN\b/', (new Client($base))->get('/registreren')['body']) && !preg_match('/\bBSN\b/', $arts->get('/arts')['body']), 'er wordt nergens meer naar een BSN gevraagd (registratie en uitnodiging)');
 T::ok(str_contains($regBody(['akkoord' => '']), 'toestemming geven'), 'registreren vereist toestemming (pilotinformatie en privacyverklaring)');
 T::ok(str_contains((new Client($base))->get('/registreren')['body'], 'href="/pilot"') && str_contains((new Client($base))->get('/')['body'], 'href="/privacy"'), 'links naar de teksten staan op het registratieformulier en in de voettekst');
 

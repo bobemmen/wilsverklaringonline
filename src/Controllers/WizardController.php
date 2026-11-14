@@ -39,6 +39,7 @@ final class WizardController extends Controller
                 'progress' => Content::progress($data),
                 'data' => $data,
                 'published' => $published,
+                'isPublished' => (bool) $declaration['is_published'],
                 'backHref' => $step > 1 ? '/verklaring/wizard?stap=' . Content::previous($step, $data) : '/dashboard',
             ]);
         }
@@ -51,6 +52,7 @@ final class WizardController extends Controller
             'stepTitle' => Content::TITLES[$step],
             'data' => $data,
             'published' => $published,
+                'isPublished' => (bool) $declaration['is_published'],
             'progress' => Content::progress($data),
             'infoOpen' => !Content::stepTouched($step, $data),
         ]);
