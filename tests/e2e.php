@@ -428,7 +428,7 @@ T::eq($r['location'], '/verklaring/wizard?stap=15&uitleg=1', 'dementie: stap 14 
 $ov = $c->get('/verklaring/wizard?stap=17')['body'];
 T::ok(str_contains($ov, '>Euthanasieverzoek dementie</h2>') && str_contains($ov, 'Als ik mijn kinderen niet herken') && str_contains($ov, 'Uiterlijk in de omslagzone') && !str_contains($ov, '>Euthanasieverzoek algemeen</h2>'), 'overzicht: dementie als apart onderdeel, algemeen weggelaten');
 $pdfx = $c->get('/verklaring/pdf');
-T::ok($pdfx['status'] === 200, 'pdf met dementieonderdeel');
+T::ok($pdfx['status'] === 303, 'met een concept (nog niet gepubliceerd) is er geen pdf te downloaden');
 $pg = $c->get('/verklaring/wizard?stap=17')['body'];
 T::ok(str_contains($pg, 'Hulp en advies') && str_contains($pg, '0800-0113') && str_contains($pg, 'Piet de Vries, zoon'), 'overzicht: hulpblok en gevolmachtigde');
 
@@ -476,6 +476,10 @@ T::eq($other->get("/arts/patienten/$vid")['status'], 403, 'patiënt (Bas) heeft 
 $pub = (new Client($base))->get('/v/' . $token);
 T::ok(str_contains($pub['body'], 'Identiteit bevestigd door de huisarts') && str_contains($pub['body'], 'Dr. Jansen') && str_contains($pub['body'], 'Huisartsenpraktijk Wanroij'), 'leesweergave toont bevestiging door huisarts');
 T::ok(str_contains($pub['body'], '…1C1E2C') && !str_contains($pub['body'], $his), 'leesweergave toont alleen afgeschermd patiënt-ID');
+// Eerst opnieuw publiceren: een pdf bestaat alleen van een gepubliceerde verklaring zonder openstaande wijzigingen
+$c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['voornamen' => 'Anna', 'achternaam' => 'de Vries', 'geboortedatum' => '1950-03-07', 'geboorteplaats' => 'Venray']]);
+$rr = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
+T::eq($rr['location'], '/dashboard', 'Anna publiceert opnieuw (wijzigingen)');
 T::ok(str_starts_with($c->get('/verklaring/pdf')['body'], '%PDF'), 'PDF met bevestiging wordt gegenereerd');
 $linkPdf = $c->get('/verklaring/pdf')['body'];
 T::ok(str_contains($linkPdf, '/URI (' . $base . '/v/' . $token . ')'), 'de pdf bevat de link voor de arts, klikbaar');
@@ -681,7 +685,14 @@ T::ok(str_starts_with($other->get('/verklaring/versies/1/pdf')['body'], '%PDF'),
 T::eq($other->get('/verklaring/versies/9')['status'], 404, 'onbekende versie → 404');
 $vl = $other->get('/verklaring/versies')['body'];
 T::ok(substr_count($vl, '/pdf"') === 1, 'in de versielijst staat alleen bij de huidige versie een pdf-link');
-T::eq($c->get('/verklaring/versies/1/pdf')['status'], 404, 'de pdf van een oudere versie is niet op te halen');
+T::eq($c->get('/verklaring/versies/1/pdf')['status'], 303, 'de pdf van een oudere versie is niet op te halen (terug naar het dashboard)');
+// $c heeft op dit punt openstaande wijzigingen (concept na publicatie): dan is er geen pdf
+$rp = $c->get('/verklaring/pdf');
+T::ok($rp['status'] === 303 && !str_starts_with($rp['body'], '%PDF'), 'met openstaande wijzigingen is er geen pdf te downloaden');
+T::ok(str_contains($c->follow($rp)['body'], 'nog niet gepubliceerd zijn'), '…en je krijgt uitleg waarom');
+T::ok(!str_contains($c->get('/dashboard')['body'], 'href="/verklaring/pdf"'), 'het dashboard toont dan geen pdf-knoppen');
+$fresh = new Client($base);
+
 T::eq($c->get('/verklaring/versies/1')['status'] === 200 && str_contains($c->get('/verklaring/versies/1')['body'], 'Bas Bakker'), false, 'een andere patiënt ziet de versie van Bas niet');
 T::ok(str_contains($other->get('/verklaring/versies')['body'], 'href="/verklaring/versies/1"'), 'de versielijst linkt naar de versies');
 T::ok(str_contains($other->follow($r)['body'], 'href="/verklaring/pdf"') && str_contains($other->get('/dashboard')['body'], 'Uw wilsverklaring is gepubliceerd') === false, 'na publiceren staat er een pdf-knop in de melding (eenmalig)');

@@ -14,6 +14,9 @@ final class PdfController extends Controller
     public function export(): Response
     {
         $declaration = $this->declaration();
+        if ($blocked = $this->notPublished($declaration)) {
+            return $blocked;
+        }
         $version = $this->app->store->version($declaration['current_version_id'], $declaration['id']);
         $number = null;
         if ($version) {
@@ -30,6 +33,9 @@ final class PdfController extends Controller
     public function version(string $n): Response
     {
         $declaration = $this->declaration();
+        if ($blocked = $this->notPublished($declaration)) {
+            return $blocked;
+        }
         $versions = $this->app->store->versions($declaration['id']);
         $number = (int) $n;
         if ($number < 1 || $number > count($versions)) {
@@ -40,6 +46,18 @@ final class PdfController extends Controller
             throw new HttpException(404);
         }
         return $this->respond($declaration, $version, $number, true, 'wilsverklaring-versie-' . $number . '.pdf');
+    }
+
+    /** Een pdf bestaat alleen van een gepubliceerde verklaring zonder openstaande wijzigingen, anders lijkt hij op de verklaring terwijl hij dat niet is. */
+    private function notPublished(array $declaration): ?Response
+    {
+        if (!$declaration['is_published']) {
+            return $this->fail('/dashboard', ['pdf' => 'Publiceer uw verklaring eerst. Daarna kunt u hem als pdf downloaden.']);
+        }
+        if (is_array($declaration['draft'])) {
+            return $this->fail('/dashboard', ['pdf' => 'U heeft wijzigingen die nog niet gepubliceerd zijn. Publiceer eerst opnieuw, dan kunt u de pdf downloaden.']);
+        }
+        return null;
     }
 
     private function respond(array $declaration, ?array $version, ?int $number, bool $current, string $filename): Response

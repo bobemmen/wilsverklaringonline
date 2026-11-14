@@ -78,7 +78,7 @@ $statusText = [
                 <?php if ($current === null): ?>
                     <a href="/verklaring/wizard?stap=<?= \WV\Content::TOTAL_STEPS ?>" class="btn btn-primary"><?= $declaration['is_published'] && !$hasDraft ? 'Verklaring aanpassen' : 'Nakijken en publiceren' ?></a>
                 <?php endif ?>
-                <?php if ($declaration['is_published']): ?>
+                <?php if ($declaration['is_published'] && !$hasDraft): ?>
                     <a href="/verklaring/pdf" class="btn">Download als PDF</a>
                     <a href="/verklaring/pdf?groot=1" class="btn">PDF met grote letters</a>
                 <?php endif ?>
