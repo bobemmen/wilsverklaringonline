@@ -26,8 +26,10 @@
                                 <?php endif ?>
                             </td>
                             <td>
-                                <a href="/verklaring/versies/<?= $nr ?>">Lezen<span class="sr-only"> versie <?= $nr ?></span></a> ·
-                                <a href="/verklaring/versies/<?= $nr ?>/pdf">PDF<span class="sr-only"> van versie <?= $nr ?></span></a>
+                                <a href="/verklaring/versies/<?= $nr ?>">Lezen<span class="sr-only"> versie <?= $nr ?></span></a>
+                                <?php if ($version['id'] === $declaration['current_version_id']): ?>
+                                    · <a href="/verklaring/versies/<?= $nr ?>/pdf">PDF<span class="sr-only"> van versie <?= $nr ?></span></a>
+                                <?php endif ?>
                             </td>
                         </tr>
                     <?php endforeach ?>

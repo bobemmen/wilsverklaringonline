@@ -6,7 +6,7 @@
     <h1><?= e(\WV\Content::fullName($doc, $this->user()['name'])) ?></h1>
     <?php if (($birth = \WV\Content::birthLine($doc)) !== ''): ?><p class="muted"><?= e($birth) ?></p><?php endif ?>
     <p class="muted mb0">Versie <?= (int) $number ?> · <?= e(fmt_date($version['created_at'])) ?><?php if (!empty($doc['datum'])): ?> · ondertekend op <?= e(fmt_iso_date($doc['datum'])) ?><?php endif ?></p>
-    <p class="mt mb0"><a href="/verklaring/versies/<?= (int) $number ?>/pdf" class="btn">Download als PDF</a></p>
+    <?php if ($isCurrent): ?><p class="mt mb0"><a href="/verklaring/versies/<?= (int) $number ?>/pdf" class="btn">Download als PDF</a></p><?php endif ?>
 </div>
 
 <?php if ($isCurrent): ?>
