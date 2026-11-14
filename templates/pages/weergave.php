@@ -17,7 +17,7 @@ $p = $this->prefs();
             <?php foreach (\WV\Prefs::SIZE_LABELS as $n => $label): ?>
                 <label class="choice">
                     <input type="radio" name="t" value="<?= $n ?>"<?= $p->size === $n ? ' checked' : '' ?>>
-                    <span><span class="choice-label"><?= e($label) ?></span><span class="choice-help"><?= ['Standaard (ruim 18 punten)', 'Ongeveer een kwart groter', 'Ongeveer anderhalf keer zo groot', 'Twee keer zo groot'][$n - 1] ?></span></span>
+                    <span><span class="choice-label"><?= e($label) ?></span><span class="choice-help"><?= [0 => 'Iets kleiner dan normaal, voor wie meer tekst tegelijk wil zien', 1 => 'Standaard (ruim 18 punten)', 2 => 'Ongeveer een kwart groter', 3 => 'Ongeveer anderhalf keer zo groot', 4 => 'Twee keer zo groot'][$n] ?></span></span>
                 </label>
             <?php endforeach ?>
         </fieldset>

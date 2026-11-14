@@ -12,9 +12,10 @@ namespace WV;
 final class Prefs
 {
     public const COOKIE = 'wv_prefs';
+    public const MIN_SIZE = 0;
     public const MAX_SIZE = 4;
     public const CONTRASTS = ['standaard', 'hoog', 'donker'];
-    public const SIZE_LABELS = [1 => 'Normaal', 2 => 'Groot', 3 => 'Extra groot', 4 => 'Maximaal'];
+    public const SIZE_LABELS = [0 => 'Klein', 1 => 'Normaal', 2 => 'Groot', 3 => 'Extra groot', 4 => 'Maximaal'];
 
     public function __construct(
         public readonly int $size = 1,
@@ -38,7 +39,7 @@ final class Prefs
         $base ??= new self();
         $size = $base->size;
         if (isset($data['t']) && is_scalar($data['t']) && ctype_digit((string) $data['t'])) {
-            $size = max(1, min(self::MAX_SIZE, (int) $data['t']));
+            $size = max(self::MIN_SIZE, min(self::MAX_SIZE, (int) $data['t']));
         }
         $contrast = $base->contrast;
         if (isset($data['c']) && is_string($data['c']) && in_array($data['c'], self::CONTRASTS, true)) {
@@ -65,7 +66,7 @@ final class Prefs
     public function htmlAttrs(): string
     {
         $classes = [];
-        if ($this->size > 1) {
+        if ($this->size !== 1) {
             $classes[] = 't' . $this->size;
         }
         if ($this->spacious) {

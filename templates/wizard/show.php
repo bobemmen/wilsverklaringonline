@@ -2,17 +2,17 @@
 $this->layout('layouts/app', ['title' => $stepTitle . ' · WilsVerklaring']);
 $chapterNames = \WV\Content::CHAPTER_NAMES;
 ?>
-<?php $this->include('wizard/_chapters', ['chapter' => $chapter, 'progress' => $progress]) ?>
+<form method="post" action="/verklaring/wizard" id="wizard-form">
+    <?= $this->csrf() ?>
+    <input type="hidden" name="stap" value="<?= (int) $step ?>">
+    <?php /* Enter in een tekstveld slaat het concept op (eerste verzendknop in de DOM-volgorde) */ ?>
+    <button type="submit" name="actie" value="concept" class="sr-only" tabindex="-1" aria-hidden="true">Opslaan als concept</button>
 
-<div class="card conversation">
-    <p class="eyebrow">Onderwerp <?= (int) $chapter ?> van <?= count($chapterNames) ?> · Stap <?= (int) $step ?> van <?= (int) $total ?></p>
-    <h1 class="wizard-title"><?= e($stepTitle) ?></h1>
+    <?php $this->include('wizard/_chapters', ['chapter' => $chapter, 'step' => $step, 'data' => $data, 'form' => true]) ?>
 
-    <form method="post" action="/verklaring/wizard">
-        <?= $this->csrf() ?>
-        <input type="hidden" name="stap" value="<?= (int) $step ?>">
-        <?php /* Enter in een tekstveld slaat het concept op (eerste knop in de DOM-volgorde) */ ?>
-        <button type="submit" name="actie" value="concept" class="sr-only" tabindex="-1" aria-hidden="true">Opslaan als concept</button>
+    <div class="card conversation">
+        <p class="eyebrow">Onderwerp <?= (int) $chapter ?> van <?= count($chapterNames) ?> · Stap <?= (int) $step ?> van <?= (int) $total ?></p>
+        <h1 class="wizard-title"><?= e($stepTitle) ?></h1>
 
         <?php
         // Nog niets ingevuld bij deze stap? Dan staat de eerste uitleg ("Wat u moet weten") alvast open.
@@ -43,8 +43,8 @@ $chapterNames = \WV\Content::CHAPTER_NAMES;
                 <?php endif ?>
             </div>
         </div>
-    </form>
-</div>
+    </div>
+</form>
 <p class="center muted small">Uw antwoorden worden bewaard als u verdergaat of op “Opslaan als concept” klikt. U kunt altijd stoppen en later verder.</p>
 
 <?php if ($step === $total): ?>

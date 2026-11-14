@@ -1,14 +1,46 @@
 <?php
-$labels = ['klaar' => 'Afgerond', 'overgeslagen' => 'Overgeslagen', 'bezig' => 'Bezig', 'nieuw' => 'Nog te doen'];
+/**
+ * Voortgang en navigatie door de vragenlijst.
+ * @var int   $chapter  huidig onderwerp
+ * @var int   $step     huidige stap (0 = uitlegscherm)
+ * @var array $data     werkversie van de verklaring
+ * @var bool  $form     true: knoppen die eerst het concept opslaan (binnen het stappenformulier); false: gewone links
+ */
+$statuses = \WV\Content::stepStatuses($data);
+$done = \WV\Content::completion($data);
+$labels = ['klaar' => 'ingevuld', 'nieuw' => 'nog te doen', 'overgeslagen' => 'overgeslagen', 'overzicht' => 'overzicht en publicatie'];
+$go = function (int $n, string $class, string $text, string $label, bool $current) use ($form): string {
+    $aria = $current ? ' aria-current="step"' : '';
+    if ($form) {
+        return '<button type="submit" form="wizard-form" formnovalidate name="ga" value="' . $n . '" class="' . $class . '" title="' . e($label) . '" aria-label="' . e($label) . '"' . $aria . '>' . $text . '</button>';
+    }
+    return '<a href="/verklaring/wizard?stap=' . $n . '" class="' . $class . '" title="' . e($label) . '" aria-label="' . e($label) . '"' . $aria . '>' . $text . '</a>';
+};
 ?>
-<nav aria-label="Voortgang per onderwerp">
-    <ol class="chapters">
+<nav class="wz-nav" aria-label="Voortgang en navigatie door de vragenlijst">
+    <div class="wz-progress">
+        <p class="wz-progress-text"><strong><?= (int) $done['done'] ?> van <?= (int) $done['total'] ?> stappen ingevuld</strong> <span class="muted">(<?= (int) $done['percent'] ?>%)</span></p>
+        <progress max="<?= max(1, (int) $done['total']) ?>" value="<?= (int) $done['done'] ?>" aria-label="Voortgang vragenlijst"><?= (int) $done['percent'] ?>%</progress>
+    </div>
+    <ol class="wz-chapters">
         <?php foreach (\WV\Content::CHAPTER_NAMES as $n => $name):
-            $st = $progress[$n]['status'] ?? 'nieuw';
-            $cls = $n === $chapter ? 'current' : ($st === 'klaar' ? 'done' : ($st === 'overgeslagen' ? 'skipped' : ''));
+            $steps = \WV\Content::chapterSteps($n);
+            $stat = array_map(fn($s) => $statuses[$s], $steps);
+            $allDone = $stat && !array_diff($stat, ['klaar', 'overgeslagen', 'overzicht']) && in_array('klaar', $stat, true);
+            $cls = 'wz-chapter' . ($n === $chapter ? ' current' : '') . ($allDone ? ' done' : '') . (in_array('overgeslagen', $stat, true) ? ' skipped' : '');
         ?>
-            <li class="<?= $cls ?>"<?= $n === $chapter ? ' aria-current="step"' : '' ?>>
-                <span class="sr-only"><?= $n === $chapter ? 'Nu bezig' : $labels[$st] ?>: </span><?= e($name) ?>
+            <li class="<?= $cls ?>">
+                <span class="wz-chapter-name"><?= e($name) ?></span>
+                <ol class="wz-steps">
+                    <?php foreach ($steps as $s):
+                        $st = $statuses[$s];
+                        $isCur = $s === $step;
+                        $label = 'Stap ' . $s . ': ' . \WV\Content::TITLES[$s] . ', ' . $labels[$st] . ($isCur ? ' (u bent hier)' : '');
+                        $c = 'wz-step ' . $st . ($isCur ? ' is-current' : '');
+                    ?>
+                        <li><?= $go($s, $c, ($st === 'klaar' && !$isCur ? '<span aria-hidden="true">✓</span>' : (string) $s) , $label, $isCur) ?></li>
+                    <?php endforeach ?>
+                </ol>
             </li>
         <?php endforeach ?>
     </ol>

@@ -625,6 +625,21 @@ $cl = new Client($base);
 $r = $cl->submit('/registreren', '/registreren', ['name' => 'Leo Legacy', 'email' => 'legacy@voorbeeld.nl', 'code' => $legacy['code'], 'birthdate' => '01-01-1970', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']);
 T::eq($r['location'], '/2fa/instellen', 'uitnodiging van vóór deze controle (zonder geboortedatum) blijft bruikbaar');
 
+T::section('Stappenbalk en voortgang');
+$w = $c->get('/verklaring/wizard?stap=3')['body'];
+T::ok(str_contains($w, '<progress') && str_contains($w, 'stappen ingevuld'), 'voortgangsbalk met aantal ingevulde stappen');
+T::eq(substr_count($w, 'name="ga"'), 17, 'alle 17 stappen zijn direct te kiezen');
+T::ok(str_contains($w, 'aria-current="step"') && str_contains($w, 'Stap 3: Reanimatie'), 'huidige stap is gemarkeerd en elke stap heeft een duidelijke naam');
+T::ok(strpos($w, 'name="actie" value="concept"') < strpos($w, 'name="ga"'), 'Enter in een tekstveld slaat het concept op (verborgen knop komt vóór de stappenbalk)');
+$r = $c->submit('/verklaring/wizard?stap=3', '/verklaring/wizard', ['stap' => '3', 'ga' => '6', 'data' => ['reanimatie' => 'nee', 'reanimatie_toelichting' => 'Bewaard via de stappenbalk']]);
+T::eq($r['location'], '/verklaring/wizard?stap=6', 'stap kiezen in de balk springt direct naar die stap');
+T::ok(str_contains($c->get('/verklaring/wizard?stap=3')['body'], 'Bewaard via de stappenbalk'), 'wat u had ingevuld is bij het wisselen bewaard');
+T::ok(str_contains($c->get('/verklaring/wizard?stap=6')['body'], 'class="wz-step klaar"'), 'ingevulde stappen zijn in de balk als ingevuld gemarkeerd');
+$r = $c->submit('/verklaring/wizard?stap=3', '/verklaring/wizard', ['stap' => '3', 'ga' => '99', 'data' => []]);
+T::eq($r['location'], '/verklaring/wizard?stap=3', 'een onbekende stap wordt genegeerd');
+$intro = $c->get('/verklaring/wizard?stap=3&uitleg=1')['body'];
+T::ok(str_contains($intro, 'href="/verklaring/wizard?stap=6"') && !str_contains($intro, 'name="ga"'), 'op het uitlegscherm zijn de stappen gewone links');
+
 T::section('Demo');
 $rawq = function (string $sql) use ($dbfile) { $p = new PDO('sqlite:' . $dbfile); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec('PRAGMA busy_timeout=5000'); return $p->query($sql); };
 $mailLog = "$root/storage/logs/mail.log";
