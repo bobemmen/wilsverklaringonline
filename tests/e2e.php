@@ -669,7 +669,7 @@ T::ok(substr_count($dash, 'class="pad-dot"') === 6 && str_contains($dash, 'class
 T::section('Pad met ringen');
 $pd = $other->get('/dashboard')['body'];
 T::ok(str_contains($pd, 'class="pad-ring"') && str_contains($pd, 'class="seg seg-open"'), 'het pad toont ringen met een streepje per stap');
-T::ok(!str_contains($pd, 'Hier was u gebleven'), '"Hier was u gebleven" is vervangen door "Begonnen · x van y stappen ingevuld"');
+T::ok(!str_contains($pd, 'Hier was u gebleven'), '"Hier was u gebleven" is vervangen door "Begonnen" (zonder teller)');
 
 $r = $other->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 $pg = $other->follow($r)['body'];
