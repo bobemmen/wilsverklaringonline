@@ -249,6 +249,39 @@ final class Content
         return $out;
     }
 
+    /**
+     * Status per stap voor de stappenbalk: klaar (iets ingevuld), nieuw (nog leeg), overgeslagen (onderwerp uitgezet),
+     * overzicht (laatste stap, telt niet mee).
+     * @return array<int, string>
+     */
+    public static function stepStatuses(array $data): array
+    {
+        $skipped = [];
+        foreach (self::GATES as $gate => [$field]) {
+            if (($data[$field] ?? '') === 'nee') {
+                foreach (self::chapterSteps(self::STEP_CHAPTER[$gate]) as $s) {
+                    $skipped[$s] = true;
+                }
+            }
+        }
+        $out = [];
+        for ($s = 1; $s <= self::TOTAL_STEPS; $s++) {
+            $out[$s] = $s === self::TOTAL_STEPS ? 'overzicht' : (isset($skipped[$s]) ? 'overgeslagen' : (self::stepTouched($s, $data) ? 'klaar' : 'nieuw'));
+        }
+        return $out;
+    }
+
+    /** @return array{done: int, total: int, percent: int} hoeveel stappen zijn ingevuld (overgeslagen onderwerpen tellen niet mee) */
+    public static function completion(array $data): array
+    {
+        $done = $total = 0;
+        foreach (self::stepStatuses($data) as $status) {
+            if ($status === 'klaar') { $done++; $total++; }
+            elseif ($status === 'nieuw') { $total++; }
+        }
+        return ['done' => $done, 'total' => $total, 'percent' => $total > 0 ? (int) round($done / $total * 100) : 0];
+    }
+
     /** Welke velden op welke stap worden ingevuld. */
     public const STEP_FIELDS = [
         1 => ['voornamen', 'achternaam', 'geboortenaam', 'geboortedatum', 'geboorteplaats', 'intro', 'waarde'],

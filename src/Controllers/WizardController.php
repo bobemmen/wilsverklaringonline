@@ -35,6 +35,7 @@ final class WizardController extends Controller
                 'steps' => Content::chapterSteps($chapter),
                 'firstStep' => $step,
                 'progress' => Content::progress($data),
+                'data' => $data,
                 'backHref' => $step > 1 ? '/verklaring/wizard?stap=' . Content::previous($step, $data) : '/dashboard',
             ]);
         }
@@ -97,6 +98,11 @@ final class WizardController extends Controller
             'overslaan' => Content::GATES[$step][1] ?? Content::next($step, $data),
             default => $step,
         };
+        // Direct naar een andere stap (stappenbalk): het concept is hierboven al opgeslagen
+        $go = (int) $this->input('ga');
+        if ($go >= 1 && $go <= Content::TOTAL_STEPS) {
+            return $this->redirect('/verklaring/wizard?stap=' . $go);
+        }
         // Naar een nieuw onderwerp? Dan eerst het uitlegscherm van dat onderwerp.
         $intro = in_array($action, ['volgende', 'overslaan'], true)
             && Content::STEP_CHAPTER[$target] !== Content::STEP_CHAPTER[$step]

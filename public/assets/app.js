@@ -15,7 +15,7 @@
         if (m) {
             decodeURIComponent(m[1]).split('&').forEach(function (kv) {
                 var a = kv.split('=');
-                if (a[0] === 't' && /^[1-4]$/.test(a[1])) { p.t = parseInt(a[1], 10); }
+                if (a[0] === 't' && /^[0-4]$/.test(a[1])) { p.t = parseInt(a[1], 10); }
                 if (a[0] === 'c' && CONTRASTS.indexOf(a[1]) >= 0) { p.c = a[1]; }
                 if (a[0] === 'r') { p.r = a[1] === '1' ? 1 : 0; }
             });
@@ -24,8 +24,8 @@
     }
 
     function applyPrefs(p) {
-        root.classList.remove('t2', 't3', 't4', 'ruim');
-        if (p.t > 1) { root.classList.add('t' + p.t); }
+        root.classList.remove('t0', 't2', 't3', 't4', 'ruim');
+        if (p.t !== 1) { root.classList.add('t' + p.t); }
         if (p.r) { root.classList.add('ruim'); }
         if (p.c === 'standaard') { root.removeAttribute('data-contrast'); } else { root.setAttribute('data-contrast', p.c); }
     }
@@ -42,7 +42,7 @@
         if (!link || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) { return; }
         e.preventDefault();
         var p = readPrefs();
-        p.t = Math.max(1, Math.min(MAX, p.t + parseInt(link.getAttribute('data-size'), 10)));
+        p.t = Math.max(0, Math.min(MAX, p.t + parseInt(link.getAttribute('data-size'), 10)));
         applyPrefs(p);
         savePrefs(p);
         refreshSizeLinks(p);
@@ -51,8 +51,8 @@
     function refreshSizeLinks(p) {
         document.querySelectorAll('a[data-size]').forEach(function (a) {
             var next = p.t + parseInt(a.getAttribute('data-size'), 10);
-            a.href = a.href.replace(/([?&])t=\d/, '$1t=' + Math.max(1, Math.min(MAX, next)));
-            var atLimit = next < 1 || next > MAX;
+            a.href = a.href.replace(/([?&])t=\d/, '$1t=' + Math.max(0, Math.min(MAX, next)));
+            var atLimit = next < 0 || next > MAX;
             a.toggleAttribute('hidden', false);
             a.style.opacity = atLimit ? '0.4' : '';
         });

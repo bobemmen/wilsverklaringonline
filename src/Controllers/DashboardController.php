@@ -22,6 +22,7 @@ final class DashboardController extends Controller
             'declaration' => $declaration,
             'currentVersion' => $currentVersion,
             'progress' => Content::progress($data),
+            'completion' => Content::completion($data),
             'hasDraft' => is_array($declaration['draft']),
             'tokenActive' => $store->tokenIsActive($declaration),
             'viewCount' => $store->logCount($declaration['id']),

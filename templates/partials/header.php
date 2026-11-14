@@ -34,7 +34,7 @@ if ($user && ($user['role'] ?? 'patient') === 'arts') {
             <span>WilsVerklaring</span>
         </a>
         <div class="tools" role="group" aria-label="Weergave en voorlezen">
-            <?php if ($p->size > 1): ?>
+            <?php if ($p->size > \WV\Prefs::MIN_SIZE): ?>
                 <a class="tool tool-a" href="<?= e($this->prefLink(['t' => $p->size - 1])) ?>" data-size="-1" title="Tekst kleiner"><span aria-hidden="true">A−</span><span class="sr-only">Tekst kleiner</span></a>
             <?php else: ?>
                 <span class="tool tool-a" aria-disabled="true" role="img" aria-label="Tekst kleiner (niet beschikbaar, dit is al de kleinste maat)">A−</span>
