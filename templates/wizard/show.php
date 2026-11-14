@@ -8,7 +8,7 @@ $chapterNames = \WV\Content::CHAPTER_NAMES;
     <?php /* Enter in een tekstveld slaat het concept op (eerste verzendknop in de DOM-volgorde) */ ?>
     <button type="submit" name="actie" value="concept" class="sr-only" tabindex="-1" aria-hidden="true">Opslaan als concept</button>
 
-    <?php $this->include('wizard/_chapters', ['chapter' => $chapter, 'step' => $step, 'data' => $data, 'form' => true]) ?>
+    <?php $this->include('wizard/_chapters', ['chapter' => $chapter, 'step' => $step, 'data' => $data, 'published' => $published, 'form' => true]) ?>
 
     <div class="card conversation">
         <p class="eyebrow">Onderwerp <?= (int) $chapter ?> van <?= count($chapterNames) ?> · Stap <?= (int) $step ?> van <?= (int) $total ?></p>

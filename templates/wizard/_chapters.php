@@ -4,10 +4,11 @@
  * @var int   $chapter  huidig onderwerp
  * @var int   $step     huidige stap (0 = uitlegscherm)
  * @var array $data     werkversie van de verklaring
+ * @var bool  $published true: gepubliceerd en geen openstaande wijzigingen (stap 17 telt dan als klaar)
  * @var bool  $form     true: knoppen die eerst het concept opslaan (binnen het stappenformulier); false: gewone links
  */
-$statuses = \WV\Content::stepStatuses($data);
-$done = \WV\Content::completion($data);
+$statuses = \WV\Content::stepStatuses($data, $published);
+$done = \WV\Content::completion($data, $published);
 $labels = ['klaar' => 'ingevuld', 'nieuw' => 'nog te doen', 'overgeslagen' => 'overgeslagen', 'overzicht' => 'overzicht en publicatie'];
 $go = function (int $n, string $class, string $text, string $label, bool $current) use ($form): string {
     $aria = $current ? ' aria-current="step"' : '';
@@ -20,7 +21,7 @@ $go = function (int $n, string $class, string $text, string $label, bool $curren
 <nav class="wz-nav" aria-label="Voortgang en navigatie door de vragenlijst">
     <div class="wz-summary">
         <p class="wz-where"><?php if ($step > 0): ?><strong>Stap <?= (int) $step ?> van <?= count(\WV\Content::TITLES) ?></strong> <span class="muted">· <?= e(\WV\Content::CHAPTER_NAMES[$chapter] ?? '') ?></span><?php else: ?><strong>Uitleg</strong> <span class="muted">· <?= e(\WV\Content::CHAPTER_NAMES[$chapter] ?? '') ?></span><?php endif ?></p>
-        <p class="wz-count" title="Stap 17 is het nakijken en publiceren en telt niet mee"><strong><?= (int) $done['done'] ?> van <?= (int) $done['total'] ?> invulstappen ingevuld</strong> <span class="muted">(<?= (int) $done['percent'] ?>%)</span></p>
+        <p class="wz-count"><strong><?= (int) $done['done'] ?> van <?= (int) $done['total'] ?> stappen ingevuld</strong> <span class="muted">(<?= (int) $done['percent'] ?>%)</span></p>
     </div>
     <progress max="<?= max(1, (int) $done['total']) ?>" value="<?= (int) $done['done'] ?>" aria-label="Voortgang vragenlijst"><?= (int) $done['percent'] ?>%</progress>
     <details class="wz-all">
@@ -38,7 +39,7 @@ $go = function (int $n, string $class, string $text, string $label, bool $curren
                     <?php foreach ($steps as $s):
                         $st = $statuses[$s];
                         $isCur = $s === $step;
-                        $label = 'Stap ' . $s . ': ' . \WV\Content::TITLES[$s] . ', ' . $labels[$st] . ($isCur ? ' (u bent hier)' : '');
+                        $label = 'Stap ' . $s . ': ' . \WV\Content::TITLES[$s] . ', ' . ($s === \WV\Content::TOTAL_STEPS ? ($st === 'klaar' ? 'gepubliceerd' : 'nog te doen') : $labels[$st]) . ($isCur ? ' (u bent hier)' : '');
                         $c = 'wz-step ' . $st . ($isCur ? ' is-current' : '');
                     ?>
                         <li><?= $go($s, $c, ($st === 'klaar' && !$isCur ? '<span aria-hidden="true">✓</span>' : (string) $s) , $label, $isCur) ?></li>

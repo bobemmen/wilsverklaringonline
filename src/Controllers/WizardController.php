@@ -26,6 +26,7 @@ final class WizardController extends Controller
         $declaration = $this->declaration();
         $data = $this->workingData($declaration);
         $chapter = Content::STEP_CHAPTER[$step];
+        $published = (bool) $declaration['is_published'] && !is_array($declaration['draft']);
 
         // Uitlegscherm vóór een onderwerp (alleen op de eerste stap van een hoofdstuk)
         if ($this->input('uitleg') === '1' && Content::firstStepOfChapter($chapter) === $step) {
@@ -36,6 +37,7 @@ final class WizardController extends Controller
                 'firstStep' => $step,
                 'progress' => Content::progress($data),
                 'data' => $data,
+                'published' => $published,
                 'backHref' => $step > 1 ? '/verklaring/wizard?stap=' . Content::previous($step, $data) : '/dashboard',
             ]);
         }
@@ -47,6 +49,7 @@ final class WizardController extends Controller
             'chapterTitle' => Content::CHAPTER_NAMES[$chapter],
             'stepTitle' => Content::TITLES[$step],
             'data' => $data,
+            'published' => $published,
             'progress' => Content::progress($data),
             'infoOpen' => !Content::stepTouched($step, $data),
         ]);
