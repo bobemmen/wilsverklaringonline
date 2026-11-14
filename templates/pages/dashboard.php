@@ -53,9 +53,12 @@ $statusText = [
                     $cls = $isCurrent ? 'current' : ($p['status'] === 'klaar' ? 'done' : '');
                     $first = \WV\Content::firstStepOfChapter($n);
                     $goHref = $p['status'] === 'nieuw' ? '/verklaring/wizard?stap=' . $first . '&uitleg=1' : '/verklaring/wizard?stap=' . $p['next'];
+                    // Het rondje is zelf ook een link. Heeft het onderwerp al een tekstlink of knop, dan is het rondje alleen een extra klikvlak.
+                    $hasTextLink = $isCurrent || $p['status'] !== 'nieuw';
+                    $dotHref = $isCurrent ? $goHref : ($p['status'] === 'nieuw' ? $goHref : '/verklaring/wizard?stap=' . $first);
                 ?>
                     <li class="<?= $cls ?>"<?= $isCurrent ? ' aria-current="step"' : '' ?>>
-                        <span class="pad-dot" aria-hidden="true"><?= $p['status'] === 'klaar' ? '✓' : $n ?></span>
+                        <a class="pad-dot" href="<?= e($dotHref) ?>"<?= $hasTextLink ? ' tabindex="-1" aria-hidden="true"' : ' aria-label="' . e($name . ': ' . $statusText[$p['status']]) . '"' ?>><?= $p['status'] === 'klaar' ? '✓' : $n ?></a>
                         <div class="pad-body">
                             <div>
                                 <strong><?= e($name) ?></strong>

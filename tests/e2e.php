@@ -642,6 +642,9 @@ T::eq($r['location'], '/verklaring/wizard?stap=3', 'een onbekende stap wordt gen
 $intro = $c->get('/verklaring/wizard?stap=3&uitleg=1')['body'];
 T::ok(str_contains($intro, 'href="/verklaring/wizard?stap=6"') && !str_contains($intro, 'name="ga"'), 'op het uitlegscherm zijn de stappen gewone links');
 
+$dash = $c->get('/dashboard')['body'];
+T::ok(substr_count($dash, 'class="pad-dot"') === 6 && str_contains($dash, 'class="pad-dot" href="/verklaring/wizard?stap='), 'op het dashboard zijn alle rondjes van de onderwerpen aanklikbaar');
+
 T::section('Demo');
 $rawq = function (string $sql) use ($dbfile) { $p = new PDO('sqlite:' . $dbfile); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec('PRAGMA busy_timeout=5000'); return $p->query($sql); };
 $mailLog = "$root/storage/logs/mail.log";
