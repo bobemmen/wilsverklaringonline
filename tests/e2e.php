@@ -628,6 +628,8 @@ T::eq($r['location'], '/2fa/instellen', 'uitnodiging van vóór deze controle (z
 T::section('Stappenbalk en voortgang');
 $w = $c->get('/verklaring/wizard?stap=3')['body'];
 T::ok(str_contains($w, '<progress') && str_contains($w, 'stappen ingevuld'), 'voortgangsbalk met aantal ingevulde stappen');
+T::ok(str_contains($w, '<details class="wz-all">') && !str_contains($w, '<details class="wz-all" open'), 'alle stappen zijn standaard ingeklapt');
+T::ok(str_contains($w, 'Stap 3 van 17') && str_contains($w, 'Alle stappen tonen'), 'ingeklapt staat er welke stap het is en hoe ver u bent');
 T::eq(substr_count($w, 'name="ga"'), 17, 'alle 17 stappen zijn direct te kiezen');
 T::ok(str_contains($w, 'aria-current="step"') && str_contains($w, 'Stap 3: Reanimatie'), 'huidige stap is gemarkeerd en elke stap heeft een duidelijke naam');
 T::ok(strpos($w, 'name="actie" value="concept"') < strpos($w, 'name="ga"'), 'Enter in een tekstveld slaat het concept op (verborgen knop komt vóór de stappenbalk)');
