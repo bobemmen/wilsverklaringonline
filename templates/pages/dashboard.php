@@ -43,7 +43,7 @@ $statusText = [
 
             <h3 class="mt">Uw pad</h3>
             <div class="wz-progress">
-                <p class="wz-progress-text"><strong><?= (int) $completion['done'] ?> van <?= (int) $completion['total'] ?> stappen ingevuld</strong> <span class="muted">(<?= (int) $completion['percent'] ?>%)</span></p>
+                <p class="wz-progress-text"><strong><?= (int) $completion['done'] ?> van <?= (int) $completion['total'] ?> invulstappen ingevuld</strong> <span class="muted">(<?= (int) $completion['percent'] ?>%)</span></p>
                 <progress max="<?= max(1, (int) $completion['total']) ?>" value="<?= (int) $completion['done'] ?>" aria-label="Voortgang vragenlijst"><?= (int) $completion['percent'] ?>%</progress>
             </div>
             <ol class="pad">
