@@ -21,7 +21,7 @@ final class DashboardController extends Controller
         return $this->view('pages/dashboard', [
             'declaration' => $declaration,
             'currentVersion' => $currentVersion,
-            'progress' => Content::progress($data),
+            'progress' => Content::progress($data, (bool) $declaration['is_published'] && !is_array($declaration['draft'])),
             'completion' => Content::completion($data, (bool) $declaration['is_published'] && !is_array($declaration['draft'])),
             'hasDraft' => is_array($declaration['draft']),
             'tokenActive' => $store->tokenIsActive($declaration),

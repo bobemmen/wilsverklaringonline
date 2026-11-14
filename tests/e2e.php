@@ -666,7 +666,11 @@ T::ok(str_contains($intro, 'href="/verklaring/wizard?stap=6"') && !str_contains(
 $dash = $c->get('/dashboard')['body'];
 T::ok(substr_count($dash, 'class="pad-dot"') === 6 && str_contains($dash, 'class="pad-dot" href="/verklaring/wizard?stap='), 'op het dashboard zijn alle rondjes van de onderwerpen aanklikbaar');
 
-T::section('Publiceren met regels');
+T::section('Pad met ringen');
+$pd = $other->get('/dashboard')['body'];
+T::ok(str_contains($pd, 'class="pad-ring"') && str_contains($pd, 'class="seg seg-done"') && str_contains($pd, 'class="seg seg-open"'), 'het pad toont ringen met een streepje per stap');
+T::ok(!str_contains($pd, 'Hier was u gebleven'), '"Hier was u gebleven" is vervangen door "Begonnen · x van y stappen ingevuld"');
+
 $r = $other->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 $pg = $other->follow($r)['body'];
 T::ok(str_contains($pg, 'Vul uw voornamen') && str_contains($pg, 'Vul de datum van ondertekening'), 'ook zonder euthanasie zijn naam, geboortedatum, datum en plaats verplicht');

@@ -222,28 +222,36 @@ final class Content
 
     /**
      * Voortgang per hoofdstuk voor het pad op het dashboard.
-     * @return array<int, array{status: string, next: int}> status: klaar|bezig|nieuw|overgeslagen; next: stap om verder te gaan
+     * status: klaar (alle stappen, ook publiceren) | bezig (een deel) | nieuw | overgeslagen.
+     * steps: stapnummer => klaar|nieuw|overgeslagen (voor de ring); open: nog niet klaar; next: stap om verder te gaan.
+     * @return array<int, array{status: string, next: int, steps: array<int,string>, open: list<int>, done: int, total: int}>
      */
-    public static function progress(array $data): array
+    public static function progress(array $data, bool $published = false): array
     {
+        $statuses = self::stepStatuses($data, $published);
         $out = [];
         foreach (self::CHAPTER_NAMES as $ch => $name) {
             $steps = self::chapterSteps($ch);
             $gate = $steps[0];
+            $perStep = [];
+            foreach ($steps as $s) {
+                $perStep[$s] = $statuses[$s] ?? 'nieuw';
+            }
             if (isset(self::GATES[$gate]) && ($data[self::GATES[$gate][0]] ?? '') === 'nee') {
-                $out[$ch] = ['status' => 'overgeslagen', 'next' => $gate];
+                $out[$ch] = ['status' => 'overgeslagen', 'next' => $gate, 'steps' => $perStep, 'open' => [], 'done' => 0, 'total' => 0];
                 continue;
             }
-            $touched = array_values(array_filter($steps, fn($s) => ($s !== self::TOTAL_STEPS) && self::stepTouched($s, $data)));
-            $open = array_values(array_filter($steps, fn($s) => $s !== self::TOTAL_STEPS && !self::stepTouched($s, $data)));
+            $open = array_values(array_filter($steps, fn($s) => $perStep[$s] !== 'klaar'));
+            $done = count($steps) - count($open);
+            $base = ['steps' => $perStep, 'open' => $open, 'done' => $done, 'total' => count($steps)];
             if (isset(self::GATES[$gate]) && !self::gateOpen($gate, $data)) {
-                $out[$ch] = ['status' => 'nieuw', 'next' => $gate];
+                $out[$ch] = ['status' => 'nieuw', 'next' => $gate] + $base;
             } elseif (!$open) {
-                $out[$ch] = ['status' => 'klaar', 'next' => $steps[0]];
-            } elseif (!$touched) {
-                $out[$ch] = ['status' => 'nieuw', 'next' => $steps[0]];
+                $out[$ch] = ['status' => 'klaar', 'next' => $steps[0]] + $base;
+            } elseif ($done === 0) {
+                $out[$ch] = ['status' => 'nieuw', 'next' => $steps[0]] + $base;
             } else {
-                $out[$ch] = ['status' => 'bezig', 'next' => $open[0]];
+                $out[$ch] = ['status' => 'bezig', 'next' => $open[0]] + $base;
             }
         }
         return $out;

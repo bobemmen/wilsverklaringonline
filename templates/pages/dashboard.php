@@ -9,9 +9,40 @@ foreach ($progress as $n => $p) {
 $statusText = [
     'klaar' => 'Ingevuld',
     'overgeslagen' => 'Overgeslagen',
-    'bezig' => 'Hier was u gebleven',
+    'bezig' => 'Begonnen',
     'nieuw' => 'Nog niet begonnen',
 ];
+// Ring met één streepje per stap (gekleurd = ingevuld). Kleuren via CSS-klassen.
+$ring = function (array $p): string {
+    $steps = array_values($p['steps']);
+    $n = count($steps);
+    $svg = '<svg class="pad-ring" width="40" height="40" viewBox="0 0 42 42" aria-hidden="true" focusable="false">';
+    if ($p['status'] === 'overgeslagen') {
+        return $svg . '<circle class="seg seg-skip" cx="21" cy="21" r="18" fill="none"/></svg>';
+    }
+    if ($n === 1) {
+        return $svg . '<circle class="seg ' . ($steps[0] === 'klaar' ? 'seg-done' : 'seg-open') . '" cx="21" cy="21" r="18" fill="none"/></svg>';
+    }
+    $gap = 14.0;
+    $seg = 360.0 / $n;
+    $pt = fn(float $deg): array => [21 + 18 * cos(deg2rad($deg - 90)), 21 + 18 * sin(deg2rad($deg - 90))];
+    foreach ($steps as $k => $st) {
+        $a0 = $k * $seg + $gap / 2;
+        $a1 = ($k + 1) * $seg - $gap / 2;
+        [$x0, $y0] = $pt($a0);
+        [$x1, $y1] = $pt($a1);
+        $svg .= sprintf('<path class="seg %s" d="M%.2F %.2F A18 18 0 %d 1 %.2F %.2F" fill="none"/>', $st === 'klaar' ? 'seg-done' : 'seg-open', $x0, $y0, ($a1 - $a0) > 180 ? 1 : 0, $x1, $y1);
+    }
+    return $svg . '</svg>';
+};
+$titles = \WV\Content::TITLES;
+// Alleen nog publiceren over? Dan staat de knop "Nakijken en publiceren" onderaan.
+$onlyPublishLeft = true;
+foreach ($progress as $pp) {
+    if (!in_array($pp['status'], ['klaar', 'overgeslagen'], true) && $pp['open'] !== [\WV\Content::TOTAL_STEPS]) {
+        $onlyPublishLeft = false;
+    }
+}
 ?>
 <div class="page-head">
     <h1>Welkom, <?= e(explode(' ', trim($this->user()['name']))[0]) ?></h1>
@@ -50,7 +81,8 @@ $statusText = [
                 <?php foreach ($names as $n => $name):
                     $p = $progress[$n];
                     $isCurrent = $n === $current;
-                    $cls = $isCurrent ? 'current' : ($p['status'] === 'klaar' ? 'done' : '');
+                    $cls = trim(($isCurrent ? 'current ' : '') . ($p['status'] === 'klaar' ? 'done' : ($p['status'] === 'bezig' ? 'part' : '')));
+                    $partText = $p['status'] === 'bezig' ? 'Begonnen · ' . (int) $p['done'] . ' van ' . (int) $p['total'] . ' stappen ingevuld' : null;
                     $first = \WV\Content::firstStepOfChapter($n);
                     $goHref = $p['status'] === 'nieuw' ? '/verklaring/wizard?stap=' . $first . '&uitleg=1' : '/verklaring/wizard?stap=' . $p['next'];
                     // Het rondje is zelf ook een link. Heeft het onderwerp al een tekstlink of knop, dan is het rondje alleen een extra klikvlak.
@@ -58,14 +90,16 @@ $statusText = [
                     $dotHref = $isCurrent ? $goHref : ($p['status'] === 'nieuw' ? $goHref : '/verklaring/wizard?stap=' . $first);
                 ?>
                     <li class="<?= $cls ?>"<?= $isCurrent ? ' aria-current="step"' : '' ?>>
-                        <a class="pad-dot" href="<?= e($dotHref) ?>"<?= $hasTextLink ? ' tabindex="-1" aria-hidden="true"' : ' aria-label="' . e($name . ': ' . $statusText[$p['status']]) . '"' ?>><?= $p['status'] === 'klaar' ? '✓' : $n ?></a>
+                        <a class="pad-dot" href="<?= e($dotHref) ?>"<?= $hasTextLink ? ' tabindex="-1" aria-hidden="true"' : ' aria-label="' . e($name . ': ' . $statusText[$p['status']]) . '"' ?>><?= $p['status'] === 'klaar' ? '✓' : $ring($p) . '<span class="pad-num">' . $n . '</span>' ?></a>
                         <div class="pad-body">
                             <div>
                                 <strong><?= e($name) ?></strong>
-                                <span class="muted"><?= $isCurrent && $p['status'] === 'nieuw' ? 'Hier gaat u verder' : $statusText[$p['status']] ?><?= isset($optional[$n]) ? ' · niet verplicht' : '' ?></span>
+                                <span class="muted"><?= $isCurrent && $p['status'] === 'nieuw' ? 'Hier gaat u verder' : ($partText ?? $statusText[$p['status']]) ?><?= isset($optional[$n]) ? ' · niet verplicht' : '' ?></span>
                             </div>
                             <?php if ($isCurrent): ?>
                                 <a class="btn btn-primary" href="<?= e($goHref) ?>"><?= $p['status'] === 'nieuw' ? 'Beginnen' : 'Verder' ?><span class="sr-only"> met <?= e($name) ?></span></a>
+                            <?php elseif ($p['status'] === 'bezig'): ?>
+                                <a href="/verklaring/wizard?stap=<?= (int) $p['next'] ?>">Verder met stap <?= (int) $p['next'] ?>: <?= e($titles[$p['next']] ?? '') ?><span class="sr-only"> (<?= e($name) ?>)</span></a>
                             <?php elseif ($p['status'] !== 'nieuw'): ?>
                                 <a href="/verklaring/wizard?stap=<?= (int) $first ?>">Bekijken of aanpassen<span class="sr-only">: <?= e($name) ?></span></a>
                             <?php endif ?>
@@ -75,7 +109,7 @@ $statusText = [
             </ol>
 
             <div class="card-foot btn-row">
-                <?php if ($current === null): ?>
+                <?php if ($current === null || $onlyPublishLeft): ?>
                     <a href="/verklaring/wizard?stap=<?= \WV\Content::TOTAL_STEPS ?>" class="btn btn-primary"><?= $declaration['is_published'] && !$hasDraft ? 'Verklaring aanpassen' : 'Nakijken en publiceren' ?></a>
                 <?php endif ?>
                 <?php if ($declaration['is_published'] && !$hasDraft): ?>
