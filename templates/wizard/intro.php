@@ -1,7 +1,7 @@
 <?php
 $this->layout('layouts/app', ['title' => $intro['title'] . ' · WilsVerklaring']);
 ?>
-<?php $this->include('wizard/_chapters', ['chapter' => $chapter, 'step' => 0, 'data' => $data, 'form' => false]) ?>
+<?php $this->include('wizard/_chapters', ['chapter' => $chapter, 'step' => 0, 'data' => $data, 'published' => $published, 'form' => false]) ?>
 
 <div class="card conversation">
     <div class="callout"><p>Voordat de vragen beginnen, leggen we eerst uit waar dit onderwerp over gaat. Neem er gerust de tijd voor.</p></div>

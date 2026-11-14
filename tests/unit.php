@@ -75,13 +75,16 @@ T::eq(array_keys(Content::normalize(['onbekend' => 1])), array_keys(Content::def
 
 T::section('Voortgang en weergave');
 $st0 = Content::stepStatuses(Content::defaults());
-T::eq([$st0[1], $st0[17], count($st0)], ['nieuw', 'overzicht', 17], 'lege verklaring: stappen nog te doen');
+T::eq([$st0[1], $st0[17], count($st0)], ['nieuw', 'nieuw', 17], 'lege verklaring: stappen nog te doen');
+T::eq(Content::stepStatuses(Content::defaults(), true)[17], 'klaar', 'stap 17 is klaar zodra de verklaring gepubliceerd is');
 T::eq(Content::completion(Content::defaults())['done'], 0, 'lege verklaring: 0 stappen ingevuld');
 $dd = Content::normalize(['voornamen' => 'Anna', 'reanimatie' => 'nee', 'euthanasie_opgenomen' => 'nee']);
 $ss = Content::stepStatuses($dd);
 T::eq([$ss[1], $ss[3], $ss[9], $ss[12]], ['klaar', 'klaar', 'overgeslagen', 'nieuw'], 'ingevulde stap klaar; uitgezet onderwerp overgeslagen');
 $cc = Content::completion($dd);
-T::ok($cc['done'] === 2 && $cc['total'] < 16 && $cc['percent'] > 0 && $cc['percent'] <= 100, 'voortgang telt overgeslagen onderwerpen niet mee');
+T::ok($cc['done'] === 2 && $cc['total'] < 17 && $cc['percent'] > 0 && $cc['percent'] <= 100, 'voortgang telt overgeslagen onderwerpen niet mee');
+T::eq(Content::completion(Content::defaults())['total'], 17, 'alle 17 stappen tellen mee');
+T::eq(Content::completion(Content::defaults(), true)['done'], 1, 'gepubliceerd telt als één stap klaar');
 T::eq(WV\Prefs::fromArray(['t' => '0'])->size, 0, 'tekstgrootte kan een maat kleiner dan normaal');
 T::eq(WV\Prefs::fromArray(['t' => '9'])->size, 4, 'tekstgrootte blijft binnen 0 t/m 4');
 T::ok(str_contains((new WV\Prefs(0))->htmlAttrs(), 'class="t0"') && !str_contains((new WV\Prefs(1))->htmlAttrs(), 'class='), 'html-klasse t0 bij kleine tekst, niets bij normaal');

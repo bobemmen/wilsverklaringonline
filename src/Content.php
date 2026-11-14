@@ -251,10 +251,10 @@ final class Content
 
     /**
      * Status per stap voor de stappenbalk: klaar (iets ingevuld), nieuw (nog leeg), overgeslagen (onderwerp uitgezet),
-     * overzicht (laatste stap, telt niet mee).
+     * de laatste stap (nakijken en publiceren) is klaar zodra de verklaring gepubliceerd is en er geen niet-gepubliceerde wijzigingen zijn.
      * @return array<int, string>
      */
-    public static function stepStatuses(array $data): array
+    public static function stepStatuses(array $data, bool $published = false): array
     {
         $skipped = [];
         foreach (self::GATES as $gate => [$field]) {
@@ -266,16 +266,16 @@ final class Content
         }
         $out = [];
         for ($s = 1; $s <= self::TOTAL_STEPS; $s++) {
-            $out[$s] = $s === self::TOTAL_STEPS ? 'overzicht' : (isset($skipped[$s]) ? 'overgeslagen' : (self::stepTouched($s, $data) ? 'klaar' : 'nieuw'));
+            $out[$s] = $s === self::TOTAL_STEPS ? ($published ? 'klaar' : 'nieuw') : (isset($skipped[$s]) ? 'overgeslagen' : (self::stepTouched($s, $data) ? 'klaar' : 'nieuw'));
         }
         return $out;
     }
 
-    /** @return array{done: int, total: int, percent: int} hoeveel stappen zijn ingevuld (overgeslagen onderwerpen tellen niet mee) */
-    public static function completion(array $data): array
+    /** @return array{done: int, total: int, percent: int} hoeveel van de 17 stappen klaar zijn (overgeslagen onderwerpen tellen niet mee) */
+    public static function completion(array $data, bool $published = false): array
     {
         $done = $total = 0;
-        foreach (self::stepStatuses($data) as $status) {
+        foreach (self::stepStatuses($data, $published) as $status) {
             if ($status === 'klaar') { $done++; $total++; }
             elseif ($status === 'nieuw') { $total++; }
         }
