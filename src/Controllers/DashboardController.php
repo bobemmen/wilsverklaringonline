@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WV\Controllers;
 
+use WV\Content;
 use WV\Response;
 
 final class DashboardController extends Controller
@@ -12,10 +13,16 @@ final class DashboardController extends Controller
     {
         $store = $this->app->store;
         $declaration = $this->declaration();
+        $currentVersion = $store->version($declaration['current_version_id'], $declaration['id']);
+        $data = is_array($declaration['draft'])
+            ? Content::normalize($declaration['draft'])
+            : ($currentVersion ? Content::normalize($currentVersion['content']) : Content::defaults());
 
         return $this->view('pages/dashboard', [
             'declaration' => $declaration,
-            'currentVersion' => $store->version($declaration['current_version_id'], $declaration['id']),
+            'currentVersion' => $currentVersion,
+            'progress' => Content::progress($data),
+            'hasDraft' => is_array($declaration['draft']),
             'tokenActive' => $store->tokenIsActive($declaration),
             'viewCount' => $store->logCount($declaration['id']),
             'activeShares' => $store->activeShareCount($declaration['id']),
@@ -24,6 +31,6 @@ final class DashboardController extends Controller
                 $store->verificationsForPatient($this->user()['id']),
                 fn($v) => $v['status'] !== 'ingetrokken'
             )),
-                    ]);
+        ]);
     }
 }

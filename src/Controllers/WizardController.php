@@ -24,16 +24,30 @@ final class WizardController extends Controller
         $step = (int) $this->input('stap');
         $step = ($step >= 1 && $step <= Content::TOTAL_STEPS) ? $step : 1;
         $declaration = $this->declaration();
-
+        $data = $this->workingData($declaration);
         $chapter = Content::STEP_CHAPTER[$step];
-        $chapterTitle = Content::CHAPTER_NAMES[$chapter];
+
+        // Uitlegscherm vóór een onderwerp (alleen op de eerste stap van een hoofdstuk)
+        if ($this->input('uitleg') === '1' && Content::firstStepOfChapter($chapter) === $step) {
+            return $this->view('wizard/intro', [
+                'chapter' => $chapter,
+                'intro' => Content::CHAPTER_INTROS[$chapter],
+                'steps' => Content::chapterSteps($chapter),
+                'firstStep' => $step,
+                'progress' => Content::progress($data),
+                'backHref' => $step > 1 ? '/verklaring/wizard?stap=' . Content::previous($step, $data) : '/dashboard',
+            ]);
+        }
+
         return $this->view('wizard/show', [
             'step' => $step,
             'total' => Content::TOTAL_STEPS,
             'chapter' => $chapter,
-            'chapterTitle' => $chapterTitle,
+            'chapterTitle' => Content::CHAPTER_NAMES[$chapter],
             'stepTitle' => Content::TITLES[$step],
-            'data' => $this->workingData($declaration),
+            'data' => $data,
+            'progress' => Content::progress($data),
+            'infoOpen' => !Content::stepTouched($step, $data),
         ]);
     }
 
@@ -83,10 +97,14 @@ final class WizardController extends Controller
             'overslaan' => Content::GATES[$step][1] ?? Content::next($step, $data),
             default => $step,
         };
+        // Naar een nieuw onderwerp? Dan eerst het uitlegscherm van dat onderwerp.
+        $intro = in_array($action, ['volgende', 'overslaan'], true)
+            && Content::STEP_CHAPTER[$target] !== Content::STEP_CHAPTER[$step]
+            && Content::firstStepOfChapter(Content::STEP_CHAPTER[$target]) === $target;
         if ($action === 'concept') {
             $this->flash('Concept opgeslagen.');
         }
-        return $this->redirect('/verklaring/wizard?stap=' . $target);
+        return $this->redirect('/verklaring/wizard?stap=' . $target . ($intro ? '&uitleg=1' : ''));
     }
 
     public function versions(): Response

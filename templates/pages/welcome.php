@@ -1,29 +1,38 @@
-<?php $this->layout('layouts/plain', ['title' => 'WilsVerklaring · Uw stem, voor wanneer u zelf niet meer kunt spreken']) ?>
-<div class="page-head">
-    <p class="eyebrow">Wilsverklaring online</p>
-    <h1>Uw stem, voor wanneer u zelf niet meer kunt spreken</h1>
-    <p class="lead">WilsVerklaring helpt u stap voor stap uw wensen voor het einde van uw leven vast te leggen. U schrijft in uw eigen woorden, deelt met uw huisarts en naasten, en houdt zelf de regie.</p>
-</div>
+<?php $this->layout('layouts/plain', ['title' => 'WilsVerklaring · Samen nadenken over wat u belangrijk vindt', 'wide' => true]) ?>
+<section class="card hero" aria-labelledby="hero-titel">
+    <div class="hero-text">
+        <p class="eyebrow">Wilsverklaring online, via uw huisarts</p>
+        <h1 id="hero-titel">Samen nadenken over wat u belangrijk vindt</h1>
+        <p class="lead">We stellen u rustig de vragen die bij een wilsverklaring horen, met uitleg bij elke keuze. U schrijft in uw eigen woorden, deelt met uw huisarts en naasten, en houdt zelf de regie.</p>
+        <div class="btn-row">
+            <?php if ($loggedIn): ?>
+                <a href="/dashboard" class="btn btn-primary">Naar mijn dashboard</a>
+            <?php else: ?>
+                <a href="/registreren" class="btn btn-primary">Beginnen met de code van mijn huisarts</a>
+                <a href="/inloggen" class="btn btn-soft">Inloggen</a>
+            <?php endif ?>
+        </div>
+    </div>
+    <div class="hero-chat" aria-hidden="true">
+        <div class="speaker"><span class="avatar"></span><p class="bubble">Wat geeft uw leven waarde?</p></div>
+        <p class="bubble bubble-me">Zolang ik mijn kleinkinderen herken en buiten kan zitten.</p>
+        <div class="speaker"><span class="avatar"></span><p class="bubble">Dank u. Dat nemen we op in uw verklaring.</p></div>
+    </div>
+</section>
 
-<div class="btn-row mb">
-    <?php if ($loggedIn): ?>
-        <a href="/dashboard" class="btn btn-primary">Naar mijn dashboard</a>
-    <?php else: ?>
-        <a href="/registreren" class="btn btn-primary">Registreren met code van uw huisarts</a>
-        <a href="/inloggen" class="btn">Inloggen</a>
-    <?php endif ?>
-</div>
+<h2 class="section-title">Zo werkt het</h2>
+<ol class="steps-row">
+    <li><span class="nr" aria-hidden="true">1</span><h3>Code van uw huisarts</h3><p>Uw huisarts nodigt u uit en geeft u een code op papier. Daarmee registreert u zich; uw identiteit is dan meteen bevestigd.</p></li>
+    <li><span class="nr" aria-hidden="true">2</span><h3>Het gesprek</h3><p>Zes onderwerpen, vraag voor vraag, met uitleg. U kunt altijd stoppen en later verdergaan.</p></li>
+    <li><span class="nr" aria-hidden="true">3</span><h3>Uw verklaring</h3><p>Na het publiceren lezen uw huisarts en naasten via een persoonlijke link altijd de nieuwste versie.</p></li>
+</ol>
 
-<div class="card">
-    <h2 class="card-title">Hoe werkt het?</h2>
-    <ol class="steps">
-        <li><strong>Uw huisarts nodigt u uit</strong> en geeft u een code op papier. Daarmee registreert u zich; uw identiteit is dan meteen bevestigd. Stel daarna tweestapsverificatie in.</li>
-        <li><strong>Doorloop de vragen</strong> in zes hoofdstukken: wie u bent, wat u wel en niet wilt, en waar uw grens ligt. U kunt altijd stoppen en later verdergaan.</li>
-        <li><strong>Publiceer uw verklaring.</strong> Uw huisarts en naasten kunnen via een persoonlijke link altijd de nieuwste versie lezen.</li>
-    </ol>
-</div>
+<section class="sun" aria-labelledby="twijfel">
+    <h2 id="twijfel">Twijfelt u nog?</h2>
+    <p>Er is geen haast. Bespreek het eerst met uw huisarts of met de mensen om u heen.</p>
+</section>
 
-<div class="card">
-    <h2 class="card-title">Prettig lezen</h2>
+<section class="card" aria-labelledby="prettig">
+    <h2 class="card-title" id="prettig">Prettig lezen</h2>
     <p>Is de tekst te klein of te zwak van kleur? Met <strong>A+</strong> bovenaan maakt u alles groter. Bij <a href="<?= e($this->prefLink([])) ?>">Weergave</a> kiest u ook hoog contrast, een donker thema of ruimere regels. Met <strong>Lees voor</strong> laat u de pagina uitspreken.</p>
-</div>
+</section>

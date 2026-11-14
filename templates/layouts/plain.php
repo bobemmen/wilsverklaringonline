@@ -6,7 +6,7 @@
 <body>
     <a class="skip-link" href="#inhoud">Direct naar de inhoud</a>
     <?php $this->include('partials/header', ['nav' => false]) ?>
-    <main id="inhoud" class="page" tabindex="-1">
+    <main id="inhoud" class="page<?= !empty($wide) ? ' page-wide' : '' ?>" tabindex="-1">
         <?php $this->include('partials/messages') ?>
         <?= $content ?>
     </main>

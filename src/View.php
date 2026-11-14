@@ -192,6 +192,9 @@ final class View
             . '<input type="radio" name="data[' . e($name) . ']" value="' . e($value) . '"' . ($checked ? ' checked' : '') . '>'
             . '<span><span class="choice-label">' . $label . '</span>'
             . ($help ? '<span class="choice-help">' . $help . '</span>' : '')
+            . (isset(Content::MEANINGS[$name . '.' . $value])
+                ? '<span class="choice-meaning"><strong>Wat betekent deze keuze?</strong>' . e(Content::MEANINGS[$name . '.' . $value]) . '</span>'
+                : '')
             . '</span></label>';
     }
 }

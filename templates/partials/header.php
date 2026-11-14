@@ -21,7 +21,7 @@ if ($user && ($user['role'] ?? 'patient') === 'arts') {
 <header class="site-header">
     <div class="bar">
         <a class="brand" href="<?= $user ? '/dashboard' : '/' ?>">
-            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M7 10.5l4.2 12 4.8-8.6 4.8 8.6 4.2-12" fill="none" stroke="var(--on-brand)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="brand-logo" aria-hidden="true"><span class="brand-mark"></span></span>
             <span>WilsVerklaring</span>
         </a>
         <div class="tools" role="group" aria-label="Weergave en voorlezen">
