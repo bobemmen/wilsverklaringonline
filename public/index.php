@@ -11,6 +11,8 @@ if (PHP_SAPI === 'cli-server') {
     }
 }
 
+define('WV_PUBLIC_DIR', __DIR__);
+
 // App-map: normaal één niveau boven public/. Op hosting waar de documentroot en de app naast elkaar staan
 // (bijv. wilsverklaring.example.nl/ en wilsverklaring-app/) wordt die buurmap gebruikt; of zet WV_ROOT.
 $root = getenv('WV_ROOT') ?: dirname(__DIR__);

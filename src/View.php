@@ -71,8 +71,12 @@ final class View
 
     public function asset(string $file): string
     {
-        $abs = $this->app->root . '/public/assets/' . $file;
-        $v = is_file($abs) ? (string) filemtime($abs) : '1';
+        // Versienummer = inhoud van het bestand: nieuwe CSS/JS krijgt een nieuwe URL, dus geen Cmd+Shift+R nodig.
+        // De openbare map is de map van index.php (op hosting staat die los van de app-map).
+        $public = defined('WV_PUBLIC_DIR') ? WV_PUBLIC_DIR : $this->app->root . '/public';
+        $abs = $public . '/assets/' . $file;
+        static $cache = [];
+        $v = $cache[$abs] ??= is_file($abs) ? substr((string) md5_file($abs), 0, 10) : '0';
         return '/assets/' . $file . '?v=' . $v;
     }
 
