@@ -19,7 +19,7 @@ $base = "http://127.0.0.1:$port";
 $key = WV\Crypto::generateKey();
 $env = [
     'APP_KEY' => $key, 'APP_ENV' => 'local', 'APP_DEBUG' => 'true', 'APP_URL' => $base,
-    'DB_PATH' => "$tmp/db/e2e.sqlite", 'MAIL_DRIVER' => 'log', 'PATH' => getenv('PATH'),
+    'DB_PATH' => "$tmp/db/e2e.sqlite", 'MAIL_DRIVER' => 'log', 'PATH' => getenv('PATH'), 'DEMO_ENABLED' => 'true',
 ];
 $proc = proc_open(
     [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', "$root/public", "$root/public/index.php"],
@@ -624,6 +624,58 @@ $legacy = $st2->addVerification($j['id'], $j['practice_id'], 'legacy@voorbeeld.n
 $cl = new Client($base);
 $r = $cl->submit('/registreren', '/registreren', ['name' => 'Leo Legacy', 'email' => 'legacy@voorbeeld.nl', 'code' => $legacy['code'], 'birthdate' => '01-01-1970', 'password' => 'Een-lang-wachtwoord-123', 'password_confirmation' => 'Een-lang-wachtwoord-123', 'akkoord' => '1']);
 T::eq($r['location'], '/2fa/instellen', 'uitnodiging van vóór deze controle (zonder geboortedatum) blijft bruikbaar');
+
+T::section('Demo');
+$rawq = function (string $sql) use ($dbfile) { $p = new PDO('sqlite:' . $dbfile); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec('PRAGMA busy_timeout=5000'); return $p->query($sql); };
+$mailLog = "$root/storage/logs/mail.log";
+$usersBefore = (int) $rawq('SELECT COUNT(*) FROM users')->fetchColumn();
+$anonD = new Client($base);
+T::ok(str_contains($anonD->get('/inloggen')['body'], 'href="/demo"') && str_contains($anonD->get('/')['body'], 'href="/demo"'), 'demo-link op inlog- en beginpagina');
+T::ok(str_contains($anonD->get('/demo')['body'], 'Start de demo'), 'demo-pagina met uitleg');
+$d = new Client($base);
+$d->get('/demo');
+$r = $d->submit('/demo', '/demo/start', []);
+T::eq($r['location'], '/dashboard', 'demo starten → dashboard (geen 2FA nodig)');
+$dash = $d->get('/dashboard');
+T::eq($dash['status'], 200, 'dashboard bereikbaar');
+T::ok(str_contains($dash['body'], 'Dit is een demo') && str_contains($dash['body'], 'action="/demo/stoppen"'), 'demo-balk met knop om af te sluiten');
+T::eq((int) $rawq('SELECT COUNT(*) FROM users')->fetchColumn(), $usersBefore + 1, 'er is één tijdelijk demo-account bijgekomen');
+T::eq((int) $rawq('SELECT COUNT(*) FROM users WHERE demo_until IS NOT NULL')->fetchColumn(), 1, 'demo-account heeft een vervaltijd');
+// de echte pagina's werken, gegevens worden bewaard
+$r = $d->get('/verklaring/wizard');
+T::ok(str_contains($r['body'], 'Stap 1 van'), 'de echte invulhulp werkt in de demo');
+$r = $d->submit('/verklaring/wizard', '/verklaring/wizard', ['stap' => '1', 'actie' => 'volgende', 'data' => ['intro' => 'Demo-tekst die bewaard wordt', 'waarde' => "demo regel"]]);
+T::eq($r['location'], '/verklaring/wizard?stap=2', 'demo-gegevens worden opgeslagen');
+T::ok(str_contains($d->get('/verklaring/wizard?stap=1')['body'], 'Demo-tekst die bewaard wordt'), 'en teruggelezen');
+T::eq($d->get('/arts')['status'], 403, 'demo-patiënt komt niet in het huisartsgedeelte');
+T::eq($d->get('/2fa/instellen')['status'], 200, 'overige pagina’s blijven normaal bereikbaar');
+// een tweede bezoeker heeft een eigen omgeving
+$d2 = new Client($base); $d2->get('/demo'); $d2->submit('/demo', '/demo/start', []);
+T::ok(!str_contains($d2->get('/verklaring/wizard?stap=1')['body'], 'Demo-tekst die bewaard wordt'), 'een andere demo-bezoeker ziet niets van de eerste');
+// niet zichtbaar voor huisartsen, geen mail naar demo-adressen
+T::ok(!str_contains($arts->get('/arts')['body'], 'Demo-patiënt'), 'demo-patiënten staan niet in het overzicht van de huisarts');
+$mailBefore = strlen((string) @file_get_contents($mailLog));
+(new WV\Mailer())->send('demo-abc@demo.invalid', 'Test', 'Hallo');
+T::eq(strlen((string) @file_get_contents($mailLog)), $mailBefore, 'er wordt nooit een mail naar een demo-adres gestuurd');
+// afsluiten ruimt meteen op
+$r = $d->submit('/dashboard', '/demo/stoppen', []);
+T::eq($r['location'], '/', 'demo afsluiten → beginpagina');
+T::eq((int) $rawq('SELECT COUNT(*) FROM users WHERE demo_until IS NOT NULL')->fetchColumn(), 1, 'afgesloten demo-account is verwijderd (alleen de tweede bestaat nog)');
+T::eq($d->get('/dashboard')['location'], '/inloggen', 'na afsluiten is de sessie weg');
+// verlopen accounts worden opgeruimd
+$rawq('UPDATE users SET demo_until = ' . (time() - 5) . ' WHERE demo_until IS NOT NULL');
+$st = new WV\Store(new WV\Db($dbfile), new WV\Crypto(WV\Crypto::parseKey($key)));
+T::eq($st->purgeDemoUsers(), 1, 'verlopen demo-accounts worden opgeruimd');
+T::eq((int) $rawq('SELECT COUNT(*) FROM users')->fetchColumn(), $usersBefore, 'daarna zijn er weer evenveel accounts als ervoor');
+T::eq($d2->get('/dashboard')['location'], '/inloggen', 'een opgeruimd demo-account kan niet meer inloggen');
+// uitgezet: geen pagina's en geen links
+$env2 = array_merge($env, ['DEMO_ENABLED' => 'false']);
+$p2 = $port + 1;
+$proc2 = proc_open([PHP_BINARY, '-S', "127.0.0.1:$p2", '-t', "$root/public", "$root/public/index.php"], [1 => ['file', "$tmp/server2.log", 'w'], 2 => ['file', "$tmp/server2.log", 'a']], $pp2, $root, $env2 + ['STORAGE_LOG' => "$tmp"]);
+usleep(700000);
+$off = new Client("http://127.0.0.1:$p2");
+T::eq([$off->get('/demo')['status'], str_contains($off->get('/inloggen')['body'], '/demo')], [404, false], 'DEMO_ENABLED=false: geen demo en geen link');
+proc_terminate($proc2);
 
 T::section('Versienummer op CSS en JS');
 $home = (new Client($base))->get('/')['body'];

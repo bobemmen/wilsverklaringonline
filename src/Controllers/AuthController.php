@@ -151,7 +151,16 @@ final class AuthController extends Controller
 
     public function logout(): Response
     {
+        $this->endDemoIfAny();
         $this->app->auth->logout();
         return $this->redirect('/');
+    }
+
+    private function endDemoIfAny(): void
+    {
+        $u = $this->app->auth->user();
+        if ($this->app->store->isDemo($u)) {
+            $this->app->store->deleteUser($u['id']);   // demo-gegevens verdwijnen meteen bij afsluiten
+        }
     }
 }

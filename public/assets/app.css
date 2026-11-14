@@ -608,3 +608,8 @@ input.code-box {
     text-align: center; font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 @media (max-width: 24rem) { input.code-box { flex-basis: 2.6rem; width: 2.6rem; } }
+
+/* Demo-balk bovenaan */
+.demo-bar { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: center; padding: 0.6rem 1rem; background: var(--sun-bg); color: var(--sun-text); border-bottom: 2px solid var(--sun-text); }
+.demo-bar p { margin: 0; }
+.demo-bar .btn { min-height: 2.6rem; padding: 0.3rem 1rem; }

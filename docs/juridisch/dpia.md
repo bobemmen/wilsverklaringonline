@@ -57,6 +57,7 @@ Schaal: kans/impact laag (L), midden (M), hoog (H) vóór maatregelen → restri
 | 13 | Inzage- of exportverzoeken niet tijdig afgehandeld | L | L | **A** self-service export en verwijdering; **T** procedure en privacycontact | L |
 | 14 | Phishing met de naam van de dienst (nepmail “uw code”) | M | M | **A** uitnodigingsmail bevat geen code; **A** link naar eigen domein; **T** SPF/DKIM/DMARC; **T** uitleg in pilotinformatie | L–M |
 | 15 | Onbedoelde inzage door naasten of via gelekte links | M | M | **A** links intrekbaar, verloopdatum, geheime tokens; **A** arts-link met e-mailbevestiging; **A** inzagelog | L |
+| 16 | Demo-omgeving: bezoeker vult toch echte gegevens in, of misbruik van het openbare demo-startpunt | M | M | **A** alleen indien `DEMO_ENABLED=true`; **A** eigen tijdelijk account per bezoeker, niemand ziet andermans gegevens; **A** automatisch verwijderd na 2 uur of bij afsluiten; **A** duidelijke waarschuwing “vul geen echte gegevens in”; **T** limiet per IP (10 per uur) en maximaal 50 tegelijk; **T** nooit mail naar demo-adressen; demo-accounts staan niet in het overzicht van huisartsen | L |
 
 ## 4. Maatregelen vóór de start (samenvatting)
 

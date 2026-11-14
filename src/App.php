@@ -86,6 +86,9 @@ final class App
         $r->post('/inloggen', [C\AuthController::class, 'login'], ['guest']);
         $r->get('/registreren', [C\AuthController::class, 'registerForm'], ['guest']);
         $r->post('/registreren', [C\AuthController::class, 'register'], ['guest']);
+        $r->get('/demo', [C\DemoController::class, 'show'], ['guest']);
+        $r->post('/demo/start', [C\DemoController::class, 'start'], ['guest', 'throttle:demo,10,3600']);
+        $r->post('/demo/stoppen', [C\DemoController::class, 'stop'], ['auth']);
         $r->get('/wachtwoord-vergeten', [C\PasswordResetController::class, 'forgotForm'], ['guest']);
         $r->post('/wachtwoord-vergeten', [C\PasswordResetController::class, 'forgot'], ['guest', 'throttle:forgot,10,3600']);
         $r->get('/wachtwoord-resetten/{token}', [C\PasswordResetController::class, 'resetForm'], ['guest']);
@@ -219,6 +222,16 @@ final class App
                 return Response::redirect('/inloggen');
 
             case 'twofa':
+                // demo-patiënt: tijdelijk account zonder 2FA; verlopen = verwijderen en terug naar de demo-pagina
+                if ($this->store->isDemo($this->auth->user())) {
+                    $u = $this->auth->user();
+                    if ((int) ($u['demo_until'] ?? 0) < time()) {
+                        $this->store->deleteUser($u['id']);
+                        $this->auth->logout();
+                        return Response::redirect('/demo');
+                    }
+                    return null;
+                }
                 if (!$this->auth->twoFactorEnabled()) {
                     return Response::redirect('/2fa/instellen');
                 }

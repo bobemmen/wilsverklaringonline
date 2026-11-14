@@ -18,6 +18,9 @@ final class Mailer
         $from = Config::get('MAIL_FROM_ADDRESS', 'no-reply@localhost');
         $fromName = Config::get('MAIL_FROM_NAME', 'WilsVerklaring');
 
+        if (str_ends_with(mb_strtolower(trim($to)), '@demo.invalid')) {
+            return true; // demo-accounts bestaan alleen in de app; er gaat nooit een echte mail naartoe
+        }
         if (preg_match('/[\r\n]/', $to . $from . $fromName . $subject)) {
             return false; // header-injectie
         }

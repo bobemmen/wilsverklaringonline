@@ -126,6 +126,17 @@ final class View
         return '<input type="hidden" name="_token" value="' . e($this->app->session->csrfToken()) . '">';
     }
 
+    /** Staat de demo aan (DEMO_ENABLED=true in .env)? */
+    public function demoEnabled(): bool
+    {
+        return \WV\Config::bool('DEMO_ENABLED', false);
+    }
+
+    public function isDemo(): bool
+    {
+        return $this->app->store->isDemo($this->user());
+    }
+
     public function user(): ?array
     {
         return $this->app->auth->user();
