@@ -30,7 +30,7 @@ if ($user && ($user['role'] ?? 'patient') === 'arts') {
     <?php endif ?>
     <div class="bar">
         <a class="brand" href="<?= $user ? '/dashboard' : '/' ?>">
-            <span class="brand-logo" aria-hidden="true"><span class="brand-mark"></span></span>
+            <?= $this->logo(44) ?>
             <span>WilsVerklaring</span>
         </a>
         <div class="tools" role="group" aria-label="Weergave en voorlezen">

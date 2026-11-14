@@ -64,6 +64,21 @@ final class View
 
     // ----------------------------------------------------------- hulpfuncties
 
+    /** Het logo (avondzon met gloed) als inline svg; de kleuren volgen het gekozen thema (zie .logo in app.css). */
+    public function logo(int $size = 40, bool $decorative = true): string
+    {
+        static $n = 0;
+        $id = 'logo-clip-' . (++$n);
+        $a = $decorative ? ' aria-hidden="true"' : ' role="img" aria-label="Logo WilsVerklaring"';
+        return '<svg class="logo" width="' . $size . '" height="' . $size . '" viewBox="0 0 64 64" focusable="false"' . $a . '>'
+            . '<defs><clipPath id="' . $id . '"><circle cx="32" cy="32" r="28"/></clipPath></defs><g clip-path="url(#' . $id . ')">'
+            . '<rect class="logo-bg" width="64" height="64"/>'
+            . '<circle class="logo-sun" cx="36" cy="43" r="18" opacity="0.18"/><circle class="logo-sun" cx="36" cy="43" r="14" opacity="0.3"/><circle class="logo-sun" cx="36" cy="43" r="10"/>'
+            . '<path class="logo-wave" d="M2 46C14 36 26 36 36 43S54 48 64 40V64H2z"/>'
+            . '<path class="logo-bg" opacity="0.3" d="M2 54C16 48 30 48 40 53S56 56 64 52V64H2z"/>'
+            . '</g></svg>';
+    }
+
     public function url(string $path = '/'): string
     {
         return $this->app->url($path);

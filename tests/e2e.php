@@ -166,6 +166,8 @@ T::ok(str_contains($r['headers']['content-security-policy'], "script-src 'self'"
 T::eq($r['headers']['referrer-policy'], 'no-referrer', 'Referrer-Policy: no-referrer (geheime links)');
 T::eq($r['headers']['cache-control'], 'no-store', 'geen caching van gevoelige pagina\'s');
 T::ok(!str_contains($r['body'], 'googleapis'), 'geen externe lettertypes (Google Fonts)');
+T::ok(substr_count($r['body'], 'class="logo"') >= 1 && str_contains($r['body'], 'apple-touch-icon'), 'logo (avondzon) in de kop en touch-icoon in de head');
+T::ok(is_file(__DIR__ . '/../public/favicon.svg') && str_contains((string) file_get_contents(__DIR__ . '/../public/favicon.svg'), '#EFA445'), 'favicon is het zonlogo');
 $r = $anon->req('POST', '/inloggen', ['email' => 'a@b.nl', 'password' => 'x']);
 T::eq($r['status'], 419, 'POST zonder CSRF-token → 419');
 T::eq($anon->get('/nergens')['status'], 404, 'onbekende pagina → 404');

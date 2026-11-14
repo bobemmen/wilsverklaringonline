@@ -14,6 +14,7 @@ final class DeclarationPdf
         $filled = fn(string ...$keys) => array_filter($keys, fn($k) => trim((string) ($c[$k] ?? '')) !== '');
 
         $name = Content::fullName($c, $name);
+        $pdf->brandLogo(48 * min(1.0, $scale));
         $pdf->eyebrow('Wilsverklaring van');
         $pdf->title($name);
         $pdf->space(2);
