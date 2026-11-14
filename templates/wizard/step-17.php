@@ -86,7 +86,7 @@ $blocks['Afsluiting'] = [
     <div class="callout callout-warn" role="note">
         <p><strong>Dit moet nog ingevuld zijn voordat u kunt publiceren:</strong></p>
         <ul>
-            <?php foreach ($missingNow as $m): ?><li><?= e(rtrim(preg_replace('/^Vul /', '', $m), '.')) ?></li><?php endforeach ?>
+            <?php foreach ($missingNow as $field => $m): ?><li><a href="/verklaring/wizard?stap=<?= (int) \WV\Content::stepOfField($field) ?>#<?= e($field) ?>"><?= e(rtrim(preg_replace('/^Vul /', '', $m), '.')) ?></a></li><?php endforeach ?>
         </ul>
         <p class="mb0 muted">Met de knoppen bovenaan de pagina gaat u direct naar die stap.</p>
     </div>
