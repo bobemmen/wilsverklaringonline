@@ -4,24 +4,41 @@ declare(strict_types=1);
 
 namespace WV;
 
-/** Zet een verklaring om in een afdrukbare PDF (zelfde indeling als de online weergave). */
+/** Zet een verklaring om in een afdrukbare PDF: zelfde kleuren, letter, teksten en volgorde als de online weergave (templates/public/_body.php). */
 final class DeclarationPdf
 {
-    public static function build(string $name, ?string $versionDate, array $c, bool $tokenActive, float $scale = 1.0, ?array $verification = null): string
+    public static function build(string $name, ?string $versionDate, array $c, bool $tokenActive, float $scale = 1.0, ?array $verification = null, ?int $versionNumber = null): string
     {
         $pdf = new Pdf('Wilsverklaring ' . $name);
         $pdf->scale = $scale;
         $filled = fn(string ...$keys) => array_filter($keys, fn($k) => trim((string) ($c[$k] ?? '')) !== '');
 
         $name = Content::fullName($c, $name);
-        $pdf->title('Wilsverklaring');
-        $pdf->subtitle($name);
+        $pdf->eyebrow('Wilsverklaring van');
+        $pdf->title($name);
+        $pdf->space(2);
         if (($birth = Content::birthLine($c)) !== '') {
             $pdf->subtitle($birth);
         }
-        $pdf->subtitle($versionDate ? 'Versie van ' . $versionDate : 'Concept');
-        $pdf->space(6);
-        $pdf->hr();
+        $meta = $versionNumber !== null ? 'Versie ' . $versionNumber : 'Concept';
+        if ($versionDate) {
+            $meta .= ' · ' . $versionDate;
+        }
+        if ($filled('datum')) {
+            $meta .= ' · ondertekend op ' . fmt_iso_date((string) $c['datum']);
+        }
+        $pdf->subtitle($meta);
+        $pdf->space(10);
+
+        if ($verification !== null) {
+            $who = $verification['arts_name'] . (!empty($verification['practice']) ? ', ' . $verification['practice'] : '');
+            $pdf->noteBox(
+                'Identiteit bevestigd door de huisarts',
+                $who . ' heeft op ' . fmt_date($verification['verified_at']) . ' bevestigd dat dit account bij deze patiënt hoort en dat de patiënt in persoon is gezien en geïdentificeerd.'
+                . ($verification['his_masked'] !== '' ? ' Patiënt-ID in het HIS: ' . $verification['his_masked'] . '.' : ''),
+                true
+            );
+        }
 
         if ($filled('intro', 'waarde')) {
             $pdf->heading('Over mij');
@@ -72,7 +89,7 @@ final class DeclarationPdf
         if (Content::euthanasieIncluded($c)) {
             $pdf->heading('Euthanasieverzoek');
             if ($filled('euthanasie_lijden')) {
-                $pdf->field('Ondraaglijk lijden', $c['euthanasie_lijden']);
+                $pdf->field('Wat ik ondraaglijk vind', $c['euthanasie_lijden']);
             }
             if ($filled('euthanasie_situatie')) {
                 $pdf->field('Situatie', $c['euthanasie_situatie']);
@@ -107,7 +124,8 @@ final class DeclarationPdf
 
         if ($filled('volmacht')) {
             $pdf->heading('Medische volmacht');
-            $pdf->field('Mag namens mij medische beslissingen nemen', trim($c['volmacht'] . ($filled('volmacht_contact') ? ' — ' . $c['volmacht_contact'] : '')));
+            $pdf->text('Namens mij mag beslissen over mijn medische behandeling, als ik dat zelf niet meer kan:', 'L', 10, Pdf::TEXT, 0, 'L', 0.0, 1.5);
+            $pdf->text($c['volmacht'] . ($filled('volmacht_contact') ? "\n" . $c['volmacht_contact'] : ''), 'LB', 10, Pdf::TEXT, 0, 'L', 0.0, 1.5);
         }
 
         if ($filled('orgaandonatie', 'uitvaart', 'overig')) {
@@ -128,15 +146,6 @@ final class DeclarationPdf
             'Ik heb deze verklaring zelf en uit vrije wil opgesteld. Ik bevestig haar regelmatig met een nieuwe datum en handtekening.'
         );
         $pdf->signature($name, fmt_iso_date((string) $c['datum']), (string) ($c['plaats'] ?? ''));
-
-        if ($verification !== null) {
-            $who = $verification['arts_name'] . (!empty($verification['practice']) ? ', ' . $verification['practice'] : '');
-            $pdf->noteBox(
-                'Bevestigd door huisarts',
-                "Op " . fmt_date($verification['verified_at']) . " heeft $who bevestigd dat dit account bij deze patiënt hoort, dat de patiënt in persoon is gezien en dat de identiteit is gecontroleerd. "
-                . ($verification['his_masked'] !== '' ? 'Patiënt-ID in het HIS: ' . $verification['his_masked'] . '.' : '')
-            );
-        }
 
         if ($tokenActive) {
             $pdf->noteBox(

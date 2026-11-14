@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace WV;
 
 /**
- * Minimale PDF-schrijver (A4, standaard Helvetica/Times-lettertypen, WinAnsi).
- * Geen externe bibliotheken: de tekstbreedtes komen uit de Adobe AFM-metrics
- * (src/data/pdf_font_widths.php), zodat regelafbreking klopt.
+ * Minimale PDF-schrijver (A4, WinAnsi). Het lettertype Lexend (SIL OFL, src/data/fonts) wordt ingebed,
+ * zodat de pdf dezelfde letter en kleuren heeft als de website. Geen externe bibliotheken: de tekstbreedtes
+ * komen uit src/data/pdf_font_widths_lexend.php (uit de lettertypebestanden gelezen), zodat regelafbreking klopt.
  */
 final class Pdf
 {
@@ -15,12 +15,25 @@ final class Pdf
     public const PAGE_H = 841.89;
     public const MARGIN = 56.7; // 2 cm
 
+    // Kleuren van de website (zie app.css)
+    public const TEXT = [30, 43, 34];
+    public const MUTED = [70, 86, 75];
+    public const BORDER = [207, 219, 210];
+    public const BRAND = [47, 107, 79];
+    public const BRAND_STRONG = [31, 74, 54];
+    public const TINT = [221, 235, 223];
+    public const SURFACE_ALT = [245, 248, 244];
+    public const OK = [20, 83, 45];
+    public const OK_BG = [227, 243, 234];
+
+    /** resource, lettertypenaam, bestand */
     private const FONTS = [
-        'H' => ['F1', 'Helvetica'],
-        'HB' => ['F2', 'Helvetica-Bold'],
-        'T' => ['F3', 'Times-Roman'],
-        'TB' => ['F4', 'Times-Bold'],
-        'TI' => ['F5', 'Times-Italic'],
+        'L' => ['F1', 'Lexend-Regular', 'Lexend-Regular.ttf'],
+        'LB' => ['F2', 'Lexend-SemiBold', 'Lexend-SemiBold.ttf'],
+    ];
+    private const FONT_BBOX = [
+        'L' => [-209, -245, 1070, 1080],
+        'LB' => [-213, -246, 1126, 1127],
     ];
 
     private array $widths;
@@ -33,7 +46,7 @@ final class Pdf
 
     public function __construct(private readonly string $title = '')
     {
-        $this->widths = require __DIR__ . '/data/pdf_font_widths.php';
+        $this->widths = require __DIR__ . '/data/pdf_font_widths_lexend.php';
         $this->y = self::PAGE_H - self::MARGIN;
     }
 
@@ -51,7 +64,7 @@ final class Pdf
         $table = $this->widths[$font];
         $n = strlen($encoded);
         for ($i = 0; $i < $n; $i++) {
-            $w += $table[ord($encoded[$i])] ?? 500;
+            $w += $table[ord($encoded[$i])] ?: 600;
         }
         return $w * $size / 1000 + $charSpace * $n;
     }
@@ -78,7 +91,7 @@ final class Pdf
                 $chunk = '';
                 $w = 0.0;
                 for ($i = 0, $n = strlen($word); $i < $n; $i++) {
-                    $cw = ($table[ord($word[$i])] ?? 500) * $size / 1000 + $charSpace;
+                    $cw = ($table[ord($word[$i])] ?: 600) * $size / 1000 + $charSpace;
                     if ($chunk !== '' && $w + $cw > $maxWidth) {
                         $out[] = $chunk;
                         $chunk = '';
@@ -140,9 +153,9 @@ final class Pdf
      */
     public function text(
         string $text,
-        string $font = 'H',
-        float $size = 10.5,
-        array $color = [44, 44, 42],
+        string $font = 'L',
+        float $size = 10,
+        array $color = self::TEXT,
         float $indent = 0.0,
         string $align = 'L',
         float $charSpace = 0.0,
@@ -175,7 +188,7 @@ final class Pdf
     }
 
     /** Tekst op een vaste plek (voor kolommen). Geen paginabeheer. */
-    public function textAt(float $x, float $y, string $text, string $font, float $size, array $color, float $charSpace = 0.0): void
+    public function textAt(float $x, float $y, string $text, string $font, float $size, array $color, float $charSpace = 0.0, bool $encoded = false): void
     {
         $this->stream .= sprintf(
             "BT /%s %.2F Tf %s rg %.2F Tc %.2F %.2F Td (%s) Tj ET\n",
@@ -185,11 +198,11 @@ final class Pdf
             $charSpace,
             $x,
             $y,
-            self::esc($this->enc($text))
+            self::esc($encoded ? $text : $this->enc($text))
         );
     }
 
-    public function hr(array $color = [211, 209, 199], ?float $x1 = null, ?float $x2 = null, float $width = 0.6): void
+    public function hr(array $color = self::BORDER, ?float $x1 = null, ?float $x2 = null, float $width = 0.6): void
     {
         $this->stream .= sprintf(
             "%s RG %.2F w %.2F %.2F m %.2F %.2F l S\n",
@@ -202,141 +215,177 @@ final class Pdf
         );
     }
 
-    /** Verticale balk links van een citaat. */
-    private function bar(float $yTop, float $yBottom, array $color): void
+    /** Afgeronde rechthoek; $r = [linksboven, rechtsboven, rechtsonder, linksonder]. $stroke null = geen rand. */
+    public function roundRect(float $x, float $yTop, float $w, float $h, array $r, array $fill, ?array $stroke = null, float $lineW = 1.0): void
     {
-        $this->stream .= sprintf(
-            "%s RG 1.5 w %.2F %.2F m %.2F %.2F l S\n",
-            self::rgb($color),
-            self::MARGIN + 2,
-            $yTop,
-            self::MARGIN + 2,
-            $yBottom
-        );
-    }
-
-    public function fillRect(float $x, float $yTop, float $w, float $h, array $fill, array $stroke): void
-    {
-        $this->stream .= sprintf(
-            "%s rg %s RG 0.6 w %.2F %.2F %.2F %.2F re B\n",
-            self::rgb($fill),
-            self::rgb($stroke),
-            $x,
-            $yTop - $h,
-            $w,
-            $h
-        );
+        $k = 0.5523;
+        $y = $yTop - $h;
+        [$tl, $tr, $br, $bl] = $r;
+        $p = sprintf('%.2F %.2F m ', $x + $bl, $y);
+        $p .= sprintf('%.2F %.2F l ', $x + $w - $br, $y);
+        $p .= sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c ', $x + $w - $br + $br * $k, $y, $x + $w, $y + $br - $br * $k, $x + $w, $y + $br);
+        $p .= sprintf('%.2F %.2F l ', $x + $w, $y + $h - $tr);
+        $p .= sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c ', $x + $w, $y + $h - $tr + $tr * $k, $x + $w - $tr + $tr * $k, $y + $h, $x + $w - $tr, $y + $h);
+        $p .= sprintf('%.2F %.2F l ', $x + $tl, $y + $h);
+        $p .= sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c ', $x + $tl - $tl * $k, $y + $h, $x, $y + $h - $tl + $tl * $k, $x, $y + $h - $tl);
+        $p .= sprintf('%.2F %.2F l ', $x, $y + $bl);
+        $p .= sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c h ', $x, $y + $bl - $bl * $k, $x + $bl - $bl * $k, $y, $x + $bl, $y);
+        $this->stream .= self::rgb($fill) . ' rg ';
+        if ($stroke !== null) {
+            $this->stream .= sprintf('%s RG %.2F w %s B' . "\n", self::rgb($stroke), $lineW, $p);
+        } else {
+            $this->stream .= $p . "f\n";
+        }
     }
 
     // ------------------------------------------------- opgemaakte onderdelen
 
+    /** Titel bovenaan (gecentreerd). */
     public function title(string $text): void
     {
-        $this->text($text, 'T', 24, [38, 33, 92], 0, 'C', 0.0, 1.25);
+        $this->text($text, 'LB', 22, self::TEXT, 0, 'C', 0.0, 1.25);
     }
 
     public function subtitle(string $text): void
     {
-        $this->text($text, 'H', 9.5, [136, 135, 128], 0, 'C');
+        $this->text($text, 'L', 9.5, self::MUTED, 0, 'C');
     }
 
+    /** Kleine kleurige regel boven de titel (zoals "Wilsverklaring van" op de website). */
+    public function eyebrow(string $text): void
+    {
+        $this->text($text, 'LB', 9.5, self::BRAND, 0, 'C', 0.0, 1.4);
+        $this->space(2);
+    }
+
+    /** Onderwerpkop met lijn eronder. */
     public function heading(string $text): void
     {
-        $this->ensure(60);
-        $this->space(14);
-        $this->text($text, 'T', 15, [38, 33, 92], 0, 'L', 0.0, 1.3, 40);
-        $this->space(1);
-        $this->hr();
-        $this->space(7);
+        $this->ensure(70);
+        $this->space(18);
+        $this->text($text, 'LB', 15, self::TEXT, 0, 'L', 0.0, 1.3, 50);
+        $this->space(2);
+        $this->hr(self::BORDER, null, null, 1.5);
+        $this->space(10);
     }
 
     public function subheading(string $text): void
     {
-        $this->space(6);
-        $this->text($text, 'T', 12, [38, 33, 92], 0, 'L', 0.0, 1.3, 30);
+        $this->space(4);
+        $this->text($text, 'LB', 11.5, self::TEXT, 0, 'L', 0.0, 1.3, 40);
         $this->space(2);
     }
 
-    /** Veld met klein hoofdletterlabel en daaronder de tekst. */
+    /** Kopje met daaronder een alinea (zoals h3 en tekst op de website). */
     public function field(string $label, string $value): void
     {
         $this->space(4);
-        $this->text(mb_strtoupper($label), 'H', 7.5, [136, 135, 128], 0, 'L', 0.7, 1.4, 30);
-        $this->text($value, 'H', 10.5, [44, 44, 42]);
+        $this->text($label, 'LB', 11.5, self::TEXT, 0, 'L', 0.0, 1.3, 40);
+        $this->space(2);
+        $this->text($value, 'L', 10, self::TEXT, 0, 'L', 0.0, 1.5);
+        $this->space(6);
     }
 
-    /** Label gevolgd door een waarde in vet (voor keuzes zoals "Ja"/"Nee"). */
+    /** Label met de gekozen waarde als groen label (zoals de keuzes op de website). */
     public function choice(string $label, string $value): void
     {
         $k = $this->scale;
-        $this->ensure(18 * $k);
-        $this->space(4);
-        $baseline = $this->y - 10.5 * $k;
-        $this->textAt(self::MARGIN, $baseline, mb_strtoupper($label), 'H', 7.5 * $k, [136, 135, 128], 0.7);
-        $labelW = $this->textWidth('H', $this->enc(mb_strtoupper($label)), 7.5 * $k, 0.7);
-        $this->textAt(self::MARGIN + max($labelW + 10, 150 * $k), $baseline, Content::choiceLabel($value), 'HB', 10.5 * $k, [38, 33, 92]);
-        $this->y -= 15 * $k;
+        $h = 18 * $k;
+        $this->ensure($h + 10);
+        $this->space(2);
+        $top = $this->y;
+        $fs = 9.5 * $k;
+        $baseline = $top - $h / 2 - $fs * 0.35;
+        $this->textAt(self::MARGIN, $baseline, $label, 'LB', $fs, self::MUTED);
+        $labelW = $this->textWidth('LB', $this->enc($label), $fs);
+        $x = self::MARGIN + max($labelW + 14, 150 * $k);
+        $val = Content::choiceLabel($value);
+        $w = $this->textWidth('LB', $this->enc($val), $fs) + 20 * $k;
+        $maxW = self::PAGE_W - self::MARGIN - $x;
+        if ($w > $maxW) { // lang label: onder de naam laten staan
+            $x = self::MARGIN;
+            $top -= $h;
+            $this->y = $top;
+            $this->ensure($h + 4);
+            $top = $this->y;
+            $baseline = $top - $h / 2 - $fs * 0.35;
+        }
+        $this->roundRect($x, $top, $w, $h, [$h / 2, $h / 2, $h / 2, $h / 2], self::TINT, self::BRAND, 1.1);
+        $this->textAt($x + 10 * $k, $baseline, $val, 'LB', $fs, self::BRAND_STRONG);
+        $this->y = $top - $h - 6;
     }
 
-    /** Toelichting als citaat met balk. */
+    /** Toelichting in een afgerond vlak (zoals het citaatvlak op de website). */
     public function quote(string $text): void
     {
         $this->space(4);
-        $fs = 11 * $this->scale;
-        $lines = $this->wrap('TI', $text, $fs, $this->contentWidth() - 16);
-        $leading = $fs * 1.4;
-        foreach ($lines as $line) {
-            $this->ensure($leading);
-            $top = $this->y;
-            $this->stream .= sprintf(
-                "BT /F5 %.2F Tf %s rg 0 Tc %.2F %.2F Td (%s) Tj ET\n",
-                $fs,
-                self::rgb([68, 68, 68]),
-                self::MARGIN + 12,
-                $this->y - $fs,
-                self::esc($line)
-            );
-            $this->bar($top, $top - $leading, [175, 169, 236]);
-            $this->y -= $leading;
+        $fs = 10 * $this->scale;
+        $pad = 11;
+        $lines = $this->wrap('L', $text, $fs, $this->contentWidth() - 2 * $pad - 4);
+        $leading = $fs * 1.5;
+        $i = 0;
+        $n = count($lines);
+        $first = true;
+        while ($i < $n) {
+            $this->ensure($leading + 2 * $pad);
+            $room = (int) floor(($this->y - self::MARGIN - 18 - 2 * $pad) / $leading);
+            $take = max(1, min($n - $i, $room));
+            $h = $take * $leading + 2 * $pad;
+            $last = $i + $take >= $n;
+            $big = 14;
+            $this->roundRect(self::MARGIN, $this->y, $this->contentWidth(), $h, [$first ? $big : 3, $first ? $big : 3, $last ? $big : 3, $last ? 4 : 3], self::SURFACE_ALT);
+            $yy = $this->y - $pad;
+            for ($j = 0; $j < $take; $j++) {
+                $this->textAt(self::MARGIN + $pad + 2, $yy - $fs - ($leading - $fs) / 2 + 1, $lines[$i + $j], 'L', $fs, self::MUTED, 0.0, true);
+                $yy -= $leading;
+            }
+            $this->y -= $h;
+            $i += $take;
+            $first = false;
+            if (!$last) {
+                $this->newPage();
+            }
         }
+        $this->space(6);
     }
 
     /** Handtekeningblok: naam/datum, daaronder lijnen voor handtekening en plaats. */
     public function signature(string $name, string $date, string $place = ''): void
     {
-        $this->ensure(110);
-        $this->space(34);
-        $this->hr();
+        $this->ensure(120);
+        $this->space(30);
+        $this->hr(self::BORDER, null, null, 1.5);
         $this->space(10);
         $right = self::PAGE_W - self::MARGIN;
         $y = $this->y - 8;
-        $this->textAt(self::MARGIN, $y, 'ONDERTEKEND DOOR', 'H', 7.5, [136, 135, 128], 0.7);
-        $this->textAt($right - 140, $y, 'DATUM', 'H', 7.5, [136, 135, 128], 0.7);
-        $this->textAt(self::MARGIN, $y - 13, $name, 'H', 10, [44, 44, 42]);
-        $this->textAt($right - 140, $y - 13, $date, 'H', 10, [44, 44, 42]);
-        $this->y -= 58;
-        $this->hr([211, 209, 199], self::MARGIN, self::MARGIN + 290);
-        $this->hr([211, 209, 199], $right - 190, $right);
+        $this->textAt(self::MARGIN, $y, 'Ondertekend door', 'LB', 8.5, self::BRAND);
+        $this->textAt($right - 140, $y, 'Datum', 'LB', 8.5, self::BRAND);
+        $this->textAt(self::MARGIN, $y - 15, $name, 'L', 10, self::TEXT);
+        $this->textAt($right - 140, $y - 15, $date, 'L', 10, self::TEXT);
+        $this->y -= 62;
+        $this->hr(self::BORDER, self::MARGIN, self::MARGIN + 290);
+        $this->hr(self::BORDER, $right - 190, $right);
         if ($place !== '') {
-            $this->textAt($right - 190, $this->y + 5, $place, 'H', 10, [44, 44, 42]);
+            $this->textAt($right - 190, $this->y + 5, $place, 'L', 10, self::TEXT);
         }
-        $this->textAt(self::MARGIN, $this->y - 12, 'Handtekening', 'H', 8.5, [136, 135, 128]);
-        $this->textAt($right - 190, $this->y - 12, 'Plaats', 'H', 8.5, [136, 135, 128]);
-        $this->y -= 22;
+        $this->textAt(self::MARGIN, $this->y - 13, 'Handtekening', 'L', 8.5, self::MUTED);
+        $this->textAt($right - 190, $this->y - 13, 'Plaats', 'L', 8.5, self::MUTED);
+        $this->y -= 24;
     }
 
-    public function noteBox(string $label, string $text): void
+    /** Afgerond vlak met kopje en tekst; $ok = groen (bevestiging), anders neutraal. */
+    public function noteBox(string $label, string $text, bool $ok = false): void
     {
-        $lines = $this->wrap('H', $text, 9.5, $this->contentWidth() - 20);
-        $h = 14 + 11 + count($lines) * 13.3 + 4;
+        $lines = $this->wrap('L', $text, 9.5, $this->contentWidth() - 28);
+        $h = 14 + 16 + count($lines) * 14 + 8;
         $this->ensure($h + 20);
-        $this->space(18);
-        $this->fillRect(self::MARGIN, $this->y, $this->contentWidth(), $h, [241, 239, 232], [211, 209, 199]);
-        $this->textAt(self::MARGIN + 10, $this->y - 17, mb_strtoupper($label), 'H', 7.5, [136, 135, 128], 0.7);
-        $yy = $this->y - 31;
+        $this->space(16);
+        $this->roundRect(self::MARGIN, $this->y, $this->contentWidth(), $h, [14, 14, 14, 14], $ok ? self::OK_BG : self::SURFACE_ALT);
+        $this->textAt(self::MARGIN + 14, $this->y - 24, $label, 'LB', 10.5, $ok ? self::OK : self::TEXT);
+        $yy = $this->y - 40;
         foreach ($lines as $line) {
-            $this->stream .= sprintf("BT /F1 9.5 Tf %s rg 0 Tc %.2F %.2F Td (%s) Tj ET\n", self::rgb([44, 44, 42]), self::MARGIN + 10, $yy, self::esc($line));
-            $yy -= 13.3;
+            $this->textAt(self::MARGIN + 14, $yy, $line, 'L', 9.5, self::TEXT, 0.0, true);
+            $yy -= 14;
         }
         $this->y -= $h;
     }
@@ -365,8 +414,20 @@ final class Pdf
             gmdate('YmdHis') . 'Z'
         ));
         $fontRefs = [];
-        foreach (self::FONTS as [$res, $base]) {
-            $n = $add(sprintf('<< /Type /Font /Subtype /Type1 /BaseFont /%s /Encoding /WinAnsiEncoding >>', $base));
+        foreach (self::FONTS as $key => [$res, $base, $file]) {
+            $ttf = (string) file_get_contents(__DIR__ . '/data/fonts/' . $file);
+            $z = gzcompress($ttf, 9);
+            $ff = $add(sprintf("<< /Length %d /Length1 %d /Filter /FlateDecode >>\nstream\n%s\nendstream", strlen($z), strlen($ttf), $z));
+            $bb = self::FONT_BBOX[$key];
+            $fd = $add(sprintf(
+                '<< /Type /FontDescriptor /FontName /%s /Flags 32 /FontBBox [%d %d %d %d] /ItalicAngle 0 /Ascent 1000 /Descent -250 /CapHeight 700 /StemV 80 /FontFile2 %d 0 R >>',
+                $base, $bb[0], $bb[1], $bb[2], $bb[3], $ff
+            ));
+            $w = implode(' ', array_slice($this->widths[$key], 32, 224));
+            $n = $add(sprintf(
+                '<< /Type /Font /Subtype /TrueType /BaseFont /%s /FirstChar 32 /LastChar 255 /Widths [%s] /FontDescriptor %d 0 R /Encoding /WinAnsiEncoding >>',
+                $base, $w, $fd
+            ));
             $fontRefs[] = "/$res $n 0 R";
         }
         $resources = '<< /Font << ' . implode(' ', $fontRefs) . ' >> >>';
@@ -375,7 +436,7 @@ final class Pdf
         foreach ($this->pages as $i => $content) {
             $footer = sprintf(
                 "BT /F1 8 Tf %s rg 0 Tc %.2F %.2F Td (%s) Tj ET\n",
-                self::rgb([136, 135, 128]),
+                self::rgb(self::MUTED),
                 self::PAGE_W / 2 - 30,
                 28,
                 self::esc('Pagina ' . ($i + 1) . ' van ' . $total)
