@@ -660,6 +660,7 @@ T::section('Publiceren met regels');
 $r = $other->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 $pg = $other->follow($r)['body'];
 T::ok(str_contains($pg, 'Vul uw voornamen') && str_contains($pg, 'Vul de datum van ondertekening'), 'ook zonder euthanasie zijn naam, geboortedatum, datum en plaats verplicht');
+T::ok(str_contains($pg, 'href="/verklaring/wizard?stap=16#datum"') && str_contains($pg, 'href="/verklaring/wizard?stap=1#voornamen"'), 'de foutmeldingen linken naar de stap met het ontbrekende veld');
 $other->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['voornamen' => 'Bas', 'achternaam' => 'Bakker', 'geboortedatum' => '1960-01-02']]);
 $other->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'concept', 'data' => ['datum' => '2026-11-10', 'plaats' => 'Wanroij']]);
 $r = $other->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);

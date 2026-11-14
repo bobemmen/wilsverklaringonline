@@ -428,7 +428,7 @@ final class Content
      * Wat er minimaal ingevuld moet zijn om te kunnen publiceren.
      * Altijd: naam, geboortedatum en datum + plaats van ondertekening (anders is de verklaring niet aan iemand toe te schrijven).
      * Per aangezet onderwerp: de kern van het verzoek (een verzoek zonder inhoud is erger dan geen verzoek).
-     * @return list<string>
+     * @return array<string, string> veldnaam => melding
      */
     public static function missingForPublish(array $doc): array
     {
@@ -453,7 +453,7 @@ final class Content
         $missing = [];
         foreach ($need as $key => [$label, $forRequest]) {
             if (trim((string) ($doc[$key] ?? '')) === '') {
-                $missing[] = 'Vul ' . $label . ' in.' . ($forRequest ? ' Dat is nodig voor een verzoek.' : '');
+                $missing[$key] = 'Vul ' . $label . ' in.' . ($forRequest ? ' Dat is nodig voor een verzoek.' : '');
             }
         }
         return $missing;
@@ -482,6 +482,17 @@ final class Content
             }
         }
         return $out;
+    }
+
+    /** In welke stap staat dit veld? (voor links vanuit foutmeldingen) */
+    public static function stepOfField(string $field): ?int
+    {
+        foreach (self::STEP_FIELDS as $step => $fields) {
+            if (in_array($field, $fields, true)) {
+                return (int) $step;
+            }
+        }
+        return null;
     }
 
     public static function euthanasieIncluded(array $data): bool

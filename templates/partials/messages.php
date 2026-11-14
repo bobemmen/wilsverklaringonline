@@ -7,7 +7,15 @@
         <?= count($errors) === 1 ? 'Er is iets niet gelukt:' : 'Er zijn ' . count($errors) . ' dingen die u moet aanpassen:' ?>
         <ul>
             <?php foreach ($errors as $key => $text): ?>
-                <li><a href="#<?= e($key) ?>"><?= e($text) ?></a></li>
+                <?php
+                $href = '#' . $key;
+                if (str_starts_with((string) $key, 'ontbreekt-')) {
+                    $field = substr((string) $key, strlen('ontbreekt-'));
+                    $stap = \WV\Content::stepOfField($field);
+                    $href = $stap ? '/verklaring/wizard?stap=' . $stap . '#' . $field : '#fouten';
+                }
+                ?>
+                <li><a href="<?= e($href) ?>"><?= e($text) ?></a></li>
             <?php endforeach ?>
         </ul>
     </div>

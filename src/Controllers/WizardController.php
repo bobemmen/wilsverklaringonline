@@ -77,8 +77,8 @@ final class WizardController extends Controller
                 $declaration['draft'] = $data;
                 $this->app->store->saveDeclaration($declaration);
                 $errors = [];
-                foreach ($missing as $i => $text) {
-                    $errors['ontbreekt-' . $i] = $text;
+                foreach ($missing as $field => $text) {
+                    $errors['ontbreekt-' . $field] = $text;
                 }
                 if (!$confirmed) {
                     $errors['bevestig'] = 'Vink aan dat u uw verklaring rustig hebt doorgelezen en wilt publiceren.';
