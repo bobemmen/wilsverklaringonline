@@ -98,6 +98,60 @@ final class Store
         return ['id' => $id, 'practice_id' => null] + $data;
     }
 
+    // ------------------------------------------------------------------ demo
+
+    public function isDemo(?array $user): bool
+    {
+        return $user !== null && !empty($user['demo']);
+    }
+
+    /** Aantal demo-accounts dat nog niet is verlopen. */
+    public function activeDemoCount(): int
+    {
+        return (int) $this->db->one('SELECT COUNT(*) AS n FROM users WHERE demo_until IS NOT NULL AND demo_until >= ?', [time()])['n'];
+    }
+
+    /**
+     * Maakt een tijdelijke patiënt voor de demo: eigen account per bezoeker (dus niemand ziet gegevens van een ander),
+     * zonder bruikbaar wachtwoord en zonder tweestapsverificatie, automatisch verwijderd na $ttlSeconds.
+     */
+    public function createDemoPatient(int $ttlSeconds): array
+    {
+        $id = $this->newId();
+        $until = time() + $ttlSeconds;
+        $data = [
+            'name' => 'Demo-patiënt',
+            'email' => 'demo-' . bin2hex(random_bytes(8)) . '@demo.invalid',
+            'password' => password_hash(bin2hex(random_bytes(32)), PASSWORD_ARGON2ID) ?: '',
+            'created_at' => time(),
+            'role' => 'patient',
+            'demo' => true,
+            'demo_until' => $until,
+            'consent_at' => time(),
+            'consent_version' => 'demo',
+            'recovery_codes' => [],
+            'two_factor_secret' => null,
+            'two_factor_confirmed_at' => null,
+            'two_factor_last_step' => 0,
+        ];
+        $this->db->run(
+            'INSERT INTO users (id, email_idx, data, demo_until) VALUES (?, ?, ?, ?)',
+            [$id, $this->emailIndex($data['email']), $this->seal('users', $id, $data), $until]
+        );
+        return ['id' => $id, 'practice_id' => null] + $data;
+    }
+
+    /** Verwijdert verlopen demo-accounts met alles wat eraan hangt. @return int aantal */
+    public function purgeDemoUsers(): int
+    {
+        $n = 0;
+        foreach ($this->db->all('SELECT id FROM users WHERE demo_until IS NOT NULL AND demo_until < ?', [time()]) as $row) {
+            $this->deleteUser($row['id']);
+            $n++;
+        }
+        return $n;
+    }
+
     public function saveUser(array $user): void
     {
         $id = $user['id'];

@@ -17,4 +17,5 @@
 </form>
 
 <p class="guest-links"><a href="/wachtwoord-vergeten">Wachtwoord vergeten?</a></p>
+<?php if ($this->demoEnabled()): ?><p class="guest-links">Eerst even kijken? <a href="/demo">Bekijk de demo</a></p><?php endif ?>
 <p class="guest-links mb0">Nog geen account? <a href="/registreren">Account aanmaken</a></p>

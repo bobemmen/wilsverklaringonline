@@ -13,7 +13,7 @@ use PDO;
  */
 final class Db
 {
-    private const SCHEMA_VERSION = 5;
+    private const SCHEMA_VERSION = 6;
 
     public PDO $pdo;
 
@@ -187,6 +187,13 @@ final class Db
                     expires_at INTEGER NOT NULL
                 ) WITHOUT ROWID;
                 CREATE INDEX password_resets_user ON password_resets(user_id);
+                SQL);
+            }
+            if ($version < 6) {
+                // Demo-patiënten (tijdelijk, per bezoeker): alleen de vervaltijd staat leesbaar, om ze te kunnen opruimen.
+                $this->pdo->exec(<<<'SQL'
+                ALTER TABLE users ADD COLUMN demo_until INTEGER;
+                CREATE INDEX users_demo_until ON users(demo_until) WHERE demo_until IS NOT NULL;
                 SQL);
             }
             $this->pdo->exec('PRAGMA user_version = ' . self::SCHEMA_VERSION);

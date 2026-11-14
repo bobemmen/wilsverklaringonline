@@ -37,6 +37,8 @@ Aanbevolen in `php.ini`: `expose_php=Off`, OPcache aan.
 
 **Automatisch uitrollen vanaf GitHub:** `.github/workflows/deploy.yml` draait bij elke push de tests en zet bij een push naar `main` de app via FTPS op de server (de app naar `FTP_APP_DIR`, `public/` naar `FTP_WEB_DIR`). `.env` en `storage/database` blijven staan; de database wordt bij het opstarten zelf bijgewerkt. Instellen: secrets `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` en variabelen `FTP_APP_DIR`, `FTP_WEB_DIR` (zie de kop van het bestand). `public/index.php` vindt de buurmap `wilsverklaring-app/` zelf, zodat daar niets handmatig aangepast hoeft te worden.
 
+**Demo van de patiëntomgeving:** met `DEMO_ENABLED=true` in `.env` verschijnt "Bekijk de demo" op de beginpagina en inlogpagina. Een bezoeker krijgt een eigen, tijdelijk patiëntaccount (zonder wachtwoord en zonder 2FA) en gebruikt daarmee de echte pagina's; wijzigingen aan de app zijn dus automatisch ook in de demo te zien. Het account verdwijnt na `DEMO_TTL_MINUTES` (standaard 120) of zodra de bezoeker de demo afsluit (`purge` ruimt ook op), er gaan nooit mails naar demo-adressen (`@demo.invalid`), en er zijn maximaal `DEMO_MAX` (50) demo-accounts tegelijk. Demo-accounts staan niet in het overzicht van huisartsen. Standaard staat de demo uit.
+
 ### Configuratie (`.env`)
 
 | Variabele | Betekenis |

@@ -19,6 +19,15 @@ if ($user && ($user['role'] ?? 'patient') === 'arts') {
 }
 ?>
 <header class="site-header">
+    <?php if ($this->isDemo()): ?>
+        <div class="demo-bar" role="region" aria-label="Demo">
+            <p><strong>Dit is een demo.</strong> Vul geen echte gegevens in. Alles wordt automatisch verwijderd.</p>
+            <form method="post" action="/demo/stoppen" class="inline-form">
+                <?= $this->csrf() ?>
+                <button type="submit" class="btn btn-soft">Demo afsluiten</button>
+            </form>
+        </div>
+    <?php endif ?>
     <div class="bar">
         <a class="brand" href="<?= $user ? '/dashboard' : '/' ?>">
             <span class="brand-logo" aria-hidden="true"><span class="brand-mark"></span></span>

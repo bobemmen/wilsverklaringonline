@@ -10,6 +10,7 @@
             <?php else: ?>
                 <a href="/registreren" class="btn btn-primary">Beginnen met de code van mijn huisarts</a>
                 <a href="/inloggen" class="btn btn-soft">Inloggen</a>
+                <?php if ($this->demoEnabled()): ?><a href="/demo" class="btn btn-soft">Bekijk de demo</a><?php endif ?>
             <?php endif ?>
         </div>
     </div>

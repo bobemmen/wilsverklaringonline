@@ -36,6 +36,7 @@ Wij geven uw gegevens niet door aan landen buiten de Europese Economische Ruimte
 
 - Uw account en verklaring: zolang u ze wilt bewaren. Verwijdert u uw account, dan verdwijnt alles definitief, ook uit de bewaarde gegevens van de website zelf. Back-ups (ook versleuteld) bewaren wij maximaal *[termijn vaststellen; advies 35 dagen]* dagen.
 - Een link om uw wachtwoord te herstellen: 60 minuten, of tot u hem gebruikt. Wij bewaren daarvan alleen een versleutelde vingerafdruk, niet de link zelf.
+- Wanneer u de demo gebruikt: een tijdelijk demo-account met wat u daarin invult. Dit wordt na 2 uur of zodra u de demo afsluit automatisch verwijderd. Vul in de demo geen echte gegevens in.
 - Uitnodigingen die niet tot een registratie leiden: verlopen na 14 dagen en worden 30 dagen daarna verwijderd.
 - Sessiegegevens: een sessie verloopt twee uur na uw laatste activiteit; verlopen sessies worden periodiek opgeruimd.
 

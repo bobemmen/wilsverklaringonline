@@ -136,7 +136,8 @@ switch ($cmd) {
         $n = $store->db->run('DELETE FROM sessions WHERE expires_at < ?', [time()]);
         $m = $store->db->run('DELETE FROM throttle WHERE reset_at < ?', [time()]);
         $i = $store->purgeUnusedInvitations();
-        out("Verlopen sessies verwijderd: $n; verlopen tellers verwijderd: $m; niet gebruikte uitnodigingen (30 dagen na verlopen) verwijderd: $i.");
+        $d = $store->purgeDemoUsers();
+        out("Verlopen sessies verwijderd: $n; verlopen tellers verwijderd: $m; niet gebruikte uitnodigingen (30 dagen na verlopen) verwijderd: $i; verlopen demo-accounts verwijderd: $d.");
         break;
 
     case 'serve':
