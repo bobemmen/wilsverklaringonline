@@ -145,6 +145,68 @@
         window.addEventListener('pagehide', function () { window.speechSynthesis.cancel(); });
     }
 
+    // ------------------------------------------------------------------ code in losse vakjes
+    // <input data-code-boxes="6">: wordt met JavaScript zes vakjes; zonder JavaScript blijft het één invoerveld.
+    Array.prototype.forEach.call(document.querySelectorAll('input[data-code-boxes]'), function (orig) {
+        var n = parseInt(orig.getAttribute('data-code-boxes'), 10) || 6;
+        var group = document.createElement('div');
+        group.className = 'code-boxes';
+        group.setAttribute('role', 'group');
+        var label = document.querySelector('label[for="' + orig.id + '"]');
+        if (label && label.id === '') { label.id = orig.id + '-label'; }
+        if (label) { group.setAttribute('aria-labelledby', label.id); }
+        var hint = orig.getAttribute('aria-describedby');
+        if (hint) { group.setAttribute('aria-describedby', hint); }
+        var boxes = [];
+
+        function sync() {
+            orig.value = boxes.map(function (b) { return b.value; }).join('');
+        }
+        function fill(from, digits) {
+            var i = from;
+            digits.split('').forEach(function (d) { if (i < n) { boxes[i++].value = d; } });
+            sync();
+            boxes[Math.min(i, n - 1)].focus();
+        }
+        for (var i = 0; i < n; i++) {
+            (function (i) {
+                var b = document.createElement('input');
+                b.type = 'text';
+                b.className = 'code-box';
+                b.inputMode = 'numeric';
+                b.maxLength = 1;
+                b.autocomplete = i === 0 ? 'one-time-code' : 'off';
+                b.setAttribute('aria-label', 'Cijfer ' + (i + 1) + ' van ' + n);
+                if (orig.getAttribute('aria-invalid') === 'true') { b.setAttribute('aria-invalid', 'true'); }
+                if (i === 0) { b.id = orig.id + '-1'; }
+                b.addEventListener('input', function () {
+                    var digits = b.value.replace(/\D/g, '');
+                    b.value = '';
+                    if (digits) { fill(i, digits); } else { sync(); }
+                });
+                b.addEventListener('keydown', function (e) {
+                    if (e.key === 'Backspace' && b.value === '' && i > 0) {
+                        boxes[i - 1].value = ''; boxes[i - 1].focus(); sync(); e.preventDefault();
+                    } else if (e.key === 'ArrowLeft' && i > 0) { boxes[i - 1].focus(); e.preventDefault(); }
+                    else if (e.key === 'ArrowRight' && i < n - 1) { boxes[i + 1].focus(); e.preventDefault(); }
+                });
+                b.addEventListener('paste', function (e) {
+                    var t = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+                    if (t) { e.preventDefault(); fill(i, t); }
+                });
+                b.addEventListener('focus', function () { b.select(); });
+                boxes.push(b);
+                group.appendChild(b);
+            })(i);
+        }
+        if (label) { label.setAttribute('for', orig.id + '-1'); }
+        orig.type = 'hidden';
+        orig.removeAttribute('required');
+        orig.removeAttribute('pattern');
+        orig.removeAttribute('maxlength');
+        orig.parentNode.insertBefore(group, orig);
+    });
+
     // Foutmelding bovenaan krijgt focus, zodat schermlezers hem direct voorlezen
     var err = document.getElementById('fouten');
     if (err) { err.focus(); }

@@ -34,7 +34,7 @@
     <div class="field">
         <label for="code">Code van uw huisarts</label>
         <p class="hint" id="code-hint">De code van 6 cijfers die u op papier heeft gekregen.</p>
-        <input type="text" id="code" name="code" inputmode="numeric" maxlength="7" pattern="[0-9 ]{6,7}" required aria-describedby="code-hint"<?= $this->invalid('code') ?>>
+        <input type="text" id="code" name="code" inputmode="numeric" maxlength="7" pattern="[0-9 ]{6,7}" data-code-boxes="6" autocomplete="one-time-code" required aria-describedby="code-hint"<?= $this->invalid('code') ?>>
         <?= $this->fieldError('code') ?>
     </div>
     <fieldset class="field" id="akkoord">
