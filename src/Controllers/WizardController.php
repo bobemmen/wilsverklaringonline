@@ -72,12 +72,16 @@ final class WizardController extends Controller
 
         if ($action === 'publiceer' && $step === Content::TOTAL_STEPS) {
             $missing = Content::missingForPublish(Content::normalize($data));
-            if ($missing) {
+            $confirmed = $this->input('bevestig') === '1';
+            if ($missing || !$confirmed) {
                 $declaration['draft'] = $data;
                 $this->app->store->saveDeclaration($declaration);
                 $errors = [];
                 foreach ($missing as $i => $text) {
                     $errors['ontbreekt-' . $i] = $text;
+                }
+                if (!$confirmed) {
+                    $errors['bevestig'] = 'Vink aan dat u uw verklaring rustig hebt doorgelezen en wilt publiceren.';
                 }
                 return $this->fail('/verklaring/wizard?stap=17', $errors);
             }

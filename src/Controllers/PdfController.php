@@ -25,14 +25,18 @@ final class PdfController extends Controller
             }
         }
 
+        $tokenActive = $this->app->store->tokenIsActive($declaration);
+        $link = $tokenActive && !empty($declaration['access_token']) ? $this->app->url('/v/' . $declaration['access_token']) : null;
+
         $pdf = DeclarationPdf::build(
             $this->user()['name'],
             $version ? fmt_date($version['created_at']) : null,
             $content,
-            $this->app->store->tokenIsActive($declaration),
+            $tokenActive,
             $this->input('groot') === '1' ? 1.35 : 1.0,
             $this->app->store->verificationPanel($declaration),
-            $number
+            $number,
+            $link
         );
         return Response::download($pdf, 'wilsverklaring-' . date('Y-m-d') . '.pdf', 'application/pdf');
     }

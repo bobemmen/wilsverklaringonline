@@ -41,6 +41,8 @@ final class Pdf
     private array $pages = [];
     private string $stream = '';
     private float $y;
+    /** @var array<int, list<array{float, float, float, float, string}>> klikbare gebieden per pagina-index */
+    private array $annots = [];
     /** Vergrotingsfactor voor tekst (1.0 = normaal, 1.4 = grote letters). */
     public float $scale = 1.0;
 
@@ -216,7 +218,7 @@ final class Pdf
     }
 
     /** Afgeronde rechthoek; $r = [linksboven, rechtsboven, rechtsonder, linksonder]. $stroke null = geen rand. */
-    public function roundRect(float $x, float $yTop, float $w, float $h, array $r, array $fill, ?array $stroke = null, float $lineW = 1.0): void
+    public function roundRect(float $x, float $yTop, float $w, float $h, array $r, array $fill, ?array $stroke = null, float $lineW = 1.0, bool $dashed = false): void
     {
         $k = 0.5523;
         $y = $yTop - $h;
@@ -232,7 +234,7 @@ final class Pdf
         $p .= sprintf('%.2F %.2F %.2F %.2F %.2F %.2F c h ', $x, $y + $bl - $bl * $k, $x + $bl - $bl * $k, $y, $x + $bl, $y);
         $this->stream .= self::rgb($fill) . ' rg ';
         if ($stroke !== null) {
-            $this->stream .= sprintf('%s RG %.2F w %s B' . "\n", self::rgb($stroke), $lineW, $p);
+            $this->stream .= sprintf('%s RG %.2F w %s%s B%s' . "\n", self::rgb($stroke), $lineW, $dashed ? '[3 2] 0 d ' : '', $p, $dashed ? ' [] 0 d' : '');
         } else {
             $this->stream .= $p . "f\n";
         }
@@ -299,8 +301,9 @@ final class Pdf
         $this->textAt(self::MARGIN, $baseline, $label, 'LB', $fs, self::MUTED);
         $labelW = $this->textWidth('LB', $this->enc($label), $fs);
         $x = self::MARGIN + max($labelW + 14, 150 * $k);
-        $val = Content::choiceLabel($value);
-        $w = $this->textWidth('LB', $this->enc($val), $fs) + 20 * $k;
+        $empty = trim($value) === '';
+        $val = $empty ? 'Niet ingevuld' : Content::choiceLabel($value);
+        $w = $this->textWidth($empty ? 'L' : 'LB', $this->enc($val), $fs) + 20 * $k;
         $maxW = self::PAGE_W - self::MARGIN - $x;
         if ($w > $maxW) { // lang label: onder de naam laten staan
             $x = self::MARGIN;
@@ -310,8 +313,13 @@ final class Pdf
             $top = $this->y;
             $baseline = $top - $h / 2 - $fs * 0.35;
         }
-        $this->roundRect($x, $top, $w, $h, [$h / 2, $h / 2, $h / 2, $h / 2], self::TINT, self::BRAND, 1.1);
-        $this->textAt($x + 10 * $k, $baseline, $val, 'LB', $fs, self::BRAND_STRONG);
+        if ($empty) {
+            $this->roundRect($x, $top, $w, $h, [$h / 2, $h / 2, $h / 2, $h / 2], [255, 255, 255], [111, 133, 118], 1.1, true);
+            $this->textAt($x + 10 * $k, $baseline, $val, 'L', $fs, self::MUTED);
+        } else {
+            $this->roundRect($x, $top, $w, $h, [$h / 2, $h / 2, $h / 2, $h / 2], self::TINT, self::BRAND, 1.1);
+            $this->textAt($x + 10 * $k, $baseline, $val, 'LB', $fs, self::BRAND_STRONG);
+        }
         $this->y = $top - $h - 6;
     }
 
@@ -373,11 +381,12 @@ final class Pdf
         $this->y -= 24;
     }
 
-    /** Afgerond vlak met kopje en tekst; $ok = groen (bevestiging), anders neutraal. */
-    public function noteBox(string $label, string $text, bool $ok = false): void
+    /** Afgerond vlak met kopje en tekst; $ok = groen (bevestiging), anders neutraal. $url komt als klikbare link onder de tekst. */
+    public function noteBox(string $label, string $text, bool $ok = false, ?string $url = null): void
     {
         $lines = $this->wrap('L', $text, 9.5, $this->contentWidth() - 28);
-        $h = 14 + 16 + count($lines) * 14 + 8;
+        $urlLines = $url !== null ? $this->wrap('LB', $url, 9, $this->contentWidth() - 28) : [];
+        $h = 14 + 16 + count($lines) * 14 + ($urlLines ? 6 + count($urlLines) * 13 : 0) + 8;
         $this->ensure($h + 20);
         $this->space(16);
         $this->roundRect(self::MARGIN, $this->y, $this->contentWidth(), $h, [14, 14, 14, 14], $ok ? self::OK_BG : self::SURFACE_ALT);
@@ -386,6 +395,15 @@ final class Pdf
         foreach ($lines as $line) {
             $this->textAt(self::MARGIN + 14, $yy, $line, 'L', 9.5, self::TEXT, 0.0, true);
             $yy -= 14;
+        }
+        if ($urlLines) {
+            $yy -= 6;
+            $top = $yy + 9;
+            foreach ($urlLines as $line) {
+                $this->textAt(self::MARGIN + 14, $yy, $line, 'LB', 9, self::BRAND_STRONG, 0.0, true);
+                $yy -= 13;
+            }
+            $this->annots[count($this->pages)][] = [self::MARGIN + 10, $yy + 9, self::PAGE_W - self::MARGIN - 10, $top, $url];
         }
         $this->y -= $h;
     }
@@ -443,13 +461,21 @@ final class Pdf
             );
             $data = gzcompress($content . $footer, 6);
             $contentObj = $add(sprintf("<< /Length %d /Filter /FlateDecode >>\nstream\n%s\nendstream", strlen($data), $data));
+            $annotRefs = [];
+            foreach ($this->annots[$i] ?? [] as [$x1, $y1, $x2, $y2, $url]) {
+                $annotRefs[] = $add(sprintf(
+                    '<< /Type /Annot /Subtype /Link /Rect [%.2F %.2F %.2F %.2F] /Border [0 0 0] /A << /S /URI /URI (%s) >> >>',
+                    $x1, $y1, $x2, $y2, self::esc($url)
+                )) . ' 0 R';
+            }
             $pageObj = $add(sprintf(
-                '<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %.2F %.2F] /Resources %s /Contents %d 0 R >>',
+                '<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %.2F %.2F] /Resources %s /Contents %d 0 R%s >>',
                 $pagesObj,
                 self::PAGE_W,
                 self::PAGE_H,
                 $resources,
-                $contentObj
+                $contentObj,
+                $annotRefs ? ' /Annots [' . implode(' ', $annotRefs) . ']' : ''
             ));
             $kids[] = "$pageObj 0 R";
         }

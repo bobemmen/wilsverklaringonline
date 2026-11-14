@@ -15,6 +15,7 @@ final class TokenController extends Controller
             'declaration' => $declaration,
             'tokenActive' => $this->app->store->tokenIsActive($declaration),
             'plaintextToken' => $this->app->session->flashed('plaintext_token'),
+            'link' => $this->app->store->tokenIsActive($declaration) && !empty($declaration['access_token']) ? $this->app->url('/v/' . $declaration['access_token']) : null,
             'viewCount' => $this->app->store->logCount($declaration['id']),
             'logs' => array_slice(array_reverse($this->app->store->logs($declaration['id'])), 0, 50),
         ]);
@@ -25,6 +26,7 @@ final class TokenController extends Controller
         $declaration = $this->declaration();
         $token = bin2hex(random_bytes(32));
         $declaration['token_idx'] = $this->app->store->tokenIndex($token);
+        $declaration['access_token'] = $token; // versleuteld bewaard (zie Store::saveDeclaration), zodat de link opnieuw te tonen is en in de pdf kan
         $this->app->store->saveDeclaration($declaration);
 
         $this->app->session->flash('plaintext_token', $token);
@@ -36,6 +38,7 @@ final class TokenController extends Controller
     {
         $declaration = $this->declaration();
         $declaration['token_idx'] = null;
+        $declaration['access_token'] = null;
         $declaration['token_expires_at'] = null;
         $this->app->store->saveDeclaration($declaration);
 

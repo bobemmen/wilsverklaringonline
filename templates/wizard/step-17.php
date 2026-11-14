@@ -80,3 +80,31 @@ $blocks['Afsluiting'] = [
         </dl>
     </section>
 <?php endforeach ?>
+
+<?php $open = \WV\Content::notFilled($d); $missingNow = \WV\Content::missingForPublish($d); ?>
+<?php if ($missingNow): ?>
+    <div class="callout callout-warn" role="note">
+        <p><strong>Dit moet nog ingevuld zijn voordat u kunt publiceren:</strong></p>
+        <ul>
+            <?php foreach ($missingNow as $m): ?><li><?= e(rtrim(preg_replace('/^Vul /', '', $m), '.')) ?></li><?php endforeach ?>
+        </ul>
+        <p class="mb0 muted">Met de knoppen bovenaan de pagina gaat u direct naar die stap.</p>
+    </div>
+<?php endif ?>
+<?php if ($open): ?>
+    <div class="callout" role="note">
+        <p><strong>Deze onderdelen heeft u niet ingevuld:</strong></p>
+        <ul>
+            <?php foreach ($open as $o): ?><li><?= e($o) ?></li><?php endforeach ?>
+        </ul>
+        <p class="mb0">U mag gewoon publiceren. In uw verklaring staat dan bij deze onderdelen “Niet ingevuld”, zodat uw arts niet denkt dat u geen bezwaar heeft. U kunt later altijd een nieuwe versie publiceren.</p>
+    </div>
+<?php endif ?>
+<fieldset class="field" id="bevestig">
+    <legend class="sr-only">Bevestiging</legend>
+    <?= $this->fieldError('bevestig') ?>
+    <label class="choice">
+        <input type="checkbox" name="bevestig" value="1"<?= $this->invalid('bevestig') ?>>
+        <span><span class="choice-label">Ik heb mijn verklaring rustig doorgelezen en wil hem publiceren.</span></span>
+    </label>
+</fieldset>

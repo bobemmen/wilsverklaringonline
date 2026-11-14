@@ -1,6 +1,7 @@
 <?php
 $has = fn(string $k): bool => trim((string) ($doc[$k] ?? '')) !== '';
-$row = fn(string $label, string $value): string => '<div class="doc-row"><span class="doc-label">' . e($label) . '</span><span class="badge badge-brand">' . e(\WV\Content::choiceLabel($value)) . '</span></div>';
+$row = fn(string $label, string $value): string => '<div class="doc-row"><span class="doc-label">' . e($label) . '</span>'
+    . (trim($value) === '' ? '<span class="badge badge-empty">Niet ingevuld</span>' : '<span class="badge badge-brand">' . e(\WV\Content::choiceLabel($value)) . '</span>') . '</div>';
 $block = fn(string $label, string $value): string => '<h3>' . e($label) . '</h3><p class="doc-text">' . nl2br_e($value) . '</p>';
 $quote = fn(string $value): string => '<blockquote class="doc-quote">' . nl2br_e($value) . '</blockquote>';
 $sec = fn(string $t) => '<h2>' . e($t) . '</h2>';
@@ -22,22 +23,20 @@ $sec = fn(string $t) => '<h2>' . e($t) . '</h2>';
 
 <section class="doc-section"><?= $sec('Behandelverbod') ?>
     <?php foreach (['reanimatie' => 'Reanimatie', 'beademing' => 'Beademing', 'ic' => 'Intensive care', 'antibiotica' => 'Antibiotica', 'sonde' => 'Sondevoeding'] as $k => $label): ?>
-        <?php if ($has($k)) echo $row($label, $doc[$k]) ?>
+        <?= $row($label, (string) ($doc[$k] ?? '')) ?>
     <?php endforeach ?>
     <?php foreach (['reanimatie_toelichting', 'beademing_toelichting', 'behandel_toelichting'] as $k): ?>
         <?php if ($has($k)) echo $quote($doc[$k]) ?>
     <?php endforeach ?>
 </section>
 
-<?php if ($has('palliatief_wens')): ?>
-    <section class="doc-section"><?= $sec('Palliatieve sedatie') ?>
-        <?= $row('Wens', $doc['palliatief_wens']) ?>
+<section class="doc-section"><?= $sec('Palliatieve sedatie') ?>
+        <?= $row('Wens', (string) ($doc['palliatief_wens'] ?? '')) ?>
         <?php foreach (['palliatief_fysiek' => 'Fysiek lijden', 'palliatief_geestelijk' => 'Geestelijk lijden'] as $k => $label): ?>
             <?php if ($has($k)) echo $block($label, $doc[$k]) ?>
         <?php endforeach ?>
         <?php if ($has('palliatief_diepte')) echo $row('Diepte', $doc['palliatief_diepte']) ?>
-    </section>
-<?php endif ?>
+</section>
 
 <?php if (\WV\Content::euthanasieIncluded($doc)): ?>
     <section class="doc-section"><?= $sec('Euthanasieverzoek') ?>
@@ -69,13 +68,11 @@ $sec = fn(string $t) => '<h2>' . e($t) . '</h2>';
     </section>
 <?php endif ?>
 
-<?php if ($has('orgaandonatie') || $has('uitvaart') || $has('overig')): ?>
-    <section class="doc-section"><?= $sec('Na het overlijden') ?>
-        <?php if ($has('orgaandonatie')) echo $row('Orgaandonatie', $doc['orgaandonatie']) ?>
+<section class="doc-section"><?= $sec('Na het overlijden') ?>
+        <?= $row('Orgaandonatie', (string) ($doc['orgaandonatie'] ?? '')) ?>
         <?php foreach (['uitvaart' => 'Uitvaart', 'overig' => 'Overig'] as $k => $label): ?>
             <?php if ($has($k)) echo $block($label, $doc[$k]) ?>
         <?php endforeach ?>
-    </section>
-<?php endif ?>
+</section>
 <p class="doc-text muted mb0">Ik heb deze verklaring zelf en uit vrije wil opgesteld.</p>
 </div>
