@@ -647,7 +647,7 @@ T::eq($r['location'], '/2fa/instellen', 'uitnodiging van vóór deze controle (z
 
 T::section('Stappenbalk en voortgang');
 $w = $c->get('/verklaring/wizard?stap=3')['body'];
-T::ok(str_contains($w, '<progress') && str_contains($w, 'stappen ingevuld'), 'voortgangsbalk met aantal ingevulde stappen');
+T::ok(str_contains($w, '<progress') && str_contains($w, 'stappen compleet'), 'voortgangsbalk met aantal ingevulde stappen');
 T::ok(preg_match('/Stap 17: Overzicht en publicatie, (nog te doen|gepubliceerd)/', $w) === 1, 'stap 17 is een gewone stap in de balk (nog te doen of gepubliceerd)');
 T::ok(str_contains($w, '<details class="wz-all">') && !str_contains($w, '<details class="wz-all" open'), 'alle stappen zijn standaard ingeklapt');
 T::ok(str_contains($w, 'Stap 3 van 17') && str_contains($w, 'Alle stappen tonen'), 'ingeklapt staat er welke stap het is en hoe ver u bent');

@@ -9,7 +9,7 @@
  */
 $statuses = \WV\Content::stepStatuses($data, $published);
 $done = \WV\Content::completion($data, $published);
-$labels = ['klaar' => 'ingevuld', 'nieuw' => 'nog te doen', 'overgeslagen' => 'overgeslagen', 'overzicht' => 'overzicht en publicatie'];
+$labels = ['klaar' => 'compleet', 'nieuw' => 'nog te doen', 'overgeslagen' => 'overgeslagen', 'overzicht' => 'overzicht en publicatie'];
 $go = function (int $n, string $class, string $text, string $label, bool $current) use ($form): string {
     $aria = $current ? ' aria-current="step"' : '';
     if ($form) {
@@ -21,7 +21,7 @@ $go = function (int $n, string $class, string $text, string $label, bool $curren
 <nav class="wz-nav" aria-label="Voortgang en navigatie door de vragenlijst">
     <div class="wz-summary">
         <p class="wz-where"><?php if ($step > 0): ?><strong>Stap <?= (int) $step ?> van <?= count(\WV\Content::TITLES) ?></strong> <span class="muted">· <?= e(\WV\Content::CHAPTER_NAMES[$chapter] ?? '') ?></span><?php else: ?><strong>Uitleg</strong> <span class="muted">· <?= e(\WV\Content::CHAPTER_NAMES[$chapter] ?? '') ?></span><?php endif ?></p>
-        <p class="wz-count"><strong><?= (int) $done['done'] ?> van <?= (int) $done['total'] ?> stappen ingevuld</strong> <span class="muted">(<?= (int) $done['percent'] ?>%)</span></p>
+        <p class="wz-count"><strong><?= (int) $done['done'] ?> van <?= (int) $done['total'] ?> stappen compleet</strong> <span class="muted">(<?= (int) $done['percent'] ?>%)</span></p>
     </div>
     <progress max="<?= max(1, (int) $done['total']) ?>" value="<?= (int) $done['done'] ?>" aria-label="Voortgang vragenlijst"><?= (int) $done['percent'] ?>%</progress>
     <details class="wz-all">
