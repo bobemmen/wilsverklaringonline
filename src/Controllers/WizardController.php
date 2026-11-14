@@ -93,6 +93,7 @@ final class WizardController extends Controller
                 $this->app->store->saveDeclaration($declaration);
             });
             $this->flash('Uw wilsverklaring is gepubliceerd.');
+            $this->app->session->flash('status_pdf', true);
             return $this->redirect('/dashboard');
         }
 
