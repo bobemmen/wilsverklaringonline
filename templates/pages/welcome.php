@@ -15,9 +15,9 @@
         </div>
     </div>
     <div class="hero-chat" aria-hidden="true">
-        <div class="speaker"><span class="avatar"><?= $this->logo(40) ?></span><p class="bubble">Wat geeft uw leven waarde?</p></div>
+        <div class="speaker"><span class="avatar"></span><p class="bubble">Wat geeft uw leven waarde?</p></div>
         <p class="bubble bubble-me">Zolang ik mijn kleinkinderen herken en buiten kan zitten.</p>
-        <div class="speaker"><span class="avatar"><?= $this->logo(40) ?></span><p class="bubble">Dank u. Dat nemen we op in uw verklaring.</p></div>
+        <div class="speaker"><span class="avatar"></span><p class="bubble">Dank u. Dat nemen we op in uw verklaring.</p></div>
     </div>
 </section>
 

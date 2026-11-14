@@ -174,7 +174,7 @@ a:hover { text-decoration-thickness: 0.16em; }
 .skip-link:focus { top: 0.75rem; }
 
 /* Gespreksicoon (tekstballon), als masker zodat het de kleur van het thema volgt */
-.conversation .callout::after {
+.avatar::before, .conversation .callout::after {
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v10H9l-5 4z'/%3E%3C/svg%3E") center / 58% no-repeat;
             mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v10H9l-5 4z'/%3E%3C/svg%3E") center / 58% no-repeat;
 }
@@ -392,8 +392,8 @@ ol.steps li { margin-bottom: 0.75rem; padding-left: 0.25rem; }
 /* het gesprek: de app spreekt via tekstballonnen met een rond icoon */
 .conversation { padding: 2.25rem 2.25rem 2rem; }
 .speaker { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1.25rem; }
-.avatar { flex: none; width: 2.5rem; height: 2.5rem; display: inline-flex; }
-.avatar .logo { width: 100%; height: 100%; }
+.avatar { flex: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--brand); display: inline-flex; }
+.avatar::before { content: ""; display: block; width: 100%; height: 100%; background: var(--on-brand); }
 .speaker-body { flex: 1; min-width: 0; }
 .speaker-body > :last-child { margin-bottom: 0; }
 .conversation .callout { position: relative; background: var(--surface-alt); border-radius: 1.5rem 1.5rem 1.5rem 0.4rem; margin: 0 0 1.5rem 3.25rem; padding: 1rem 1.3rem; }
