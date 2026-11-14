@@ -8,6 +8,16 @@ $chapterNames = \WV\Content::CHAPTER_NAMES;
     <?php /* Enter in een tekstveld slaat het concept op (eerste verzendknop in de DOM-volgorde) */ ?>
     <button type="submit" name="actie" value="concept" class="sr-only" tabindex="-1" aria-hidden="true">Opslaan als concept</button>
 
+    <?php if (!empty($isPublished)): ?>
+        <div class="callout" role="note">
+            <?php if ($published): ?>
+                <p><strong>Uw verklaring is gepubliceerd.</strong> U kunt alles aanpassen. Een aanpassing geldt pas als u opnieuw publiceert (laatste stap). Tot dan ziet uw arts de gepubliceerde versie.</p>
+            <?php else: ?>
+                <p><strong>U past een gepubliceerde verklaring aan.</strong> Uw arts ziet nog de gepubliceerde versie. Uw wijzigingen gelden pas als u opnieuw publiceert (stap 17).</p>
+            <?php endif ?>
+        </div>
+    <?php endif ?>
+
     <?php $this->include('wizard/_chapters', ['chapter' => $chapter, 'step' => $step, 'data' => $data, 'published' => $published, 'form' => true]) ?>
 
     <div class="card conversation">
@@ -39,7 +49,7 @@ $chapterNames = \WV\Content::CHAPTER_NAMES;
                 <?php if ($step < $total): ?>
                     <button type="submit" name="actie" value="volgende" class="btn btn-primary">Verder →</button>
                 <?php else: ?>
-                    <button type="submit" name="actie" value="publiceer" class="btn btn-primary" data-confirm="Weet u zeker dat u uw wilsverklaring wilt publiceren? Eerdere versies blijven bewaard.">Publiceer verklaring</button>
+                    <button type="submit" name="actie" value="publiceer" class="btn btn-primary" data-confirm="Weet u zeker dat u uw wilsverklaring wilt publiceren? Eerdere versies blijven bewaard."><?= !empty($isPublished) ? 'Opnieuw publiceren' : 'Publiceer verklaring' ?></button>
                 <?php endif ?>
             </div>
         </div>
