@@ -174,7 +174,7 @@ a:hover { text-decoration-thickness: 0.16em; }
 .skip-link:focus { top: 0.75rem; }
 
 /* Gespreksicoon (tekstballon), als masker zodat het de kleur van het thema volgt */
-.brand-mark, .avatar::before, .conversation .callout::after {
+.conversation .callout::after {
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v10H9l-5 4z'/%3E%3C/svg%3E") center / 58% no-repeat;
             mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v10H9l-5 4z'/%3E%3C/svg%3E") center / 58% no-repeat;
 }
@@ -192,8 +192,12 @@ a:hover { text-decoration-thickness: 0.16em; }
     color: var(--text); text-decoration: none;
 }
 .brand:hover { text-decoration: none; }
-.brand-logo { flex: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--brand); display: inline-flex; align-items: center; justify-content: center; }
-.brand-mark { display: block; width: 100%; height: 100%; background: var(--on-brand); }
+/* Logo: avondzon met gloed. Kleuren per thema; de zon blijft altijd amber. */
+.logo { flex: none; display: block; width: 2.75rem; height: 2.75rem; }
+.logo-bg { fill: var(--logo-bg, var(--brand)); }
+.logo-wave { fill: var(--logo-wave, var(--on-brand)); }
+.logo-sun { fill: #EFA445; }
+:root[data-contrast="donker"] { --logo-bg: #2A4A38; --logo-wave: #9FD3B5; }
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .tool {
     display: inline-flex; align-items: center; justify-content: center;
@@ -388,8 +392,8 @@ ol.steps li { margin-bottom: 0.75rem; padding-left: 0.25rem; }
 /* het gesprek: de app spreekt via tekstballonnen met een rond icoon */
 .conversation { padding: 2.25rem 2.25rem 2rem; }
 .speaker { display: flex; gap: 0.75rem; align-items: flex-start; margin-bottom: 1.25rem; }
-.avatar { flex: none; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--brand); display: inline-flex; }
-.avatar::before { content: ""; display: block; width: 100%; height: 100%; background: var(--on-brand); }
+.avatar { flex: none; width: 2.5rem; height: 2.5rem; display: inline-flex; }
+.avatar .logo { width: 100%; height: 100%; }
 .speaker-body { flex: 1; min-width: 0; }
 .speaker-body > :last-child { margin-bottom: 0; }
 .conversation .callout { position: relative; background: var(--surface-alt); border-radius: 1.5rem 1.5rem 1.5rem 0.4rem; margin: 0 0 1.5rem 3.25rem; padding: 1rem 1.3rem; }
@@ -550,7 +554,7 @@ a.pad-dot:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; 
 @media (forced-colors: active) {
     .btn, .tool, .choice, .card, input, textarea, details.more { border: 2px solid ButtonText; }
     .choice:has(input:checked) { border-color: Highlight; }
-    .brand-mark, .avatar::before, .conversation .callout::after { background: ButtonText; }
+    .conversation .callout::after { background: ButtonText; }
     .choice-meaning { border: 1px solid ButtonText; }
 }
 

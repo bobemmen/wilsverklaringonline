@@ -240,6 +240,57 @@ final class Pdf
         }
     }
 
+    /**
+     * Logo "Avondzon met gloed" (zelfde tekening als public/favicon.svg): groene cirkel, zon met gloed en een witte golf.
+     * Doorzichtigheden zijn vooraf uitgerekend, zodat er geen extra grafische toestanden nodig zijn.
+     */
+    public function logo(float $x, float $yTop, float $size): void
+    {
+        $k = $size / 64;
+        $px = fn(float $v): float => $x + $v * $k;
+        $py = fn(float $v): float => $yTop - $v * $k;
+        $circle = function (float $cx, float $cy, float $r) use ($px, $py, $k): string {
+            $c = 0.5523 * $r;
+            $X = $px($cx);
+            $Y = $py($cy);
+            $R = $r * $k;
+            $C = $c * $k;
+            return sprintf(
+                '%.2F %.2F m %.2F %.2F %.2F %.2F %.2F %.2F c %.2F %.2F %.2F %.2F %.2F %.2F c %.2F %.2F %.2F %.2F %.2F %.2F c %.2F %.2F %.2F %.2F %.2F %.2F c h ',
+                $X + $R, $Y,
+                $X + $R, $Y + $C, $X + $C, $Y + $R, $X, $Y + $R,
+                $X - $C, $Y + $R, $X - $R, $Y + $C, $X - $R, $Y,
+                $X - $R, $Y - $C, $X - $C, $Y - $R, $X, $Y - $R,
+                $X + $C, $Y - $R, $X + $R, $Y - $C, $X + $R, $Y
+            );
+        };
+        $wave1 = sprintf(
+            '%.2F %.2F m %.2F %.2F %.2F %.2F %.2F %.2F c %.2F %.2F %.2F %.2F %.2F %.2F c %.2F %.2F l %.2F %.2F l h ',
+            $px(2), $py(46), $px(14), $py(36), $px(26), $py(36), $px(36), $py(43),
+            $px(46), $py(50), $px(54), $py(48), $px(64), $py(40), $px(64), $py(64), $px(2), $py(64)
+        );
+        $wave2 = sprintf(
+            '%.2F %.2F m %.2F %.2F %.2F %.2F %.2F %.2F c %.2F %.2F %.2F %.2F %.2F %.2F c %.2F %.2F l %.2F %.2F l h ',
+            $px(2), $py(54), $px(16), $py(48), $px(30), $py(48), $px(40), $py(53),
+            $px(50), $py(58), $px(56), $py(56), $px(64), $py(52), $px(64), $py(64), $px(2), $py(64)
+        );
+        $s = 'q ' . $circle(32, 32, 28) . "W n\n";
+        $s .= self::rgb(self::BRAND) . ' rg ' . sprintf("%.2F %.2F %.2F %.2F re f\n", $px(0), $py(64), 64 * $k, 64 * $k);
+        $s .= self::rgb([82, 117, 77]) . ' rg ' . $circle(36, 43, 18) . "f\n";   // gloed (18 % amber)
+        $s .= self::rgb([129, 131, 75]) . ' rg ' . $circle(36, 43, 14) . "f\n";   // gloed (30 %)
+        $s .= self::rgb([239, 164, 69]) . ' rg ' . $circle(36, 43, 10) . "f\n";   // zon
+        $s .= '1 1 1 rg ' . $wave1 . "f\n";
+        $s .= self::rgb([193, 211, 202]) . ' rg ' . $wave2 . "f\nQ\n";
+        $this->stream .= $s;
+    }
+
+    /** Logo gecentreerd bovenaan de pagina, op de huidige schrijfpositie. */
+    public function brandLogo(float $size = 40): void
+    {
+        $this->logo((self::PAGE_W - $size) / 2, $this->y, $size);
+        $this->y -= $size + 8;
+    }
+
     // ------------------------------------------------- opgemaakte onderdelen
 
     /** Titel bovenaan (gecentreerd). */
