@@ -617,12 +617,23 @@ input.code-box {
 
 /* Voortgang en stappennavigatie in de vragenlijst */
 .wz-nav { margin: 0 0 1.25rem; }
+.wz-summary { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.2rem 1rem; margin: 0 0 0.35rem; }
+.wz-summary p { margin: 0; }
 .wz-progress { margin: 0 0 0.9rem; }
 .wz-progress-text { margin: 0 0 0.35rem; }
-.wz-progress progress { display: block; width: 100%; height: 0.9rem; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface); overflow: hidden; appearance: none; -webkit-appearance: none; }
-.wz-progress progress::-webkit-progress-bar { background: var(--surface); }
-.wz-progress progress::-webkit-progress-value { background: var(--brand); border-radius: 999px; }
-.wz-progress progress::-moz-progress-bar { background: var(--brand); border-radius: 999px; }
+.wz-nav > progress, .wz-progress progress { display: block; width: 100%; height: 0.9rem; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface); overflow: hidden; appearance: none; -webkit-appearance: none; }
+.wz-nav > progress::-webkit-progress-bar, .wz-progress progress::-webkit-progress-bar { background: var(--surface); }
+.wz-nav > progress::-webkit-progress-value, .wz-progress progress::-webkit-progress-value { background: var(--brand); border-radius: 999px; }
+.wz-nav > progress::-moz-progress-bar, .wz-progress progress::-moz-progress-bar { background: var(--brand); border-radius: 999px; }
+.wz-all { margin: 0.6rem 0 0; }
+.wz-all > summary { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2.75rem; padding: 0 0.2rem; cursor: pointer; font-weight: 600; color: var(--brand-strong); list-style: none; }
+.wz-all > summary::-webkit-details-marker { display: none; }
+.wz-all > summary::after { content: "▾"; font-size: 0.9em; }
+.wz-all[open] > summary::after { content: "▴"; }
+.wz-all > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.wz-all .wz-close, .wz-all[open] .wz-open { display: none; }
+.wz-all[open] .wz-close { display: inline; }
+.wz-all .wz-chapters { margin-top: 0.4rem; }
 .wz-chapters { list-style: none; display: flex; flex-wrap: wrap; gap: 0.6rem; padding: 0; margin: 0; max-width: none; }
 .wz-chapter { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.55rem 0.8rem 0.7rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .wz-chapter-name { font-size: 0.85rem; font-weight: 600; color: var(--muted); line-height: 1.3; }
