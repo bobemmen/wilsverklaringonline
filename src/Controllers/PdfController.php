@@ -26,7 +26,7 @@ final class PdfController extends Controller
         return $this->respond($declaration, $version, $number, true, 'wilsverklaring-' . date('Y-m-d') . '.pdf');
     }
 
-    /** PDF van een bepaalde gepubliceerde versie. De arts-link en de bevestiging staan alleen in de pdf van de huidige versie. */
+    /** PDF van de huidige versie via het versienummer. Oudere versies zijn alleen te lezen, niet te downloaden. */
     public function version(string $n): Response
     {
         $declaration = $this->declaration();
@@ -36,8 +36,10 @@ final class PdfController extends Controller
             throw new HttpException(404);
         }
         $version = $versions[$number - 1];
-        $current = $version['id'] === $declaration['current_version_id'];
-        return $this->respond($declaration, $version, $number, $current, 'wilsverklaring-versie-' . $number . '.pdf');
+        if ($version['id'] !== $declaration['current_version_id']) {
+            throw new HttpException(404);
+        }
+        return $this->respond($declaration, $version, $number, true, 'wilsverklaring-versie-' . $number . '.pdf');
     }
 
     private function respond(array $declaration, ?array $version, ?int $number, bool $current, string $filename): Response
