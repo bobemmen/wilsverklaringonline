@@ -82,7 +82,7 @@ foreach ($progress as $pp) {
                     $p = $progress[$n];
                     $isCurrent = $n === $current;
                     $cls = trim(($isCurrent ? 'current ' : '') . ($p['status'] === 'klaar' ? 'done' : ($p['status'] === 'bezig' ? 'part' : '')));
-                    $partText = $p['status'] === 'bezig' ? 'Begonnen · ' . (int) $p['done'] . ' van ' . (int) $p['total'] . ' stappen ingevuld' : null;
+                    $partText = null;
                     $first = \WV\Content::firstStepOfChapter($n);
                     $goHref = $p['status'] === 'nieuw' ? '/verklaring/wizard?stap=' . $first . '&uitleg=1' : '/verklaring/wizard?stap=' . $p['next'];
                     // Het rondje is zelf ook een link. Heeft het onderwerp al een tekstlink of knop, dan is het rondje alleen een extra klikvlak.
