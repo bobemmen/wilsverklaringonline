@@ -1,7 +1,7 @@
 <?php $this->layout('layouts/plain', ['title' => 'WilsVerklaring · Samen nadenken over wat u belangrijk vindt', 'wide' => true]) ?>
 <section class="card hero" aria-labelledby="hero-titel">
     <div class="hero-text">
-        <p class="eyebrow">Wilsverklaring online, via uw huisarts</p>
+        <div class="hero-logo"><?= $this->logo(96, false) ?></div>
         <h1 id="hero-titel">Samen nadenken over wat u belangrijk vindt</h1>
         <p class="lead">We stellen u rustig de vragen die bij een wilsverklaring horen, met uitleg bij elke keuze. U schrijft in uw eigen woorden, deelt met uw huisarts en naasten, en houdt zelf de regie.</p>
         <div class="btn-row">
