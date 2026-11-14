@@ -1,6 +1,10 @@
 <?php $errors = $this->errors() ?>
 <?php if ($msg = $this->flash('status')): ?>
-    <div class="alert alert-ok" role="status"><?= e($msg) ?></div>
+    <div class="alert alert-ok" role="status"><?= e($msg) ?>
+        <?php if ($this->flash('status_pdf')): ?>
+            <p class="alert-actions"><a href="/verklaring/pdf" class="btn">Download als PDF</a> <a href="/verklaring/pdf?groot=1" class="btn">PDF met grote letters</a></p>
+        <?php endif ?>
+    </div>
 <?php endif ?>
 <?php if ($errors): ?>
     <div class="alert alert-bad" role="alert" tabindex="-1" id="fouten">

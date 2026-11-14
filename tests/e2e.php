@@ -669,6 +669,7 @@ $s17 = $other->get('/verklaring/wizard?stap=17')['body'];
 T::ok(str_contains($s17, 'Deze onderdelen heeft u niet ingevuld') && str_contains($s17, 'Reanimatie (stap 3)') && str_contains($s17, 'name="bevestig"'), 'stap 17 toont de lijst met niet-ingevulde onderdelen en het vinkje');
 $r = $other->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 T::eq($r['location'], '/dashboard', 'met kern en vinkje kan worden gepubliceerd, ook als keuzes nog leeg zijn');
+T::ok(str_contains($other->follow($r)['body'], 'href="/verklaring/pdf"') && str_contains($other->get('/dashboard')['body'], 'Uw wilsverklaring is gepubliceerd') === false, 'na publiceren staat er een pdf-knop in de melding (eenmalig)');
 $other->submit('/token', '/token/genereer', []);
 $rp = $other->follow($other->submit('/token', '/token/genereer', []));
 preg_match('#token-box">' . preg_quote($base, '#') . '/v/([a-f0-9]{64})<#', $rp['body'], $mb);
