@@ -278,20 +278,21 @@ $r = $c->submit('/verklaring/wizard?stap=15', '/verklaring/wizard', ['stap' => '
 T::eq($r['location'], '/verklaring/wizard?stap=12', 'terug vanaf 15 → 12');
 $r = $c->submit('/verklaring/wizard?stap=12', '/verklaring/wizard', ['stap' => '12', 'actie' => 'terug']);
 T::eq($r['location'], '/verklaring/wizard?stap=8', 'terug vanaf 12 → 8');
-$c->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'volgende', 'data' => ['volmacht' => 'Piet de Vries, zoon', 'volmacht_contact' => '06 12345678', 'arts' => 'Dr. Jansen', 'besproken' => 'ja', 'datum' => '2026-11-01']]);
+$c->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'volgende', 'data' => ['volmacht' => 'Piet de Vries, zoon', 'volmacht_contact' => '06 12345678', 'arts' => 'Dr. Jansen', 'besproken' => 'ja', 'datum' => '2026-11-01', 'plaats' => 'Venray']]);
+$c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['voornamen' => 'Anna', 'achternaam' => 'de Vries', 'geboortedatum' => '1950-03-07']]);
 $r = $c->get('/verklaring/wizard?stap=17');
 T::ok(str_contains($r['body'], 'Overzicht en publicatie') && str_contains($r['body'], 'Dr. Jansen') && str_contains($r['body'], "regel 1<br>\nregel 2"), 'overzicht toont alle antwoorden');
-$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 T::eq($r['location'], '/dashboard', 'publiceren → dashboard');
 $r = $c->get('/dashboard');
 T::ok(str_contains($r['body'], 'Definitief') && str_contains($r['body'], 'Laatst gepubliceerd op ' . date('d-m-Y')), 'dashboard: Definitief');
 $r = $c->get('/verklaring/versies');
 T::ok(str_contains($r['body'], 'Versie 1') && str_contains($r['body'], 'Huidig'), 'versieoverzicht');
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Gewijzigd concept']]);
-$c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+$c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 T::ok(str_contains($c->get('/verklaring/versies')['body'], 'Versie 2'), 'tweede publicatie wordt versie 2 (v1 blijft bewaard)');
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => $intro]]);
-$c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+$c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 
 function clearThrottle(string $dbfile): void { $p = new PDO('sqlite:' . $dbfile); $p->exec('DELETE FROM throttle'); }
 $dbfile = "$tmp/db/e2e.sqlite";
@@ -304,7 +305,12 @@ $page = $c->follow($r);
 preg_match('#token-box">' . preg_quote($base, '#') . '/v/([a-f0-9]{64})<#', $page['body'], $m);
 $token = $m[1] ?? '';
 T::ok($token !== '', 'toegangslink wordt eenmalig getoond');
-T::ok(!str_contains($c->get('/token')['body'], $token), 'de code wordt daarna niet meer getoond');
+$tokenPage = $c->get('/token')['body'];
+T::ok(str_contains($tokenPage, 'Uw link voor de arts') && str_contains($tokenPage, $token), 'de link is op de pagina terug te zien (versleuteld bewaard)');
+$rawPdo = new PDO('sqlite:' . $dbfile); $rawPdo->exec('PRAGMA busy_timeout=5000');
+$plainInDb = (int) $rawPdo->query("SELECT COUNT(*) FROM declarations WHERE data LIKE '%$token%'")->fetchColumn();
+unset($rawPdo);
+T::eq($plainInDb, 0, 'de link staat niet leesbaar in de database');
 $doc = new Client($base);
 $r = $doc->get('/v/' . $token);
 T::ok($r['status'] === 200 && str_contains($r['body'], 'Anna de Vries') && str_contains($r['body'], $intro), 'arts ziet de verklaring zonder account');
@@ -471,16 +477,20 @@ $pub = (new Client($base))->get('/v/' . $token);
 T::ok(str_contains($pub['body'], 'Identiteit bevestigd door de huisarts') && str_contains($pub['body'], 'Dr. Jansen') && str_contains($pub['body'], 'Huisartsenpraktijk Wanroij'), 'leesweergave toont bevestiging door huisarts');
 T::ok(str_contains($pub['body'], '…1C1E2C') && !str_contains($pub['body'], $his), 'leesweergave toont alleen afgeschermd patiënt-ID');
 T::ok(str_starts_with($c->get('/verklaring/pdf')['body'], '%PDF'), 'PDF met bevestiging wordt gegenereerd');
+$linkPdf = $c->get('/verklaring/pdf')['body'];
+T::ok(str_contains($linkPdf, '/URI (' . $base . '/v/' . $token . ')'), 'de pdf bevat de link voor de arts, klikbaar');
+$c->get('/token'); // geen nieuwe link nodig: de link blijft beschikbaar
+
 // wijziging: bevestiging blijft gelden; een verklaring met euthanasiehoofdstuk vraagt om volledige gegevens
-$c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Nieuwe tekst na de bevestiging.']]);
+$c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['intro' => 'Nieuwe tekst na de bevestiging.', 'voornamen' => '', 'achternaam' => '', 'geboortedatum' => '', 'geboorteplaats' => '']]);
 $c->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'concept', 'data' => ['datum' => '', 'plaats' => '']]);
-$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 $page = $c->follow($r)['body'];
 T::ok(str_contains($page, 'Vul uw voornamen') && str_contains($page, 'Vul uw geboorteplaats') && str_contains($page, 'Vul de plaats van ondertekening'), 'publiceren met euthanasiehoofdstuk vereist naam, geboortegegevens, datum en plaats');
 T::ok(str_contains($c->get('/verklaring/wizard?stap=17')['body'], 'Overzicht en publicatie'), 'bij ontbrekende gegevens blijft de verklaring een concept');
 $c->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['voornamen' => 'Anna Maria', 'achternaam' => 'de Vries', 'geboortenaam' => 'Jansen', 'geboortedatum' => '1950-03-07', 'geboorteplaats' => 'Utrecht']]);
 $c->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'concept', 'data' => ['datum' => '2026-11-12', 'plaats' => 'Wanroij']]);
-$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+$r = $c->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
 T::eq($r['location'], '/dashboard', 'met alle gegevens kan wel worden gepubliceerd');
 $pubNew = (new Client($base))->get('/v/' . $token);
 T::ok(str_contains($pubNew['body'], 'Anna Maria de Vries') && str_contains($pubNew['body'], 'Geboren op 07-03-1950 te Utrecht') && str_contains($pubNew['body'], 'geboortenaam: Jansen') && str_contains($pubNew['body'], 'uit vrije wil'), 'leesweergave toont naam, geboortegegevens, geboortenaam en vrije-wil-verklaring');
@@ -645,6 +655,27 @@ T::ok(str_contains($intro, 'href="/verklaring/wizard?stap=6"') && !str_contains(
 
 $dash = $c->get('/dashboard')['body'];
 T::ok(substr_count($dash, 'class="pad-dot"') === 6 && str_contains($dash, 'class="pad-dot" href="/verklaring/wizard?stap='), 'op het dashboard zijn alle rondjes van de onderwerpen aanklikbaar');
+
+T::section('Publiceren met regels');
+$r = $other->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
+$pg = $other->follow($r)['body'];
+T::ok(str_contains($pg, 'Vul uw voornamen') && str_contains($pg, 'Vul de datum van ondertekening'), 'ook zonder euthanasie zijn naam, geboortedatum, datum en plaats verplicht');
+$other->submit('/verklaring/wizard?stap=1', '/verklaring/wizard', ['stap' => '1', 'actie' => 'concept', 'data' => ['voornamen' => 'Bas', 'achternaam' => 'Bakker', 'geboortedatum' => '1960-01-02']]);
+$other->submit('/verklaring/wizard?stap=16', '/verklaring/wizard', ['stap' => '16', 'actie' => 'concept', 'data' => ['datum' => '2026-11-10', 'plaats' => 'Wanroij']]);
+$r = $other->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer']);
+T::ok(str_contains($other->follow($r)['body'], 'Vink aan dat u uw verklaring rustig hebt doorgelezen'), 'publiceren zonder vinkje "rustig doorgelezen" lukt niet');
+$s17 = $other->get('/verklaring/wizard?stap=17')['body'];
+T::ok(str_contains($s17, 'Deze onderdelen heeft u niet ingevuld') && str_contains($s17, 'Reanimatie (stap 3)') && str_contains($s17, 'name="bevestig"'), 'stap 17 toont de lijst met niet-ingevulde onderdelen en het vinkje');
+$r = $other->submit('/verklaring/wizard?stap=17', '/verklaring/wizard', ['stap' => '17', 'actie' => 'publiceer', 'bevestig' => '1']);
+T::eq($r['location'], '/dashboard', 'met kern en vinkje kan worden gepubliceerd, ook als keuzes nog leeg zijn');
+$other->submit('/token', '/token/genereer', []);
+$rp = $other->follow($other->submit('/token', '/token/genereer', []));
+preg_match('#token-box">' . preg_quote($base, '#') . '/v/([a-f0-9]{64})<#', $rp['body'], $mb);
+$bp = (new Client($base))->get('/v/' . ($mb[1] ?? 'x'))['body'];
+T::ok(substr_count($bp, 'Niet ingevuld') >= 6, 'de verklaring toont "Niet ingevuld" bij onbeantwoorde keuzes');
+T::ok(str_contains($bp, 'Gedeeltelijk ingevuld'), 'de arts ziet een melding dat de verklaring gedeeltelijk is ingevuld');
+$bpdf = $other->get('/verklaring/pdf')['body'];
+T::ok(str_contains($bpdf, '/URI (' . $base . '/v/' . ($mb[1] ?? 'x') . ')'), 'pdf van Bas bevat zijn link');
 
 T::section('Demo');
 $rawq = function (string $sql) use ($dbfile) { $p = new PDO('sqlite:' . $dbfile); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec('PRAGMA busy_timeout=5000'); return $p->query($sql); };
@@ -847,7 +878,7 @@ $r = $g->submit('/inloggen', '/inloggen', ['email' => 'anna@voorbeeld.nl', 'pass
 T::ok(str_contains($g->follow($r)['body'], 'komen niet overeen'), 'verwijderd account kan niet meer inloggen');
 T::eq($c->get('/dashboard')['location'], '/inloggen', 'oude sessie is ongeldig');
 T::eq((new Client($base))->get('/v/' . $token)['status'], 404, 'toegangscodes zijn mee verwijderd');
-$left = (int) $pdo->query('SELECT (SELECT COUNT(*) FROM versions) + (SELECT COUNT(*) FROM shares) + (SELECT COUNT(*) FROM access_logs) + (SELECT COUNT(*) FROM declarations WHERE user_id NOT IN (SELECT id FROM users))')->fetchColumn();
+$left = (int) $pdo->query('SELECT (SELECT COUNT(*) FROM versions WHERE declaration_id NOT IN (SELECT id FROM declarations)) + (SELECT COUNT(*) FROM shares WHERE declaration_id NOT IN (SELECT id FROM declarations)) + (SELECT COUNT(*) FROM access_logs WHERE declaration_id NOT IN (SELECT id FROM declarations)) + (SELECT COUNT(*) FROM declarations WHERE user_id NOT IN (SELECT id FROM users))')->fetchColumn();
 T::eq($left, 0, 'geen verweesde versies, uitnodigingen of logs na verwijderen');
 $bas = (int) $pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
 T::eq($bas, 5, 'alleen Bas, Eva, Leo, Dr. Jansen en Dr. Elders (andere praktijk) bestaan nog');
